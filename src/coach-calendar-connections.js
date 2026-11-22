@@ -74,6 +74,20 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
       const token = await authorizedToken(doc,true);
       return google.availability(token,doc.calendarId,{start,end},doc.mailbox);
     },
+    async readAgenda({owner,grant,start,end,zone,includeEvents,includePrimary}) {
+      const doc = await connectedCalendar(owner,grant,false);
+      const token = await authorizedToken(doc,false);
+      const primary = includePrimary && doc.availabilityEnabled;
+      const range = {start,end,zone};
+      const [events,busy] = await Promise.allSettled([
+        includeEvents ? google.agendaEvents(token,doc.calendarId,range) : null,
+        primary ? google.primaryBusy(token,range,doc.mailbox) : null
+      ]);
+      const unchanged = await store.exists({_id:owner,grant,calendarId:doc.calendarId,
+        ...(primary && {availabilityEnabled:true})});
+      if (!unchanged) throw new Error('La conexión cambió.');
+      return {events,busy,availabilityEnabled:doc.availabilityEnabled===true};
+    },
     async routeAppointments({owner,grant,start,end}) {
       const doc = await connectedCalendar(owner,grant,true);
       return google.routeAppointments(await authorizedToken(doc,true),doc.calendarId,{start,end});

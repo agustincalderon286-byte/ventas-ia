@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {sealToken} from '../src/coach-hycite-gmail.js';
 import {createPlanChannels} from '../src/coach-plan-channels.js';
+import {createConversationPlan} from '../src/coach-conversation-plan.js';
 
 const fixed=Date.parse('2026-11-21T18:00:00Z');
 function fixture({busy=[],outcome='saved',outbound='sent',message='Gracias por conversar conmigo.',editResult={body:'¿Guardaste el folleto?'}}={}) {
@@ -41,6 +42,49 @@ function fixture({busy=[],outcome='saved',outbound='sent',message='Gracias por c
   }});
   return {actor,channels,doc,cal,log};
 }
+
+test('piloto: referidos, dos horarios y borrador antes de elegir; confirmar solo la cita conserva el correo',async()=>{
+  const {actor,channels,log}=fixture();
+  const email='agustincalderon286@gmail.com';
+  const auth={user:{_id:actor.owner,email},session:{accessMode:'direct',tokenHash:'fixture'}};
+  const req={body:{accountId:actor.owner,coachPlanVersion:1,coachTimeZone:actor.zone}};
+  const intents=[
+    {kind:'plan',operations:['list','appointment','email'],bucket:'today',leadKind:'referrals',schedule:'mañana',slots:true,mailInstruction:'déjame listo el correo'},
+    {kind:'revise',operations:[],ordinal:2}
+  ];
+  let state,reads=0;
+  const runner=createConversationPlan({config:{planPilot:[email],sheetsPilot:[email]},now:()=>fixed,readConnections:async()=>({}),
+    readSession:async()=>auth,switched:()=>false,pilotInterpret:async()=>intents.shift(),
+    plans:{load:async()=>structuredClone(state),save:async(_,old,data)=>{
+      assert.equal(old,state?.revision);const revision=randomBytes(12).toString('hex');state={data:structuredClone(data),revision};return revision;
+    }},
+    sheets:{access:async()=>({grant:'mi-hoja',token:'ficticio'})},sheetTools:{
+      search:async(_ctx,q)=>{assert.equal(q.kind,'referrals');reads++;return {total:1,contacts:[{fullName:'Cliente Prueba',key:'1',identityKey:'1',sheetTitle:'4 en 14',row:2,email:'cliente@example.test',reason:'Toca hoy.'}]};},
+      revalidate:async()=>true
+    },channels:{
+      appointment:(_actor,...args)=>channels.appointment(actor,...args),
+      email:(_actor,...args)=>channels.email(actor,...args),
+      confirmAppointment:(_actor,...args)=>channels.confirmAppointment(actor,...args)
+    }});
+  const ask=async text=>{
+    const result=await runner({req,auth,sessionId:'chat',text});
+    req.body.coachPlanPending=result.coachPlanPending;
+    return result;
+  };
+  const first=await ask('Checa quién me falta del cuatro en catorce, búscame dos huecos para mañana y déjame listo el correo');
+  assert.equal(reads,1);assert.match(first.respuesta,/Toca hoy/);
+  const offered=first.coachHelpActions.filter(btn=>btn.op==='slot');
+  assert.equal(offered.length,2);assert.equal(log.proposals.length,0);assert.equal(log.preparedMail.length,1);
+  for(const option of offered) assert.ok(log.preparedMail[0].body.includes(option.label));
+  assert.ok(!first.coachHelpActions.some(btn=>btn.op==='apply'));
+  const second=await ask('Mejor el segundo');
+  const confirm=second.coachHelpActions.find(btn=>btn.op==='apply' && btn.arg==='appointment');
+  assert.ok(confirm);assert.equal(log.preparedMail.length,2);
+  assert.ok(log.preparedMail[1].body.includes(offered[1].label));assert.ok(!log.preparedMail[1].body.includes(offered[0].label));
+  assert.equal(log.writes.length,0);
+  await ask('TECPLAN '+confirm.revision+' apply appointment');
+  assert.equal(log.writes.length,1);assert.equal(log.delivered.length,0);
+});
 
 test('después de las cuatro de la tarde busca dos horarios dentro de ese viernes sin preparar ni crear evento',async()=>{
   const {actor,channels,log}=fixture();

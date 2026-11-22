@@ -25,10 +25,11 @@ const statuses = {
 export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody, offerHooks = null }) {
   const load = id => store.findById(id, 'mailbox encryptedToken grant sendEnabled').lean();
   const access = async doc => (await gmail.refresh(openToken(doc.encryptedToken, config.key, doc._id))).access_token;
-  return async ({ req, auth, sessionId, text, literalDraftInput = false }) => {
+  return async ({ req, auth, sessionId, text, literalDraftInput = false, readTool }) => {
     const pending = req.body?.coachMailPending;
     let intent;
-    if (!literalDraftInput) {
+    if (readTool==='inbox' || readTool==='sales') intent={kind:readTool};
+    else if (!literalDraftInput) {
       if (classifySalesMailReport(text)) intent = { kind: 'report' };
       else intent = pending ? classifyMailIntent(text) : await resolveMailIntent(text);
     }
@@ -53,7 +54,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       const aad = 'draft-question:' + actor._id + ':' + session + ':' + doc.grant;
       const contextToken = (context, minutes = 30) => sealToken(JSON.stringify({ ...context, until:Date.now() + minutes * 60000 }), config.key, aad);
       let context;
-      if (typeof pending === 'string' && pending.length <= 40000) {
+      if (!readTool && typeof pending === 'string' && pending.length <= 40000) {
         try {
           const saved = JSON.parse(openToken(pending, config.key, aad));
           if (saved.until > Date.now()) context = saved;

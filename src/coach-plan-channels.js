@@ -84,34 +84,37 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
       return {state:next,proposal:{id:draft.id,grant:cal.grant,calendarId:cal.calendarId},whenText,
         preview:summary+' · '+whenText+', '+(Date.parse(when.end)-Date.parse(when.start))/60000+' min. Seguimientos TEC · '+cal.mailbox+'. Sin invitados. '+(reminder==null?'Sin recordatorio.':'Aviso '+reminder+' min antes.')};
     },
-    async email(actor,{to,instruction,whenText='',priorDraft,editInstruction=''}) {
+    async email(actor,{to,instruction,whenText='',optionLabels,priorDraft,editInstruction=''}) {
       personalPilot(actor);
       if (!isGmailAddress(to)) return {question:'¿A qué dirección de correo quieres escribirle?'};
-      if (!instruction && !priorDraft) return {question:'¿Qué te gustaría decirle en el correo?'};
+      const alternatives=optionLabels?.length>0;
+      const timed=alternatives || Boolean(whenText);
+      if (!instruction && !priorDraft && !timed) return {question:'¿Qué te gustaría decirle en el correo?'};
       const doc=await mailDoc(actor.owner);
       if (!doc?.grant || !doc.mailbox) throw problem('Conecta Gmail desde tu propia cuenta en Mis conexiones.');
       // A concrete slot comes from the seller's Calendar. Append it locally, never as model input.
       const timingInstruction='El Coach adjuntará el horario propuesto al final. Omite la fecha y hora en tu redacción. La persona todavía debe confirmar.';
       let msg;
       if (priorDraft) {
-        const edit=editInstruction ? await rewrite(priorDraft.body,editInstruction+(whenText?'\n'+timingInstruction:'')) : {body:priorDraft.body};
+        const edit=editInstruction ? await rewrite(priorDraft.body,editInstruction+(timed?'\n'+timingInstruction:'')) : {body:priorDraft.body};
         if (edit.question) return {question:edit.question};
         msg={to,subject:priorDraft.subject,body:edit.body};
-      } else if (whenText && aboutAppointmentOnly(instruction)) {
-        msg={to,subject:'Propuesta de horario',body:'Hola,\n\nMe gustaría acordar contigo el siguiente horario.'};
+      } else if (timed && (!instruction || aboutAppointmentOnly(instruction) || /^(?:y )?(?:d[eé]ja\w*|prepara\w*) (?:listo )?(?:el |un )?(?:correo|borrador)[.!]?$/i.test(instruction))) {
+        msg={to,subject:'Propuesta de horario',body:'Hola,\n\nMe gustaría coordinar contigo la próxima visita.'};
       } else {
-        msg=await compose((whenText?timingInstruction+'\n':'')+'Redacta un correo a '+to+' para decirle: '+instruction);
+        msg=await compose((timed?timingInstruction+'\n':'')+'Redacta un correo a '+to+' para decirle: '+instruction);
       }
       if (msg.question) return {question:msg.question};
       const baseDraft={subject:msg.subject,body:msg.body};
-      if (whenText) {
+      if (timed) {
         const baseText=fold(msg.subject+' '+msg.body);
         const claimsBooked=/\b(?:ya (?:esta|quedo|te|he|la he)|queda|quedo|esta|hemos|te (?:lo |la )?confirmo)\b.{0,30}\b(?:reservad[ao]|agendad[ao]|confirmad[ao]|cita|visita|reserva|reunion)\b|\b(?:cita|visita|reserva|reunion) (?:ha sido |esta |queda |ya )?(?:confirmada|reservada|agendada)\b/;
         const addsAnotherTime=/\b(?:a las? (?:\d{1,2}|un[ao]?|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)|\d{1,2}(?::\d\d|\s*[ap]\.?\s*m\.?))\b/;
         if (claimsBooked.test(baseText) || addsAnotherTime.test(baseText)) {
           return {question:'¿Qué texto quieres acompañar al horario propuesto? La cita aún espera tu confirmación.'};
         }
-        msg.body=msg.body.trim()+'\n\nHorario propuesto: '+whenText+'. ¿Te funciona?';
+        msg.body=alternatives ? msg.body.trim()+'\n\nOpciones de horario ('+actor.zone+'):\n'+optionLabels.join('\n')+'\n¿Cuál te funciona?' :
+          msg.body.trim()+'\n\nHorario propuesto: '+whenText+'. ¿Te funciona?';
       }
       if (msg.to?.toLowerCase()!==to.toLowerCase()) throw problem('Confirma una sola dirección para el correo.');
       const draft=await drafts.prepare({owner:actor.owner,session:actor.session,grant:doc.grant,...msg});

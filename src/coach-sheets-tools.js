@@ -72,7 +72,7 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
   }
 
   return {
-    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false}={}) {
+    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind}={}) {
       const binding=scope(ctx);
       await check(ctx);
       let cached=searchReads.get(ctx);
@@ -90,6 +90,7 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       if (!Number.isSafeInteger(offset) || offset<0) throw fail(422,'Revisa la página solicitada.');
       const matches=[];
       for (const {row,key,id} of rows) {
+        if (kind && row.kind!==kind) continue;
         if (!matchWords(row.fullName,nameKey) || !matchWords(row.host,hostKey)) continue;
         const followup=classifySheetsFollowup(row,{today,locale});
         if (bucket && followup?.bucket!==bucket) continue;
@@ -98,11 +99,12 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       return {contacts:matches.slice(offset,offset+12),total:matches.length};
     },
 
-    async nextCall(ctx,{today,seen=[],name='',host='',bucket=''}={}) {
+    async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind}={}) {
       const {rows,locale}=await load(ctx);
       const priority=['overdue','today','undated'];
       const ranked=[];
       for (const hit of rows) {
+        if (kind && hit.row.kind!==kind) continue;
         if (!matchWords(hit.row.fullName,fold(name)) || !matchWords(hit.row.host,fold(host))) continue;
         const followup=classifySheetsFollowup(hit.row,{today,locale});
         if (!followup || !priority.includes(followup.bucket) || bucket && bucket!==followup.bucket) continue;

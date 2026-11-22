@@ -3,6 +3,8 @@ import {createCoachContactsConnections} from './coach-contacts-connections.js';
 import {createCoachRouteAgent} from './coach-route-agent.js';
 import {createPostSaleReader} from './coach-postsale.js';
 import {createConversationPlan} from './coach-conversation-plan.js';
+import {agentConnectionReader,sellerAgentModel} from './coach-agent-pilot.js';
+import {readCoachAgenda} from './coach-agenda.js';
 import {createPlanStore} from './coach-plan-store.js';
 import {createPlanChannels} from './coach-plan-channels.js';
 import {createCoachSheetTools} from './coach-sheets-tools.js';
@@ -53,7 +55,7 @@ export function connectionConfig(env) {
     'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
   const sheetsReady = Boolean(clientId && secret && key.length===32 && sheetsPickerKey && /^\d+$/.test(sheetsAppId));
   const planPilot=(env.COACH_PLAN_PILOT_EMAILS ?? 'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
-  return { key, origin, pilot, planPilot, domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
+  return { key, origin, pilot, planPilot, agentModel:env.COACH_AGENT_PILOT_MODEL ?? 'gpt-6.2-sol', domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
@@ -253,10 +255,24 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   const runRoute=createCoachRouteAgent({config,calendar:calendar.service,sheets:sheets.service,sheetsGoogle:sheetsReader,
     readSession:readSheetsSession,switched,...routeDependencies});
   const runPlan=createConversationPlan({config,plans:createPlanStore({key:config.key}),sheets:sheets.service,
+    readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service}),
+    readMail:(args,readTool)=>runMail({...args,readTool}),
+    readAgenda:(actor,text)=>{
+      if (!config.pilot.some(email=>email==='*' || email===actor.email.toLowerCase())) return 'Tu cuenta todavía no participa en el piloto de Calendar.';
+      if (!config.calendarReady) return 'Google Calendar no está disponible en TEC en este momento.';
+      return readCoachAgenda({calendar:calendar.service,owner:actor.owner,zone:actor.zone,current:actor.current,text});
+    },
     sheetTools,readSales:createPostSaleReader({config,store,gmail}),channels:createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts}),
     readSession:readSheetsSession,switched,...planDependencies});
   async function dispatch(args) {
     const body = args.req?.body;
+    const {user,session}=args.auth || {};
+    if (body?.coachPlanVersion===1 && sellerAgentModel(user?.email,config.agentModel)) {
+      const directOwner=session?.accessMode==='direct' || (session && !session.accessMode && user.accountType!=='seat');
+      if (!directOwner || !session.tokenHash || !args.sessionId || String(user._id)!==body.accountId || switched(args.req)) {
+        return {mode:'coach',coachMailAgent:true,respuesta:'Abre tu propia sesión del Coach para consultar o cambiar tus conexiones.'};
+      }
+    }
     const planFocused = body?.coachPlanVersion === 1 && body.coachPlanPending && body.coachQuestionFocus === 'plan';
     const direct = directDraftInput(body,args.text);
     if (direct && !(direct.literal && planFocused)) {

@@ -1,5 +1,7 @@
 import {createHash} from 'node:crypto';
-import {interpretCoachPlan} from './coach-plan-language.js';
+import {interpretCoachPlan,interpretPilotPlan} from './coach-plan-language.js';
+import {describeAgentConnections,offlineRead,sellerAgentModel} from './coach-agent-pilot.js';
+import {excludedReads} from './coach-plan-responses.js';
 import {validTimeZone,readFollowup} from './coach-followup-input.js';
 import {salePeriod} from './coach-postsale.js';
 import {sheetsToday} from './coach-sheets-followup-input.js';
@@ -31,8 +33,8 @@ function view(s,revision,prefix='') {
   for (const page of s.pages || []) button('page',page.arg,page.label);
   if (s.chosen) {
     lines.push('Prospecto de la hoja: '+clean(s.chosen.fullName)+' ('+clean(s.chosen.sheetTitle)+', fila '+s.chosen.row+').');
+    if (s.chosen.reason) lines.push(s.chosen.reason);
     if (s.ops.includes('call') || s.ops.includes('postSale')) {
-      if (s.chosen.reason) lines.push(s.chosen.reason);
       if (s.chosen.phone) {
         lines.push('Teléfono de la ficha: '+s.chosen.phone+'.');
         buttons.push({type:'planCall',revision,phone:s.chosen.phone,label:'Llamar a '+clean(s.chosen.fullName)});
@@ -70,14 +72,16 @@ function pick(s,c) {
   s.chosen=c;s.fields.contact=c.fullName;s.choices=[];s.pages=[];s.listTitle='';s.waiting='';s.questions={};
 }
 
-export function createConversationPlan({config,plans,sheets,sheetTools,channels,readSession,switched,readSales,interpret=interpretCoachPlan,now=Date.now}) {
+export function createConversationPlan({config,plans,sheets,sheetTools,channels,readSession,switched,readSales,interpret=interpretCoachPlan,
+  pilotInterpret=interpretPilotPlan,readAgenda,readMail,readConnections,now=Date.now}) {
   return async args=>{
     const {req,auth,sessionId,text}=args, body=req.body||{};
     const cmd=command.exec(text), client=body.coachPlanPending;
     if (body.coachPlanVersion!==1) return null;
     const email=String(auth?.user?.email || '').toLowerCase();
     const inPilot=list=>list?.some(x=>x==='*' || x===email);
-    const allowed=inPilot(config.sheetsPilot) && inPilot(config.planPilot ?? config.sheetsPilot);
+    const model=readConnections && sellerAgentModel(email,config.agentModel);
+    const allowed=(model || inPilot(config.sheetsPilot)) && inPilot(config.planPilot ?? config.sheetsPilot);
     if (!allowed || !direct(auth) || !sessionId || switched(req) || body.accountId!==String(auth.user._id)) return cmd||client?reply('Abre tu sesión personal del piloto para continuar.'):null;
     if (/^(?:confirmar|descartar|cancelar|elegir horario|registrar horarios|enviar whatsapp)\b.*\b[a-f0-9]{12,32}[.!]?$/i.test(text)) return null;
     const owner=auth.user._id, session=hash(auth.session.tokenHash+':'+sessionId), scope=hash(JSON.stringify([String(owner),session]));
@@ -87,6 +91,7 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
     let ctxCache;
     const ctx=async()=>{
       if (!ctxCache) {
+        if (!inPilot(config.sheetsPilot)) throw Object.assign(new Error('Tu cuenta aún no participa en el piloto de Google Sheets.'),{status:403});
         const {token,grant,...workbook}=await sheets.access(owner);
         ctxCache={owner,session,grant,workbook,access:token,sellerName:auth.user.name,isCurrent:async()=>await current() && await sheets.current(owner,grant)};
       }
@@ -104,8 +109,11 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       if ((client || cmd) && (!record?.data || (!recovery && (client!==record.revision || cmd && cmd[1]!==record.revision)))) return reply(stale);
       if (!client && !cmd && record?.data?.running) return reply('Todavía se está confirmando una propuesta de esta conversación.');
       s=(client || cmd ? record?.data : null) || initial();
-      if (s.sheetGrant && (await ctx()).grant!==s.sheetGrant) return reply('Cambiaste la conexión de Sheets. Pídeme una consulta nueva.');
-      if (s.salesGrant) await readSales(actor,{knownGrant:s.salesGrant,verifyOnly:true});
+      const verifyBindings=async()=>{
+        if (s.sheetGrant && (await ctx()).grant!==s.sheetGrant) throw Object.assign(new Error('Cambiaste la conexión de Sheets. Pídeme una consulta nueva.'),{status:409});
+        if (s.salesGrant) await readSales(actor,{knownGrant:s.salesGrant,verifyOnly:true});
+      };
+      if (cmd || !model) await verifyBindings();
       if (s.running && (!recovery || now()-s.running.at < 90000)) return reply('Hay una confirmación en curso. Espera su resultado antes de modificar la propuesta.',client);
       if (cmd?.[2]==='apply') {
         const keys=cmd[3].split(',');
@@ -153,7 +161,42 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
         intent={kind:'revise',operations:[],bucket:['match','sales'].includes(page[1])?'':page[1]};
       } else if (cmd) intent={kind:'revise',operations:[],ordinal:Number(cmd[3])};
       else {
-        intent=await interpret(text,{context:{operations:s.ops,hasSelection:!!s.chosen,hasReview:Object.values(s.steps).some(x=>x.status==='ready'),waiting:s.waiting}});
+        const context={operations:s.ops,hasSelection:!!s.chosen,hasReview:Object.values(s.steps).some(x=>x.status==='ready'),waiting:s.waiting};
+        if (model) {
+          context.connections=await readConnections(actor);
+          context.lastRead=s.lastRead;
+          if (!await current()) return reply('Tu sesión cambió. Abre de nuevo tu Coach.');
+          intent=await pilotInterpret(text,{context,model});
+          if (['clarify','unavailable','none','unsupported'].includes(intent.kind) && excludedReads(text).size)
+            return reply(intent.question || '¿Qué quieres revisar con las demás conexiones?',client);
+          if (['unsupported','none','unavailable','clarify'].includes(intent.kind)) {
+            const read=offlineRead(text,s.lastRead);
+            if (read && (!s.waiting || !client || s.lastRead==='agenda')) intent={kind:read};
+          }
+          if (['agenda','inbox','sales'].includes(intent.kind)) {
+            if (!await current()) return reply('Tu sesión cambió. Abre de nuevo tu Coach.');
+            if (intent.kind!=='agenda') {
+              const result=await readMail(args,intent.kind);
+              return await current()?result:reply('La sesión cambió durante la consulta.');
+            }
+            const result=await readAgenda(actor,text);
+            if (!await current()) return reply('La sesión cambió durante la consulta.');
+            // A separate day lookup must leave any previous confirmation buttons usable.
+            if (s.ops.length) return reply(result,client);
+            s.lastRead='agenda';
+            const revision=await plans.save(scope,record?.revision,s);
+            return reply(result,revision || '');
+          }
+          if (intent.kind==='capabilities') return reply(describeAgentConnections(context.connections),client,[{type:'connections',label:'Mis conexiones'}]);
+          if (intent.kind==='unsupported') {
+            if (args.legacyFocus && !client) return null;
+            return reply('No encontré una herramienta para completar ese pedido tal como lo planteaste. Estas son las conexiones de tu cuenta:\n'+describeAgentConnections(context.connections),client);
+          }
+          if (intent.kind==='unavailable' && (client || /\b(?:hoja|referidos|pendientes|boletas|calendario|agenda|gmail|correos?|ventas)\b/i.test(text)) && !args.legacyFocus) {
+            return reply('No pude interpretar la petición en este momento. Vuelve a intentarlo.'+(client?' Tu propuesta sigue disponible.':''),client);
+          }
+          if (['plan','revise','select'].includes(intent.kind)) await verifyBindings();
+        } else intent=await interpret(text,{context});
         if (args.legacyFocus && !client && !['plan','capabilities','unsupported'].includes(intent.kind)) return null;
         if (intent.kind==='none' || intent.kind==='unavailable') return client && intent.kind==='unavailable'?reply('No pude interpretar ese cambio. Tu propuesta sigue disponible.',client):null;
         if (intent.kind==='capabilities') return reply('Con tus conexiones del piloto puedo buscar un referido por nombre o anfitrión, priorizar llamadas, revisar tu postventa de Hy Cite, comprobar trayectos entre visitas, buscar o preparar cambios en tus Contactos de Google, preparar un alta o una nota, consultar horarios, agendar una cita personal y redactar un correo. Puedes combinarlo y elegir qué guardar. También puedes corregirme antes de confirmar.',client);
@@ -215,7 +258,7 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       const f=s.fields,today=sheetsToday(now(),zone), needsLookup=s.ops.includes('list') || s.ops.includes('note') || !!f.host && !s.ops.includes('add');
       if (freshQueue && !freshSales) {
         const context=await ctx();s.sheetGrant=context.grant;
-        const next=await sheetTools.nextCall(context,{today,seen:callSeen,name:f.contact,host:f.host,bucket:f.bucket});
+        const next=await sheetTools.nextCall(context,{today,seen:callSeen,name:f.contact,host:f.host,bucket:f.bucket,kind:f.leadKind});
         if (!next.contact) return reply(next.total?'Ya recorriste los contactos con teléfono pendientes en esta consulta.':'No encontré una ficha pendiente con un teléfono completo en las dos pestañas para esa búsqueda.');
         pick(s,next.contact);s.callSeen=[...callSeen,next.contact.identityKey];
         const label={overdue:'Venció el '+s.chosen.date,today:'Toca hoy',undated:'Pendiente sin fecha'};
@@ -256,11 +299,26 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       }
       if (needsLookup && !s.chosen) {
         if (!f.contact && !f.host && !f.bucket && s.ops.includes('note')) { s.questions.contact='¿En la ficha de quién guardamos la nota?';s.waiting='contact';return save(); }
-        const context=await ctx();s.sheetGrant=context.grant;
+        const independentSlots=async()=>{
+          if (!model || !f.slots || !f.schedule || !s.ops.includes('appointment')) return;
+          try {
+            const found=await channels.appointment(actor,{}, {schedule:f.schedule,slots:true});
+            s.questions.availability=found.labels?.length ? 'Horarios disponibles ('+actor.zone+'): '+found.labels.join(' o ')+'.' : found.question;
+          } catch(error) {s.questions.availability=userError(error);}
+        };
+        let context,result;
         const group=f.bucket || (!f.contact && !f.host?'today':'');
-        const lookup=(bucket,offset=0)=>sheetTools.search(context,{name:f.contact,host:f.host,bucket,today,offset});
+        const lookup=(bucket,offset=0)=>sheetTools.search(context,{name:f.contact,host:f.host,bucket,today,offset,kind:f.leadKind});
         const page=requestedPage || 1, limit=10, offset=(page-1)*limit;
-        const result=await lookup(group,offset);
+        try {
+          context=await ctx();s.sheetGrant=context.grant;
+          result=await lookup(group,offset);
+        } catch(error) {
+          if (!model || !f.slots || !s.ops.includes('appointment')) throw error;
+          s.questions.contact='Google Sheets: '+userError(error);
+          await independentSlots();
+          return save();
+        }
         s.choices=result.contacts.slice(0,limit);
         s.pages=[];
         if (deferredOrdinal && s.choices[deferredOrdinal-1]) pick(s,s.choices[deferredOrdinal-1]);
@@ -281,13 +339,15 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
           }
           s.waiting='choice';
           s.questions.contact=deferredOrdinal?'Elige un prospecto de los que aparecen en esta página.':result.total?'¿Con quién seguimos?':'Puedes elegir otro grupo o darme un nombre o anfitrión.';
+          if (!requestedPage) await independentSlots();
           return save();
         }
       }
       if (s.ops.includes('add') && s.ops.includes('note')) {s.questions.note='¿Quieres dar de alta al prospecto o anotar una gestión en una ficha existente? Pídeme una de estas acciones primero.';return save();}
       const dateState=readFollowup(f.noteSchedule || '',{},{timeZone:zone,now:now()}).state;
       // Calendar supplies the checked time to a related draft, independent of operation order in the request.
-      const relatedMail=s.ops.includes('appointment') && (priorDraft && s.mailUsesTime || /\b(cita|demo|demostraci[oó]n|horarios?|llamada|hora|reuni[oó]n|visita)\b/i.test(f.mailInstruction || ''));
+      const relatedMail=s.ops.includes('appointment') && (priorDraft && s.mailUsesTime || /\b(cita|demo|demostraci[oó]n|horarios?|llamada|hora|reuni[oó]n|visita)\b/i.test(f.mailInstruction || '') ||
+        model && f.slots && (!f.mailInstruction || /^(?:(?:y|el|un|mi|para|de|en|lo|le|al|la|listo|un[ao]?|d[eé]ja\w*|prep[aá]r\w*|red[aá]ct\w*|correo|borrador|mensaje|seguimiento)\s*)+[.!]?$/i.test(f.mailInstruction)));
       s.mailUsesTime=!!relatedMail;
       for (const k of ['note','add','appointment','email'].filter(op=>s.ops.includes(op))) {
         if (s.steps[k]) continue;
@@ -301,10 +361,13 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
             s.calendarState=result.state || s.calendarState;
             if (result.options) {s.options=result.options;s.slotLabels=result.labels;}
           } else if (k==='email') {
-            if (relatedMail && !s.steps.appointment?.whenText) {
+            const options=model && relatedMail && !s.steps.appointment?.whenText ? s.slotLabels : null;
+            if (relatedMail && !s.steps.appointment?.whenText && !options?.length) {
               s.questions.email='Cuando elijas el horario, lo incluiré en el borrador.';continue;
             }
-            result=await channels.email(actor,{to:f.to || s.chosen?.email,instruction:f.mailInstruction,priorDraft,editInstruction:priorDraft?intent.mailInstruction:'',whenText:relatedMail?s.steps.appointment.whenText:''});
+            result=await channels.email(actor,{to:f.to || s.chosen?.email,instruction:f.mailInstruction,
+              priorDraft,editInstruction:priorDraft?intent.mailInstruction:'',
+              optionLabels:options,whenText:relatedMail?s.steps.appointment?.whenText:''});
           }
           else if (k==='note') {
             if (f.noteSchedule && dateState.day==null) result={question:'¿Para qué fecha queda el seguimiento en la hoja?'};

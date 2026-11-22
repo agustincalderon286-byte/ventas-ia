@@ -10,6 +10,8 @@ const eventFields = 'id,htmlLink,etag,status,summary,start/dateTime,end/dateTime
 const fail = (text, status) => Object.assign(new Error(text), { status });
 const isoTime = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,9})?)?(?:Z|[+-]\d\d:\d\d)$/;
 const timestamp = value => typeof value === 'string' && isoTime.test(value) ? Date.parse(value) : NaN;
+const civilDate = value => typeof value === 'string' && /^\d{4}-\d\d-\d\d$/.test(value) &&
+  Number.isFinite(Date.parse(value)) && new Date(value).toISOString().startsWith(value+'T');
 const unavailableSlot = () => Object.assign(fail('Ese horario ya no está disponible.', 409), {slotBusy:true});
 const incompleteAvailability = () => fail('Google no pudo verificar ambos calendarios.', 503);
 const calendarPath = id => {
@@ -40,19 +42,20 @@ export function calendarGoogleClient(config, fetcher = fetch) {
       ...(data && { 'Content-Type': 'application/json' }), ...(etag && { 'If-Match': etag }) },
     ...(data && { body: JSON.stringify(data) })
   });
-  async function availability(access, calendarId, {start,end}, mailbox) {
+  async function busyBlocks(access, ids, {start,end}, mailbox) {
     const from = timestamp(start), to = timestamp(end);
-    if (!isSecondaryCalendarId(calendarId) || !Number.isFinite(from) || !Number.isFinite(to) || from >= to) {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to) {
       throw fail('Revisa el período para buscar horarios libres.', 400);
     }
     const result = await api(access,'/freeBusy',{method:'POST',data:{
-      timeMin:start,timeMax:end,items:[{id:'primary'},{id:calendarId}]
+      timeMin:start,timeMax:end,items:ids.map(id=>({id}))
     }});
     if (!(timestamp(result?.timeMin) <= from && timestamp(result?.timeMax) >= to)) throw incompleteAvailability();
     const calendars = result.calendars;
     const primary = calendars?.primary ?? (mailbox && calendars?.[mailbox]);
     const blocks = [];
-    for (const item of [primary,calendars?.[calendarId]]) {
+    for (const id of ids) {
+      const item = id === 'primary' ? primary : calendars?.[id];
       if (Array.isArray(item?.errors) && item.errors.some(error => ['forbidden','insufficientPermissions'].includes(error?.reason))) {
         throw Object.assign(fail('Google solicita renovar el permiso de disponibilidad.',403),{reauthorize:true});
       }
@@ -69,8 +72,48 @@ export function calendarGoogleClient(config, fetcher = fetch) {
     }
     return blocks.sort((a,b) => a.start.localeCompare(b.start));
   }
+  async function availability(access, calendarId, range, mailbox) {
+    if (!isSecondaryCalendarId(calendarId)) throw fail('Elige el calendario personal de TEC.', 400);
+    return busyBlocks(access, ['primary',calendarId], range, mailbox);
+  }
   return {
     availability,
+    primaryBusy: (access, range, mailbox) => busyBlocks(access, ['primary'], range, mailbox),
+    async agendaEvents(access, calendarId, {start,end,zone}) {
+      const base = calendarPath(calendarId) + '/events?';
+      const from = timestamp(start), to = timestamp(end);
+      if (!(from < to) || to-from > 32*86400000) throw fail('Revisa las fechas de la agenda.', 400);
+      const query = new URLSearchParams({
+        timeMin:start, timeMax:end, timeZone:zone, singleEvents:'true', orderBy:'startTime',
+        maxResults:'250', maxAttendees:'1', fields:'nextPageToken,items(id,status,summary,start(date,dateTime),end(date,dateTime),endTimeUnspecified,transparency,attendees(self,responseStatus))'
+      });
+      const rows = new Map(), pages = new Set();
+      while (true) {
+        const data = await api(access, base + query);
+        if (!Array.isArray(data?.items)) throw fail('Google devolvió una agenda incompleta.', 503);
+        for (const item of data.items) {
+          if (item?.status === 'cancelled') continue;
+          const allDay = typeof item?.start?.date === 'string';
+          const first = allDay ? item.start.date : item?.start?.dateTime;
+          const last = allDay ? item.end?.date : item?.end?.dateTime;
+          if (!item?.id || (allDay ? !(civilDate(first) && civilDate(last) && first<last) : !(timestamp(first)<timestamp(last)))) {
+            throw fail('Google devolvió una cita incompleta.', 503);
+          }
+          const title = String(item.summary || '').replace(/[\p{Cc}\p{Cf}\s]+/gu,' ').trim().slice(0,130) || 'Cita sin título';
+          const attendance = item.attendees?.find(a=>a?.self===true)?.responseStatus;
+          rows.set(item.id,{title,start:first,end:last,allDay,available:item.transparency==='transparent',
+            ...(attendance && {attendance}),...(item.status==='tentative' && {tentative:true}),
+            ...(item.endTimeUnspecified===true && {openEnd:true})});
+        }
+        if (data.nextPageToken == null) return [...rows.values()];
+        const next = data.nextPageToken;
+        if (typeof next!=='string' || !next || next.length>4096 || pages.has(next) || pages.size>=11) {
+          throw fail('Hay demasiados eventos para mostrar el período completo. Acota la fecha.', 422);
+        }
+        pages.add(next);
+        query.set('pageToken',next);
+      }
+    },
     async routeAppointments(access, calendarId, {start, end}) {
       if (!(timestamp(start) < timestamp(end)) || timestamp(end)-timestamp(start) > 8*86400000) {
         throw fail('Revisa el período de las citas del trayecto.', 400);
