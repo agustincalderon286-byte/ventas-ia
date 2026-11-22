@@ -81,7 +81,7 @@ function nextDate(text, anchor, order) {
   return '';
 }
 
-function latestEntry(value) {
+export function sheetHistoryEntries(value,locale) {
   const headings = new Set();
   // Inside one dated note, a new line or semicolon can continue the same call.
   // A spaced slash or a fresh date heading starts an independent entry.
@@ -106,13 +106,18 @@ function latestEntry(value) {
     const hours = period ? Number(hour)%12 + (period === 'pm' ? 12 : 0) : Number(hour);
     return {text:text.slice(prefix[0].length),token,weekday,minutes:hour ? hours*60+Number(minute) : null};
   });
-  if (!lines.length) return {text:'',anchor:''};
-  const order = headings.size === 1 ? [...headings][0] : '';
+  const order = headings.size === 1 ? [...headings][0] : !headings.size ? numericOrder(locale) : '';
   for (const line of lines) {
     line.order = order;
     line.anchor = line.token ? explicitDate(line.token,order) : '';
     if (line.anchor && line.weekday && weekdays[new Date(line.anchor+'T00:00:00Z').getUTCDay()] !== line.weekday) line.anchor = '';
   }
+  return lines;
+}
+
+function latestEntry(value) {
+  const lines=sheetHistoryEntries(value);
+  if (!lines.length) return {text:'',anchor:''};
   // Teams may put the newest dated entry first. When lines lack timestamps, only their written order is known.
   if (lines.every(line => line.anchor)) return lines.reduce((a,b) =>
     a.anchor > b.anchor || a.anchor === b.anchor && a.minutes != null && b.minutes != null && a.minutes > b.minutes ? a : b);
@@ -137,10 +142,14 @@ function analyze(entry) {
   return null;
 }
 
+export function excludesPhoneContact(row) {
+  const refusal=/\b(?:no (?:me |le |nos |lo |la |se le )(?:llamen|llames|contacten|contactes|marquen|marques)|no me (?:llame|marque|contacte)|(?:pidio que no|no (?:quiere|desea) que) (?:la|le|lo) (?:llame(?:mos|n)?|marque(?:mos|n)?|contacte(?:mos|n)?)|no molestar|no mas llamadas|don['’]t (?:call|contact))\b/;
+  return [row.history,row.result,row.status].some(v=>stopContact.test(normalized(v)) || refusal.test(normalized(v)) ||
+    /\b(?:numero|telefono|linea) (?:equivocad[oa]|incorrect[oa]|invalid[oa]|desconectad[oa]|fuera de servicio)\b/.test(normalized(v)));
+}
+
 export function classifySheetsFollowup({history, result, followupDate, status}, {today, locale} = {}) {
-  for (const value of [history,result,status]) {
-    if (stopContact.test(normalized(value))) return null;
-  }
+  if (excludesPhoneContact({history,result,status})) return null;
   const resultEntry = latestEntry(result);
   const outcome = analyze(resultEntry);
   const state = analyze(latestEntry(status));

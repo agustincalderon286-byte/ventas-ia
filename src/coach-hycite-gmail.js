@@ -206,7 +206,7 @@ export function gmailClient(config) {
       });
       return response.ok;
     },
-    async notices(access) {
+    async notices(access, options = {}) {
       const query = config.domains.map(domain => 'from:(@' + domain + ')').join(' ');
       const list = await read(api + '/messages?' + new URLSearchParams({
         q: 'newer_than:90d {' + query + '}', maxResults: '100'
@@ -221,7 +221,7 @@ export function gmailClient(config) {
         }));
         messages.push(...batch);
       }
-      return { ...summarizeMessages(messages, config.domains), limited: Boolean(list.nextPageToken) };
+      return { ...summarizeMessages(messages, config.domains, options), limited: Boolean(list.nextPageToken) };
     }
   };
 }
@@ -242,7 +242,23 @@ const reference = new RegExp(
 const uncertain = /pendiente|pending|cancel|declin|rechaz|revers|devolu|devuelt|refund|anulad|void|on hold|suspend|denied|denegad|not (?:yet )?(?:confirmed|approved)|sin (?:confirmar|aprobar)|no (?:confirmad|aprobad)|credit application|solicitud de credito|awaiting approval|en revision/;
 const validOrder = value => value && value.length <= 40 && /\d/.test(value);
 
-function parseNotice(message, domains) {
+function customerIdentifiers(snippet) {
+  // Only values explicitly labelled as the buyer's. Signatures and seller contact details are excluded.
+  const fields={};
+  for (const [key,pattern] of [
+    ['email', /\b(?:customer(?:'s)? (?:e-?mail)(?: address)?|correo(?: electr[oó]nico)? del (?:cliente|comprador))\s*[:=]\s*([^\s,;<>]+)/giu],
+    ['phone', /\b(?:customer(?:'s)? (?:phone|mobile)(?: number)?|(?:tel[eé]fono|celular) del (?:cliente|comprador))\s*[:=]\s*(\+?[\d (][-\d ().]{7,23}\d)(?![\d-])/giu]
+  ]) {
+    const values=new Set([...String(snippet||'').matchAll(pattern)].map(m=>m[1].trim().replace(/[.,;]+$/,'').toLowerCase()));
+    if (values.size===1) {
+      const [value]=values;
+      if (key==='phone' || isGmailAddress(value)) fields[key]=value;
+    }
+  }
+  return fields;
+}
+
+function parseNotice(message, domains, forPostSale) {
   const headers = message.payload?.headers || [];
   const header = name => headers.find(h => h.name.toLowerCase() === name)?.value || '';
   const from = header('from').trim().toLowerCase();
@@ -267,13 +283,13 @@ function parseNotice(message, domains) {
   if (!message.id || !Number.isSafeInteger(time) || time < 0 || time > 8.64e15) return null;
   const accepted = Boolean(order && (match || confirmedTitle.test(normalized)) && !uncertain.test(normalized + ' ' + snippet));
   return { ids, time, row: { id: message.id, subject: subject.slice(0, 220), order,
-    date: new Date(time).toISOString(), confirmed: accepted } };
+    date: new Date(time).toISOString(), confirmed: accepted, ...(accepted && forPostSale && {customer:customerIdentifiers(message.snippet)}) } };
 }
 
-export function summarizeMessages(messages, domains) {
+export function summarizeMessages(messages, domains, {forPostSale = false} = {}) {
   const seen = new Set();
   const confirmed = [], review = [];
-  const notices = messages.map(message => parseNotice(message, domains)).filter(Boolean);
+  const notices = messages.map(message => parseNotice(message, domains, forPostSale)).filter(Boolean);
   // At the same timestamp, prefer manual review over an ambiguous confirmation.
   notices.sort((a,b) => b.time - a.time || Number(a.row.confirmed) - Number(b.row.confirmed));
   for (const { ids, row } of notices) {

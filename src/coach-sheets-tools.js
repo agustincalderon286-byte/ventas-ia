@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { saleScope } from './coach-sheets-agent.js';
-import { classifySheetsFollowup } from './coach-sheets-followup-input.js';
+import { dialNumber, reviewConfirmedSales } from './coach-postsale.js';
+import { classifySheetsFollowup, excludesPhoneContact } from './coach-sheets-followup-input.js';
 import { createSheetsGoogle } from './coach-sheets-google.js';
 import { createSheetsTransfer } from './coach-sheets-transfer.js';
 
@@ -47,6 +48,15 @@ function noteValue(before,entry) {
   return value;
 }
 
+function contactOf({row,key,id},followup,withPhone=false) {
+  const email=text(row.email);
+  const phone=withPhone && !excludesPhoneContact(row) ? dialNumber(row.phone) : '';
+  return {key,identityKey:id,fullName:row.fullName,host:row.host,kind:row.kind,row:row.row,sheetTitle:row.sheetTitle,
+    ...(phone && {phone}),
+    ...(email.length<=254 && /^[^\s@,;:<>]+@[^\s@,;:<>]+\.[^\s@,;:<>]+$/.test(email) && {email}),
+    ...(followup && {date:followup.date || '',reason:followup.reason,bucket:followup.bucket})};
+}
+
 export function createCoachSheetTools({google=createSheetsGoogle(),transfer=createSheetsTransfer({google})}={}) {
   // ctx belongs to one authenticated chat request. Only list/search shares a snapshot.
   const searchReads=new WeakMap();
@@ -62,7 +72,7 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
   }
 
   return {
-    async search(ctx,{name,host,bucket,today,offset=0}={}) {
+    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false}={}) {
       const binding=scope(ctx);
       await check(ctx);
       let cached=searchReads.get(ctx);
@@ -83,12 +93,31 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
         if (!matchWords(row.fullName,nameKey) || !matchWords(row.host,hostKey)) continue;
         const followup=classifySheetsFollowup(row,{today,locale});
         if (bucket && followup?.bucket!==bucket) continue;
-        const email=text(row.email);
-        matches.push({key,identityKey:id,fullName:row.fullName,host:row.host,kind:row.kind,row:row.row,sheetTitle:row.sheetTitle,
-          ...(email.length<=254 && /^[^\s@,;:<>]+@[^\s@,;:<>]+\.[^\s@,;:<>]+$/.test(email) && {email}),
-          ...(followup && {date:followup.date || '',reason:followup.reason,bucket:followup.bucket})});
+        matches.push(contactOf({row,key,id},followup,withPhone));
       }
       return {contacts:matches.slice(offset,offset+12),total:matches.length};
+    },
+
+    async nextCall(ctx,{today,seen=[],name='',host='',bucket=''}={}) {
+      const {rows,locale}=await load(ctx);
+      const priority=['overdue','today','undated'];
+      const ranked=[];
+      for (const hit of rows) {
+        if (!matchWords(hit.row.fullName,fold(name)) || !matchWords(hit.row.host,fold(host))) continue;
+        const followup=classifySheetsFollowup(hit.row,{today,locale});
+        if (!followup || !priority.includes(followup.bucket) || bucket && bucket!==followup.bucket) continue;
+        const contact=contactOf(hit,followup,true);
+        if (contact.phone) ranked.push(contact);
+      }
+      ranked.sort((a,b)=>priority.indexOf(a.bucket)-priority.indexOf(b.bucket) || a.date.localeCompare(b.date) || a.row-b.row);
+      if (name && ranked.length>1) throw fail(422,'Hay varias fichas pendientes con ese nombre. Dime el nombre completo y el anfitrión antes de llamar.');
+      return {contact:ranked.find(c=>!seen.includes(c.identityKey)),total:ranked.length};
+    },
+
+    async postSale(ctx,snapshot,range) {
+      const {rows,locale}=await load(ctx);
+      const review=reviewConfirmedSales(snapshot,rows,{...range,locale});
+      return {...review,pending:review.pending.map(({hit,order,reason})=>({...contactOf(hit,null,true),order,reason}))};
     },
 
     async revalidate(ctx,identityKey) {

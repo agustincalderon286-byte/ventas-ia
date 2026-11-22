@@ -130,3 +130,12 @@ test('unknown headings, omitted Google ranges, and oversized sheets fail without
   await assert.rejects(provider({records,omitColumn:2}).reader.readFollowups('a',bookA),e=>e.status===503);
   await assert.rejects(provider({records,extraLength:16001}).reader.readFollowups('a',bookA),e=>e.status===422);
 });
+
+test('la vista para el Coach conserva el número de pedido y el teléfono de la persona en sus columnas reales',async()=>{
+  const headers={0:[['Nombre del prospecto','Teléfonos','Comentarios del telemarketing','Número de pedido','Correo del prospecto']],7:tabs[7]};
+  const data={[bookA.spreadsheetId]:{0:{1:['Venta de prueba','(312) 555-0144','Venta confirmada','0012-AB','cliente@example.invalid']},7:{}}};
+  const {reader}=provider({headers,records:data});
+  const {rows}=await reader.readFollowups('alpha-token',bookA,{forPlan:true});
+  assert.equal(rows.length,1);
+  assert.deepEqual([rows[0].sheetId,rows[0].phone,rows[0].email,rows[0].order],[0,'(312) 555-0144','cliente@example.invalid','0012-AB']);
+});

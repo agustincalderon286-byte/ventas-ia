@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {interpretCoachPlan} from './coach-plan-language.js';
 import {validTimeZone,readFollowup} from './coach-followup-input.js';
+import {salePeriod} from './coach-postsale.js';
 import {sheetsToday} from './coach-sheets-followup-input.js';
 
 const labels={note:'Guardar nota',add:'Agregar prospecto',appointment:'Confirmar cita',email:'Enviar correo'};
@@ -28,7 +29,16 @@ function view(s,revision,prefix='') {
     }
   }
   for (const page of s.pages || []) button('page',page.arg,page.label);
-  if (s.chosen) lines.push('Prospecto de la hoja: '+clean(s.chosen.fullName)+' ('+clean(s.chosen.sheetTitle)+', fila '+s.chosen.row+').');
+  if (s.chosen) {
+    lines.push('Prospecto de la hoja: '+clean(s.chosen.fullName)+' ('+clean(s.chosen.sheetTitle)+', fila '+s.chosen.row+').');
+    if (s.ops.includes('call') || s.ops.includes('postSale')) {
+      if (s.chosen.reason) lines.push(s.chosen.reason);
+      if (s.chosen.phone) {
+        lines.push('Teléfono de la ficha: '+s.chosen.phone+'.');
+        buttons.push({type:'planCall',revision,phone:s.chosen.phone,label:'Llamar a '+clean(s.chosen.fullName)});
+      }
+    }
+  }
   for (const k of s.ops) {
     const step=s.steps[k];
     if (step) lines.push(titles[k]+': '+(step.status==='saved'?'✓ '+step.message:step.preview+(step.message?'\n'+step.message:'')));
@@ -60,7 +70,7 @@ function pick(s,c) {
   s.chosen=c;s.fields.contact=c.fullName;s.choices=[];s.pages=[];s.listTitle='';s.waiting='';s.questions={};
 }
 
-export function createConversationPlan({config,plans,sheets,sheetTools,channels,readSession,switched,interpret=interpretCoachPlan,now=Date.now}) {
+export function createConversationPlan({config,plans,sheets,sheetTools,channels,readSession,switched,readSales,interpret=interpretCoachPlan,now=Date.now}) {
   return async args=>{
     const {req,auth,sessionId,text}=args, body=req.body||{};
     const cmd=command.exec(text), client=body.coachPlanPending;
@@ -95,12 +105,20 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       if (!client && !cmd && record?.data?.running) return reply('Todavía se está confirmando una propuesta de esta conversación.');
       s=(client || cmd ? record?.data : null) || initial();
       if (s.sheetGrant && (await ctx()).grant!==s.sheetGrant) return reply('Cambiaste la conexión de Sheets. Pídeme una consulta nueva.');
+      if (s.salesGrant) await readSales(actor,{knownGrant:s.salesGrant,verifyOnly:true});
       if (s.running && (!recovery || now()-s.running.at < 90000)) return reply('Hay una confirmación en curso. Espera su resultado antes de modificar la propuesta.',client);
       if (cmd?.[2]==='apply') {
         const keys=cmd[3].split(',');
         if (!recovery && (new Set(keys).size!==keys.length || keys.some(k=>!canExecute(s,k)) ||
             s.restricted && keys.some(k=>!s.selection.includes(k)) || keys.length>1 && keys.join(',')!==s.selection.join(','))) return reply(stale,client);
         if (!await current()) return reply('Abre de nuevo tu sesión del Coach.');
+        if (s.chosen?.order && !recovery) {
+          const refreshed=await readSales(actor,{knownGrant:s.salesGrant});
+          const checked=await sheetTools.postSale(await ctx(),refreshed,{...s.salesRange,zone,today:sheetsToday(now(),zone)});
+          if (!checked.linked.some(c=>c.order===s.chosen.order && c.identityKey===s.chosen.identityKey)) {
+            return reply('La confirmación o el historial de postventa cambió. Revisa de nuevo antes de guardar.',client);
+          }
+        }
         s.running={from:cmd[1],arg:cmd[3],at:now()};
         let version=await plans.save(scope,record.revision,s);
         if (!version) return reply(stale);
@@ -129,16 +147,16 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       let intent,slotChanged=false;
       let requestedPage=0, deferredOrdinal=0;
       if (cmd?.[2]==='page') {
-        const page=/^(today|overdue|undated|match)([1-9]\d*)$/.exec(cmd[3]);
+        const page=/^(today|overdue|undated|match|sales)([1-9]\d*)$/.exec(cmd[3]);
         if (!page || !s.pages?.some(p=>p.arg===cmd[3])) return reply(stale,client);
         requestedPage=Number(page[2]);
-        intent={kind:'revise',operations:[],bucket:page[1]==='match'?'':page[1]};
+        intent={kind:'revise',operations:[],bucket:['match','sales'].includes(page[1])?'':page[1]};
       } else if (cmd) intent={kind:'revise',operations:[],ordinal:Number(cmd[3])};
       else {
         intent=await interpret(text,{context:{operations:s.ops,hasSelection:!!s.chosen,hasReview:Object.values(s.steps).some(x=>x.status==='ready'),waiting:s.waiting}});
         if (args.legacyFocus && !client && !['plan','capabilities','unsupported'].includes(intent.kind)) return null;
         if (intent.kind==='none' || intent.kind==='unavailable') return client && intent.kind==='unavailable'?reply('No pude interpretar ese cambio. Tu propuesta sigue disponible.',client):null;
-        if (intent.kind==='capabilities') return reply('Con tus conexiones del piloto puedo buscar un referido por nombre o anfitrión, revisar pendientes, preparar un alta o una nota, consultar horarios, agendar una cita personal y redactar un correo. Puedes combinarlo y elegir qué guardar. También puedes corregirme antes de confirmar.',client);
+        if (intent.kind==='capabilities') return reply('Con tus conexiones del piloto puedo buscar un referido por nombre o anfitrión, priorizar llamadas, revisar tu postventa de Hy Cite, comprobar trayectos entre visitas, buscar o preparar cambios en tus Contactos de Google, preparar un alta o una nota, consultar horarios, agendar una cita personal y redactar un correo. Puedes combinarlo y elegir qué guardar. También puedes corregirme antes de confirmar.',client);
         if (intent.kind==='unsupported' || intent.kind==='clarify') return reply(intent.question || 'Esa petición incluye una operación que aún no tengo. Puedo preparar una nota, un alta, una cita personal o un correo individual.',client);
       }
       if (!zone) return reply('Necesito la zona horaria de tu dispositivo para preparar el seguimiento.',client);
@@ -147,8 +165,14 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
         s.selection=intent.select.filter(k=>canExecute(s,k));s.restricted=true;
         return save(s.selection.length?'Revisa los cambios elegidos y confirma con el botón.':'La selección no contiene un cambio listo para confirmar.');
       }
+      const freshQueue=intent.operations?.includes('call');
+      const freshSales=intent.operations?.includes('postSale');
+      if ((freshQueue || freshSales) && Object.values(s.steps).some(step=>['ready','retry'].includes(step.status))) {
+        return reply('Tienes cambios por revisar. Confírmalos o cierra esta propuesta antes de pasar al siguiente contacto.',client);
+      }
+      const callSeen=client ? s.callSeen || [] : [];
       // A new objective starts fresh. A reference to the last displayed list keeps its candidates.
-      if (intent.kind==='plan' && (intent.bucket || !intent.ordinal && !(client && s.chosen && !intent.contact && !intent.host && !intent.operations.includes('list')))) s=initial();
+      if (freshQueue || freshSales || intent.kind==='plan' && (intent.bucket || !intent.ordinal && !(client && s.chosen && !intent.contact && !intent.host && !intent.operations.includes('list')))) s=initial();
       if (intent.contact || intent.host) delete s.fields.bucket;
       if (intent.bucket && !intent.contact && !intent.host) {delete s.fields.host;delete s.fields.contact;}
       const oldChoices=s.choices;
@@ -172,6 +196,8 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
         if (candidate?.length===1) pick(s,candidate[0]);
         else {delete s.chosen;s.choices=[];s.pages=[];s.listTitle='';}
       }
+      if (s.chosen && (s.ops.includes('call') || s.ops.includes('postSale')) && intent.operations?.includes('appointment') &&
+          /\b(?:llam|marc)/i.test(intent.note+' '+text)) s.calendarState.action='llamar';
       const oldFields={...s.fields};
       const priorDraft=intent.kind==='revise' && !intent.contact && !intent.host && !intent.to && !deferredOrdinal
         && (!intent.ordinal || slotChanged) ? s.steps.email?.baseDraft : null;
@@ -187,6 +213,47 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
       if (intent.phone || intent.leadKind) invalidate(s,'add');
       s.questions={};s.waiting='';
       const f=s.fields,today=sheetsToday(now(),zone), needsLookup=s.ops.includes('list') || s.ops.includes('note') || !!f.host && !s.ops.includes('add');
+      if (freshQueue && !freshSales) {
+        const context=await ctx();s.sheetGrant=context.grant;
+        const next=await sheetTools.nextCall(context,{today,seen:callSeen,name:f.contact,host:f.host,bucket:f.bucket});
+        if (!next.contact) return reply(next.total?'Ya recorriste los contactos con teléfono pendientes en esta consulta.':'No encontré una ficha pendiente con un teléfono completo en las dos pestañas para esa búsqueda.');
+        pick(s,next.contact);s.callSeen=[...callSeen,next.contact.identityKey];
+        const label={overdue:'Venció el '+s.chosen.date,today:'Toca hoy',undated:'Pendiente sin fecha'};
+        s.listTitle=label[s.chosen.bucket]+'.';
+      }
+      if (s.ops.includes('postSale') && !s.chosen) {
+        if (!readSales) return reply('La consulta de postventa de Hy Cite no está disponible en este momento.');
+        const context=await ctx();s.sheetGrant=context.grant;
+        const snapshot=await readSales(actor,{knownGrant:s.salesGrant});
+        s.salesGrant=snapshot.grant;
+        s.salesRange ||= salePeriod(intent.salesPeriod,today);
+        const review=await sheetTools.postSale(context,snapshot,{...s.salesRange,zone,today});
+        const page=requestedPage || 1,limit=10,offset=(page-1)*limit;
+        const matches=review.pending.filter(c=>(!f.contact || c.fullName.toLocaleLowerCase('es').includes(f.contact.toLocaleLowerCase('es'))) &&
+          (!f.host || c.host?.toLocaleLowerCase('es').includes(f.host.toLocaleLowerCase('es'))));
+        s.choices=matches.slice(offset,offset+limit);
+        s.pages=[];
+        if (page>1) s.pages.push({arg:'sales'+(page-1),label:'Página anterior'});
+        if (matches.length>offset+limit) s.pages.push({arg:'sales'+(page+1),label:'Más ventas pendientes'});
+        const lines=['Postventa del '+s.salesRange.from+' al '+s.salesRange.to+'. '+review.count+' ventas confirmadas. '+matches.length+' pendientes con ficha para esta búsqueda.',
+          review.completed+' con oferta de demo de uso registrada. '+review.excluded+' excluidas por indicaciones de contacto.'];
+        if (review.unmatched.length) lines.push('Sin vínculo comprobable con tu hoja: '+review.unmatched.join(', ')+'. Puedes anotar «Pedido: NÚMERO» en la ficha que hayas verificado.');
+        if (review.ambiguous.length) lines.push('Datos contradictorios o varias fichas: '+review.ambiguous.join(', ')+'. Revisa estos pedidos personalmente.');
+        if (review.limited) lines.push('La búsqueda de Gmail alcanzó su límite de avisos. La revisión es parcial.');
+        if (matches.length>limit) lines.push('Página '+page+' de '+Math.ceil(matches.length/limit)+'.');
+        s.listTitle=lines.join(' ');
+        if (matches.length===1 && (f.contact || f.host || s.ops.some(op=>writable.includes(op)))) {
+          const summary=s.listTitle;pick(s,matches[0]);s.listTitle=summary;
+        } else {
+          s.waiting=s.choices.length?'choice':'';
+          if (s.choices.length) s.questions.contact='Elige una ficha para llamar o preparar su seguimiento.';
+          return save();
+        }
+      }
+      if ((s.ops.includes('call') || s.ops.includes('postSale')) && s.chosen && !s.ops.some(op=>writable.includes(op))) {
+        s.questions.result='Después de la llamada dime cómo te fue y cuándo quieres volver a marcar.';
+        s.waiting='callResult';return save();
+      }
       if (needsLookup && !s.chosen) {
         if (!f.contact && !f.host && !f.bucket && s.ops.includes('note')) { s.questions.contact='¿En la ficha de quién guardamos la nota?';s.waiting='contact';return save(); }
         const context=await ctx();s.sheetGrant=context.grant;

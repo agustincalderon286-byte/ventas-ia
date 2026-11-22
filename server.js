@@ -32603,6 +32603,16 @@ app.get("/api/coach/checkout-session", async (req, res) => {
 registerCoachProductModels(app, { requireActive: requireCoachActivo });
 registerCoachTutorial(app, { requireActive: requireCoachActivo });
 
+app.get("/mis-conexiones/contexto-para-gemini.pdf", async (req,res) => {
+  res.set("Cache-Control","private, no-store").vary("Cookie");
+  const {user,session} = await obtenerCoachAuth(req);
+  if (!user) return res.redirect("/coach/login/");
+  const personal = session?.accessMode === "direct" || (session && !session.accessMode && user.accountType !== "seat");
+  if (!personal || parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE] ||
+      String(user.email || "").toLowerCase() !== "agustincalderon286@gmail.com") return res.sendStatus(403);
+  res.download(path.join(PRIVATE_DIR,"TEC-Coach-contexto-para-Gemini.pdf"));
+});
+
 app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
 

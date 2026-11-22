@@ -71,6 +71,22 @@ export function calendarGoogleClient(config, fetcher = fetch) {
   }
   return {
     availability,
+    async routeAppointments(access, calendarId, {start, end}) {
+      if (!(timestamp(start) < timestamp(end)) || timestamp(end)-timestamp(start) > 8*86400000) {
+        throw fail('Revisa el período de las citas del trayecto.', 400);
+      }
+      const query = new URLSearchParams({
+        timeMin:start, timeMax:end, singleEvents:'true', orderBy:'startTime', maxResults:'100',
+        fields:'nextPageToken,items(id,summary,location,start/dateTime,status,transparency)'
+      });
+      const data = await api(access, calendarPath(calendarId) + '/events?' + query);
+      if (!Array.isArray(data.items) || data.nextPageToken) throw fail('Acota la fecha de la demo.', 422);
+      return data.items.filter(row => row.status !== 'cancelled' && row.transparency !== 'transparent' &&
+        Number.isFinite(timestamp(row.start?.dateTime))).map(row => ({
+        id:row.id, title:String(row.summary || 'Cita').slice(0,160), location:String(row.location || '').slice(0,240),
+        start:new Date(timestamp(row.start.dateTime)).toISOString()
+      }));
+    },
     authorize(state, challenge, email, withAvailability = false) {
       const params = new URLSearchParams({
         client_id: config.clientId, redirect_uri: redirect, state, code_challenge: challenge,

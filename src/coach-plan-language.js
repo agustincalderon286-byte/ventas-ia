@@ -2,13 +2,14 @@
 import { structuredResult } from './coach-mail-intent.js';
 import { isGmailAddress } from './coach-mail-address.js';
 
-const operations = ['list','note','add','appointment','email'];
-const changes = operations.filter(value => value !== 'list');
+const operations = ['list','call','postSale','note','add','appointment','email'];
+const changes = ['note','add','appointment','email'];
+const periods = ['','week','lastWeek','today','yesterday','last7','last30','month'];
 const kinds = ['none','capabilities','plan','revise','select','clarify','unsupported'];
 const buckets = ['','today','overdue','undated'];
 const leadKinds = ['','tickets','referrals'];
 const waitingFields = ['','contact','host','choice','ordinal','schedule','day','clock','time','zone','slots','slot','note','phone',
-  'mail','email','to','purpose','mailInstruction','kind','leadKind','duration','review'];
+  'mail','email','to','purpose','mailInstruction','kind','leadKind','duration','review','callResult'];
 const empty = kind => ({kind,operations:[],select:[],contact:'',host:'',ordinal:0,bucket:'',leadKind:'',phone:'',
   note:'',noteSchedule:'',schedule:'',slots:false,to:'',mailInstruction:'',sendEmail:false,question:''});
 
@@ -18,7 +19,7 @@ const properties = {
   kind:enumString(kinds),operations:enumList(operations),select:enumList(changes),
   contact:{type:'string'},host:{type:'string'},ordinal:{type:'integer'},
   bucket:enumString(buckets),leadKind:enumString(leadKinds),phone:{type:'string'},
-  note:{type:'string'},noteSchedule:{type:'string'},schedule:{type:'string'},slots:{type:'boolean'},to:{type:'string'},
+  salesPeriod:enumString(periods),note:{type:'string'},noteSchedule:{type:'string'},schedule:{type:'string'},slots:{type:'boolean'},to:{type:'string'},
   mailInstruction:{type:'string'},sendEmail:{type:'boolean'},question:{type:'string'}
 };
 
@@ -30,6 +31,9 @@ Elige kind:
 - capabilities = pregunta qué puede hacer con sus conexiones. Si pide una acción real, «¿puedes ...?» es petición y no ayuda. none = consejo comercial, conversación, hipótesis, ejemplos, pregunta general o flujo especializado existente (leer bandeja/hilo o ventas Hy Cite, responder a un hilo, ofertas de dos horarios por correo, WhatsApp, mover citas existentes) que debe pasar al módulo correspondiente. unsupported = una operación o condición esencial fuera del catálogo dentro de un pedido combinado; no ejecutar parcialmente ni sustituir borrar por editar, mover por crear o un envío masivo por uno individual. clarify = intención operacional ambigua que requiere una pregunta corta en español. Nunca inventes efectos realizados.
 
 Operaciones combinables:
+call elige una ficha pendiente con teléfono para que el vendedor la marque desde su teléfono, sin marcar automáticamente. «Dame el siguiente pendiente», «¿a quién llamo primero?», «¿a quién le marco ahorita?» o «pásame el siguiente para marcar» = call, kind plan incluso si acabas de mostrar otro. «Me dijo que trabaja de día y que le llame el jueves después de las seis» tras un call o postSale = revise con note y appointment para PROPONER la nota y el recordatorio personal, conservar el contacto seleccionado y la fecha literal en noteSchedule y schedule. Si solo cuenta el resultado sin fecha, propone solo note. Si solo pide una llamada en el futuro, usa appointment, no call.
+postSale = cruzar ventas confirmadas de Hy Cite con Sheets para ofrecer demo de uso, hacer postventa o identificar clientes por contactar después de comprar. Solo listar ventas confirmadas sigue siendo el flujo de Gmail (none). Para postSale indica salesPeriod=week (esta semana o sin rango), lastWeek, month (este mes), today, yesterday, last7 o last30 según lo que pida. Para otro período pregunta cuál de esos intervalos quiere consultar. Conserva el contacto seleccionado al pedir después una nota, cita o correo. Nunca marques la venta como entregada ni la llamada como realizada. Para «quién me falta llamar de los que compraron esta semana» solo postSale y deja escoger a la persona.
+
 list busca en las dos pestañas autorizadas a un contacto, a los referidos de un anfitrión o los seguimientos de una categoría. bucket today = vencen hoy, overdue = ya se pasó el día, undated = pendientes sin fecha. No uses undated para «no contestó» si no pide pendientes sin fecha. Los planes con un contacto explícito en Calendar/Gmail y sin petición de consultarlo en la hoja no necesitan list. Tampoco consultes la hoja para un pronombre ya resuelto.
 note propone añadir una gestión o acordar/corregir próxima fecha en la ficha. note (el campo) debe ser un trozo literal, claro y relevante de la petición; evita copiar instrucciones de otros canales a la nota. noteSchedule (campo) solo se llena con la fecha literal que el vendedor quiere registrar como próxima gestión EN LA FICHA; puede coincidir con la cita si pide ambas para ese día. schedule es de Calendar. El día de una cita por sí solo no es la próxima fecha solicitada para la hoja. «Anota que contestó y agéndame para el viernes» → noteSchedule vacío, schedule «el viernes». «En la hoja déjale el próximo contacto para el martes y agenda una demo el viernes» → noteSchedule «el martes», schedule «el viernes». «Mejor a las cinco» solo cambia la hora de la cita si se está revisando Calendar. Nunca supongas que preparar una cita o un correo también pide modificar la ficha.
 add propone captar un contacto nuevo del vendedor en Sheets: tickets = rifa o boleta; referrals = referido de 4 en 14. host es quien refirió, contact el prospecto o el apodo que realmente dijo. Un registro puede pedir nombre, teléfono, tipo o anfitrión cuando falten.
@@ -117,7 +121,8 @@ function validate(result,context,message,values) {
   if (kind==='revise' && !context.operations.length && !context.hasSelection && !context.hasReview && !context.waiting) {
     return ask('¿Qué seguimiento o propuesta quieres preparar?');
   }
-  const out={...empty(kind),operations:result.operations,bucket:result.bucket,leadKind:result.leadKind,ordinal:result.ordinal,slots:result.slots,
+  if (result.salesPeriod && (!periods.includes(result.salesPeriod) || !result.operations.includes('postSale'))) return unavailable();
+  const out={...empty(kind),...(result.salesPeriod && {salesPeriod:result.salesPeriod}),operations:result.operations,bucket:result.bucket,leadKind:result.leadKind,ordinal:result.ordinal,slots:result.slots,
     sendEmail:sendEmail && (result.operations.includes('email') || context.operations.includes('email'))};
   for (const [key,max] of Object.entries(limits)) {
     if (typeof result[key]!=='string' || result[key].length>max) return unavailable();
@@ -139,6 +144,12 @@ function validate(result,context,message,values) {
 export async function interpretCoachPlan(text, {context={},infer=inference}={}) {
   if (typeof text!=='string' || !text.trim()) return empty('none');
   if (text.length>6000) return ask('¿Puedes dividir el pedido en dos mensajes más cortos?');
+  const words=text.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim();
+  // The ordinary shorthand for a single next call works even if the interpreter is offline.
+  // Qualified queries, corrections and combinations continue through the full interpreter.
+  if (/^(?:a quien (?:le )?(?:marco|llamo)(?: (?:ahorita|ahora|primero|ahora mismo))?|(?:dame|pasame) (?:el |la )?siguiente (?:pendiente|llamada|contacto))(?: por (?:favor|fa))?$/.test(words)) {
+    return {...empty('plan'),operations:['call']};
+  }
   const {message,values}=maskContactDetails(text.trim());
   const safeContext=publicContext(context);
   try {

@@ -74,6 +74,10 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
       const token = await authorizedToken(doc,true);
       return google.availability(token,doc.calendarId,{start,end},doc.mailbox);
     },
+    async routeAppointments({owner,grant,start,end}) {
+      const doc = await connectedCalendar(owner,grant,true);
+      return google.routeAppointments(await authorizedToken(doc,true),doc.calendarId,{start,end});
+    },
     async saveEvent(event) {
       if (event.reconcileOnly) {
         // Read-only: returns the event this operation already wrote, or null. Never inserts or patches.

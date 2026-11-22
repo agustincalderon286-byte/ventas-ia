@@ -572,17 +572,38 @@ test("a late save receipt cannot write into the next visit or seller session; vi
   assert.ok(referrals.confirm());
 });
 
-test("the referral step exposes camera and gallery before the manual form, and Mis leads targets that reader", () => {
-  const photo = appPage.match(/<section class="fourteen-photo-tool"[^>]*>([\s\S]*?)<\/section>/);
+test("el botón de referencias y el de Mis leads abren el mismo lector inicialmente cerrado", () => {
+  const photo = appPage.match(/<dialog class="fourteen-photo-tool"[^>]*>([\s\S]*?)<\/dialog>/);
   assert.ok(photo);
-  const manual = appPage.indexOf('id="tec-fourteen-sheet"');
-  assert.ok(appPage.indexOf('id="paso-4-en-14"') < photo.index && photo.index < manual);
-  assert.doesNotMatch(photo[0].split(">")[0], /hidden/);
-  assert.match(photo[1], /capture="environment" data-fourteen-photo-camera/);
+  assert.doesNotMatch(photo[0].split(">")[0], /\sopen(?:\s|$)/);
+  assert.match(photo[1], /data-fourteen-photo-close/);
+  assert.match(photo[1], /id="fourteen-photo-notice"[\s\S]*OpenAI[\s\S]*capture="environment" data-fourteen-photo-camera/);
   assert.match(photo[1], /data-fourteen-photo\s*\//);
   assert.equal(appPage.match(/data-fourteen-photo-read/g)?.length, 1);
+  const card=appPage.slice(appPage.indexOf('id="paso-4-en-14"'), appPage.indexOf('id="tec-fourteen-sheet"'));
+  assert.match(card,/data-fourteen-sheet-toggle[\s\S]*data-fourteen-photo-toggle aria-haspopup="dialog" aria-controls="tec-referral-photo" aria-expanded="false"/);
+  assert.doesNotMatch(card,/data-fourteen-photo-read/);
   const folder = appPage.slice(appPage.indexOf("<h3>Mis leads</h3>"), appPage.indexOf("data-lead-folder-wrap"));
-  assert.match(folder, /data-jump-ticket-photo aria-controls="tec-referral-photo">Subir foto de boletas/);
+  assert.match(folder, /data-jump-ticket-photo aria-haspopup="dialog" aria-controls="tec-referral-photo" aria-expanded="false"/);
+});
+
+test("cerrar y reabrir la foto conserva el borrador, sin volver a transcribir ni cambiar de pestaña", async () => {
+  const launch=new Element("button"), jump=new Element("button"), close=new Element("button"), dialog=new Element("dialog");
+  const field=new Element("input");
+  dialog.append(close,field);
+  let bindings=0;
+  dialog.querySelector=()=>close;
+  dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.fire("close");};
+  const nodes={"[data-fourteen-photo-tool]":dialog,"[data-fourteen-photo-toggle]":launch,"[data-jump-ticket-photo]":jump};
+  const context={document:{querySelector:s=>nodes[s]},window:{TecReferralPhoto:{bind(){bindings++;}}},
+    form:{},isCurrentSeller:()=>true,reviewSheets(){},visiting:false};
+  const a=appSource.indexOf('  const photoTool = document.querySelector("[data-fourteen-photo-tool]")');
+  const b=appSource.indexOf("  const exportSheet =",a);
+  vm.runInNewContext(appSource.slice(a,b),context);
+  await launch.fire("click");field.value="Teléfono corregido";assert.equal(dialog.open,true);
+  await close.fire("click");assert.equal(dialog.open,false);assert.equal(launch["aria-expanded"],"false");
+  await jump.fire("click");assert.equal(dialog.open,true);assert.equal(jump["aria-expanded"],"true");
+  assert.equal(field.value,"Teléfono corregido");assert.equal(bindings,1);
 });
 
 test("the integration sends reviewed rows once with an account-bound key and opens the host form only when applying referrals", async () => {
@@ -592,7 +613,7 @@ test("the integration sends reviewed rows once with an account-bound key and ope
   let bound, own = true, loads = 0;
   const context = {
     window: { TecReferralPhoto: { bind: args => { bound = args; } } }, document: { querySelector: () => null },
-    form: { scrollIntoView() {} }, accountId: "seller-a", visiting: false, isCurrentSeller: () => own, reviewSheets() {},
+    form: { scrollIntoView() {}, querySelector:()=>({focus(){}}) }, isCoachWorkspaceAvailable:()=>true, setCoachWorkspaceTab:()=>true, accountId: "seller-a", visiting: false, isCurrentSeller: () => own, reviewSheets() {},
     createTecOfflineId: () => "stable-test-key", apiRequest: async (url, options) => {
       requests.push({ url, options: JSON.parse(JSON.stringify(options)) });
       return { createdCount: 1, duplicateCount: 0 };

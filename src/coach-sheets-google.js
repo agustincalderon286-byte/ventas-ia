@@ -7,6 +7,7 @@ const headerPatterns = {
   phone:/^(?:telefono(?:s)?(?: (?:del (?:referido|prospecto)|celular|de contacto))?|celular|numero de telefono|phone(?: number)?)$/,
   host:/^(?:anfitrion(?:a)?|nombre del anfitrion|quien refiere|referido por|referente|host(?: name)?)$/,
   hostPhone:/^(?:telefono (?:del )?anfitrion|host phone)$/,
+  order:/^(?:pedido|orden|numero de (?:pedido|orden)|order (?:id|number))$/,
   number:/^(?:nro|numero|no|num)$/,
   city:/^(?:ciudad(?: o zona(?: de residencia)?(?: zip code)?)?|zona de residencia|city)$/,
   address:/^(?:direccion(?: del (?:referido|prospecto))?|domicilio|address)$/,
@@ -192,13 +193,14 @@ export function createSheetsGoogle(fetcher = fetch) {
       }
       return state;
     },
-    async readFollowups(access, book, { forPlan = false } = {}) {
+    async readFollowups(access, book, { forPlan = false, forRoute = false } = {}) {
       const {sheets, state, locale} = await layouts(access, book);
-      const columns = ['fullName', 'host', 'number', 'seller', 'history', 'result', 'followupDate', 'status'];
-      if (forPlan) columns.push('email','phone');
+      const columns = forRoute ? ['fullName','host','number','seller','address','city'] :
+        ['fullName','host','number','seller','history','result','followupDate','status'];
+      if (forPlan) columns.push('email','phone','order');
       const destinations = sheets.map(info => state[info.kind]);
       for (const dest of destinations) {
-        if (!['history','result','followupDate','status'].some(field => dest.cols[field] != null)) {
+        if (!forRoute && !['history','result','followupDate','status'].some(field => dest.cols[field] != null)) {
           throw fail(422, 'No reconocí columnas de seguimiento en «'+dest.title+'». Revisa los encabezados en la hoja.');
         }
       }
@@ -263,6 +265,7 @@ export function createSheetsGoogle(fetcher = fetch) {
             delete item.number;
             if (!item.fullName) continue;
             textSize += item.fullName.length + item.host.length + item.seller.length + item.history.length + item.result.length + item.followupDate.length + item.status.length;
+            if (forRoute) textSize += (item.address || '').length + (item.city || '').length;
             if (textSize > 4*1024*1024) throw fail(422, 'El historial es demasiado extenso para completar la revisión.');
             rows.push(item);
           }

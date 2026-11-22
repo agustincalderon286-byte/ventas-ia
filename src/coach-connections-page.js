@@ -2,6 +2,14 @@ const actions = '/api/coach/conexiones/gmail/';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const date = value => new Intl.DateTimeFormat('es-US', { dateStyle: 'medium', timeZone: 'America/Chicago' }).format(new Date(value));
 export const notices = {
+  contactsMissingScope:'Para usar la agenda, elige el permiso de Contactos en Google.',
+  contactsNoOffline:'Vuelve a conectar Contactos para permitir el acceso desde tu Coach.',
+  contactsConnected:'Contactos de Google ya está conectado. Puedes buscar y preparar cambios desde el chat.',
+  contactsDisconnected:'El Coach desconectó tu agenda de Google.',
+  contactsWrongAccount:'Conecta Contactos con el mismo correo que usas en tu Coach.',
+  contactsDisabled:'Contactos está pendiente de configuración.',
+  contactsReconnect:'Vuelve a autorizar tus Contactos de Google.',
+  contactsFailed:'Google no pudo completar la conexión de Contactos.',
   sheetsDisabled: 'La conexión de Google Sheets está pendiente de configuración.',
   sheetsConnected: 'Google Sheets autorizado. Elige el archivo y sus dos pestañas.',
   sheetsWrongAccount: 'Elige en Google la cuenta con el mismo correo que usas en tu Coach.',
@@ -60,7 +68,7 @@ function businessSection(line, coachEmail, template) {
     <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>`;
 }
 
-export function connectionsPage({ doc, cal, pilot, ready, calendarReady, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, coachEmail, csrf, message }) {
+export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, coachEmail, csrf, message }) {
   // Alta de la línea Business incompleta: se mantiene el flujo manual y se avisa sin datos de la configuración.
   const pendingNote = businessPending ? '<p class="notice">TEC todavía no completó la conexión de tu línea de WhatsApp Business con Meta. Mientras tanto, prepara tus borradores aquí y envíalos desde tu app.</p>' : '';
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
@@ -76,7 +84,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, sheets,
   let content;
   if (!pilot) content = '<p>El acceso al piloto se habilita por vendedor.</p>';
   else if (connected) content = `<p>Gmail conectado · <strong>${esc(doc.mailbox)}</strong></p>
-      <p>Escribe «Revisa mis correos» en el chat de Coach para ver los cinco mensajes más recientes de tu bandeja de entrada. Pídele «Revisa mis ventas de Hy Cite» para consultar las órdenes confirmadas.</p>
+      <p>Escribe «Revisa mis correos» en el chat de Coach para ver los cinco mensajes más recientes de tu bandeja de entrada. Pídele «Revisa mis ventas de Hy Cite» para consultar las órdenes confirmadas. Con Sheets conectado también puedes preguntar a quién le falta una demo de uso.</p>
       <p>${doc.sendEnabled ? 'Puedes responder en el mismo hilo, pedir cambios al borrador y confirmar el envío desde el chat.' : 'Para enviar un borrador desde Coach, autoriza también el envío en Google.'}</p>
       <div class="actions">${ready ? form('sync', 'Consultar ventas') : '<p>TEC debe completar la configuración de Gmail.</p>'}${ready && !doc.sendEnabled ? form('enable-send', 'Autorizar envío en Google') : ''}${form('disconnect', 'Desconectar y borrar datos', true)}</div>`;
   else if (!ready) content = '<p>La conexión estará disponible cuando TEC complete la configuración de Google.</p>';
@@ -104,8 +112,12 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, sheets,
     } else {
       controls = `<p>Conecta la cuenta de Google que usas en el piloto. Coach creará «Seguimientos TEC» para tus citas y recordatorios. ${availabilityInfo}</p><div class="actions">${calForm('start','Conectar mi Google Calendar')}${availabilityForm}</div>`;
     }
-    calendar = `<section><h2>Google Calendar</h2>${controls}<p>Al desconectar, Coach elimina su permiso guardado. Tus citas permanecen en Google. Puedes retirar el acceso de todo TEC desde <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">tu cuenta de Google</a>.</p></section>`;
+    calendar = `<section><h2>Google Calendar</h2>${controls}<p>Para planear tu ruta, pregunta si te da tiempo de visitar a alguien antes de la siguiente demo.</p><p>Al desconectar, Coach elimina su permiso guardado. Tus citas permanecen en Google. Puedes retirar el acceso de todo TEC desde <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">tu cuenta de Google</a>.</p></section>`;
   }
+  const contactsPane=contactsPilot ? `<section><h2>Contactos de Google</h2>
+    <p>${contacts?.grant?'Agenda conectada · '+esc(contacts.mailbox):'Conecta la agenda de tu propia cuenta de Google.'}</p>
+    <p>El Coach busca coincidencias por nombre, teléfono o correo. Tú eliges si crear una ficha o agregar los datos a una existente.</p>
+    ${contactsReady ? form(contacts?.grant?'disconnect':'start',contacts?.grant?'Desconectar Contactos':'Conectar mis Contactos de Google',Boolean(contacts?.grant),'/api/coach/conexiones/contactos/') : '<p>TEC está completando la configuración.</p>'}</section>` : '';
   const snapshot = doc?.snapshot;
   const waApi = '/api/coach/conexiones/whatsapp/';
   const personalWhatsApp = businessLine ? businessSection(businessLine, coachEmail, businessTemplate) : pilot && personalWhatsAppReady ? `<section><h2>WhatsApp</h2>
@@ -124,7 +136,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, sheets,
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${results}</main></body></html>`;
+    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${results}${contactsPilot && coachEmail==='agustincalderon286@gmail.com' ? '<p><a href="/mis-conexiones/contexto-para-gemini.pdf" download>Descargar el contexto de TEC para Gemini (PDF)</a></p>' : ''}</main></body></html>`;
 }
 
 const sheetsActions='/api/coach/conexiones/sheets/';
@@ -137,7 +149,7 @@ function sheetsSection({form,profile,ready,email}) {
   if (!ready) return '<section><h2>Google Sheets</h2><p>La conexión estará disponible cuando TEC complete la configuración de Google Sheets.</p></section>';
   const hint=pilotBookFor(email) ? `<p>Para el piloto, elige <a href="https://docs.google.com/spreadsheets/d/${suggestedWorkbook}/edit" target="_blank" rel="noopener noreferrer">Base de datos Eric – Young Dreamers Chicago</a>.</p>`:'';
   const controls=profile?.grant ? `<p>Cuenta conectada · <strong>${esc(profile.mailbox)}</strong></p>
-    ${profile.spreadsheetId?`<p><strong>${esc(profile.spreadsheetTitle)}</strong><br>Rifas → ${esc(profile.ticketsTitle)}<br>Referidos con anfitrión → ${esc(profile.referralsTitle)}</p>`:hint}
+    ${profile.spreadsheetId?`<p><strong>${esc(profile.spreadsheetTitle)}</strong><br>Rifas → ${esc(profile.ticketsTitle)}<br>Referidos con anfitrión → ${esc(profile.referralsTitle)}</p><p>Pregunta «¿A quién le marco ahorita?» para ver el siguiente pendiente.</p>`:hint}
     <div class="actions">${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>` :
     `<p>Elige una hoja de tu cuenta de Google para registrar rifas y referencias. El Coach te mostrará los posibles duplicados antes de que confirmes cada guardado.</p>${hint}${form('start','Conectar mi Google Sheets',false,sheetsActions)}`;
   return `<section id="google-sheets"><h2>Google Sheets</h2>${controls}</section>`;

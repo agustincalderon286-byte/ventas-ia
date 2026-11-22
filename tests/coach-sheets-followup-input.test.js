@@ -119,3 +119,10 @@ test('valida el día abreviado en las cabeceras igual que el nombre completo', (
   assert.equal(classify({history:'Mié. 04/11/26. 9:00am. Llamar mañana'}).date,'2026-11-05');
   assert.equal(classify({history:'Mié. 21/11/26. 9:00am. Llamar mañana'}).bucket,'undated');
 });
+
+test('una negativa explícita en español o inglés excluye incluso filas con seguimiento previo',()=>{
+  for (const history of ['Dice que no le marquen', 'No quiere que le marque', 'Pidió no molestar', 'Please don’t contact me']) {
+    assert.equal(classify({history,followupDate:today,status:'Pendiente'}),null,history);
+  }
+  assert.equal(classify({history:'Hoy no le marqué',followupDate:today,status:'Pendiente'}).bucket,'today');
+});

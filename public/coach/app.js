@@ -4186,14 +4186,27 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
   };
 
   const photoTool = document.querySelector("[data-fourteen-photo-tool]");
-  document.querySelector("[data-jump-ticket-photo]")?.addEventListener("click", () => {
-    if (!photoTool || !setCoachWorkspaceTab("cierre")) return;
-    photoTool.scrollIntoView({ block: "start" });
-    photoTool.focus({ preventScroll: true });
-  });
+  const photoToggle = document.querySelector("[data-fourteen-photo-toggle]");
+  const ticketPhotoToggle = document.querySelector("[data-jump-ticket-photo]");
+  const photoLaunchers = [photoToggle, ticketPhotoToggle].filter(Boolean);
+  const setPhotoExpanded = open => {
+    for (const launcher of photoLaunchers) launcher.setAttribute("aria-expanded", String(open));
+  };
+  for (const launcher of photoLaunchers) {
+    launcher.addEventListener("click", () => {
+      if (!photoTool || photoTool.open) return;
+      photoTool.showModal();
+      setPhotoExpanded(true);
+    });
+  }
+  photoTool?.querySelector("[data-fourteen-photo-close]")?.addEventListener("click", () => photoTool.close());
+  photoTool?.addEventListener("close", () => setPhotoExpanded(false));
   window.TecReferralPhoto?.bind({
     form, container: photoTool || form, isCurrentSeller,
-    openLeads: openTicketFolder,
+    openLeads: () => {
+      if (photoTool?.open) photoTool.close();
+      openTicketFolder();
+    },
     reviewSheets,
     readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
       method:"POST", body:{photo:image, accountId}, timeoutMs:110000
@@ -4216,9 +4229,16 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
       return receipt;
     },
     apply: sheet => {
+      if (!isCoachWorkspaceAvailable(document.querySelector('[data-coach-workspace-tab="cierre"]'))) {
+        return { applied: false, message: "Abre el espacio de Cierre de tu cuenta para pasar estos referidos a la hoja." };
+      }
       const result = sheetTools.applyPhoto(form, sheet, FOURTEEN_SHEET_MAX_REFERRALS, appendReferralRow);
       if (result.applied) {
+        if (photoTool?.open) photoTool.close();
+        setCoachWorkspaceTab("cierre");
         syncToggle(true);
+        const firstField = form.querySelector("input:not([type=hidden])");
+        (firstField || toggle).focus({ preventScroll: true });
         form.scrollIntoView({ block: "start", behavior: "smooth" });
       }
       return result;
@@ -9495,6 +9515,34 @@ function renderCoachMessageActions(card, actions = []) {
       element.type = "button";
       element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
       element.textContent = String(action.label).trim();
+    } else if (action?.type === "contactsAction" && /^[a-f0-9]{24}$/.test(action.revision) &&
+        ["create","update","cancel"].includes(action.op) && Number.isInteger(action.index) && action.index >= 0 && action.index <= 10 &&
+        typeof action.label === "string" && action.accountId && action.sessionId) {
+      element = document.createElement("button");
+      element.type = "button";
+      element.textContent = action.label.slice(0,140);
+      element.dataset.coachContactsAction = ["TECPERSON",action.revision,action.op,action.index].join(" ");
+      element.dataset.coachActionAccount = action.accountId;
+      element.dataset.coachActionSession = action.sessionId;
+      element.dataset.coachOfferChannel = "contacts";
+      element.dataset.coachOfferKind = "slot";
+    } else if (["planCall","routeMap"].includes(action?.type) && action.accountId && action.sessionId) {
+      const call = action.type === "planCall";
+      if (call && !/^\+[1-9]\d{6,14}$/.test(action.phone)) return;
+      if (!call) {
+        let url;
+        try { url = new URL(action.url); } catch { return; }
+        if (url.origin !== "https://www.google.com" || url.username || url.password ||
+            url.pathname !== "/maps/dir/" || url.searchParams.get("api") !== "1") return;
+      }
+      element = document.createElement("a");
+      element.href = call ? "tel:" + action.phone : action.url;
+      if (!call) { element.target = "_blank"; element.rel = "noopener noreferrer"; }
+      element.dataset.coachActionAccount = action.accountId;
+      element.dataset.coachActionSession = action.sessionId;
+      element.dataset.coachOfferChannel = call ? "plan" : "route";
+      element.dataset.coachOfferKind = "slot";
+      element.textContent = String(action.label || (call ? "Llamar" : "Ver trayecto en Google Maps")).slice(0,140);
     } else if (action?.type === "planAction" && /^[a-f0-9]{24}$/.test(action.revision) &&
         ["apply","slot","contact","close","page"].includes(action.op) && /^[a-z0-9,]{1,40}$/.test(action.arg) &&
         typeof action.label === "string" && action.label.trim() && action.accountId && action.sessionId) {
@@ -9589,8 +9637,8 @@ function renderCoachMessageActions(card, actions = []) {
 // only replaces the context of the agent that answered, and every context is
 // bound to the account and conversation that produced it.
 function createCoachAgentContexts() {
-  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending", sheets: "coachSheetsPending", plan: "coachPlanPending" };
-  const offerTypes = { mailRetryReceipt: "mail", mailConfirm: "mail", mailCancel: "mail", calendarConfirm: "calendar", calendarCancel: "calendar",
+  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending", sheets: "coachSheetsPending", contacts: "coachContactsPending", route: "coachRoutePending", plan: "coachPlanPending" };
+  const offerTypes = { contactsAction: "contacts", planCall: "plan", routeMap: "route", mailRetryReceipt: "mail", mailConfirm: "mail", mailCancel: "mail", calendarConfirm: "calendar", calendarCancel: "calendar",
     calendarSlot: "calendar", waPersonalConfirm: "whatsapp", waCancel: "whatsapp", waCloudSend: "whatsapp" };
   const previewTypes = ["mailConfirm", "waPersonalConfirm", "waCloudSend"];
   const ownerOf = body => String(body?.accountId || "") + "\n" + String(body?.sessionId || "");
@@ -9620,7 +9668,7 @@ function createCoachAgentContexts() {
     },
     record(body, data, actions = []) {
       if (data?.coachMailAgent !== true) return null;
-      const channel = data.coachPlanAgent === true ? "plan" : data.coachSheetsAgent === true ? "sheets" : data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
+      const channel = data.coachContactsAgent === true ? "contacts" : data.coachRouteAgent === true ? "route" : data.coachPlanAgent === true ? "plan" : data.coachSheetsAgent === true ? "sheets" : data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
       if (owner !== ownerOf(body)) return null;
       const field = fields[channel];
       const sent = typeof body[field] === "string" ? body[field] : "";
@@ -9661,6 +9709,7 @@ function retireCoachOffers(roots, keepCards, outcome) {
       if (!stale) return;
       element.disabled = true;
       element.dataset.coachOfferStale = "1";
+      if (element.dataset.coachActionAccount) element.removeAttribute?.("href");
       element.setAttribute?.("aria-disabled", "true");
       element.title = "Esta opción ya no está vigente.";
     });
@@ -18386,7 +18435,7 @@ async function loadCoachAppPage() {
       // Only the agent that answered replaces its own context; general replies keep them all.
       const outcome = coachAgentContexts.record(requestBody, data, actions);
       updateCoachMessage(assistantMessageHandles, finalReply, {
-        actions: mailAgent ? actions.map(action => ["waOpen", "planAction"].includes(action?.type)
+        actions: mailAgent ? actions.map(action => ["waOpen", "planAction", "planCall", "routeMap", "contactsAction"].includes(action?.type)
           ? { ...action, accountId: requestBody.accountId, sessionId: requestBody.sessionId }
           : data.coachOfferAgent && ["calendarSlot","calendarConfirm","calendarCancel"].includes(action?.type) ? { ...action, fromOffer: true } : action)
           : actions.filter(action => action?.type === "workspace")
@@ -18462,7 +18511,13 @@ async function loadCoachAppPage() {
     sendCoachMessage(chatInput?.value || "");
   });
 
+  window.addEventListener("tec:coach-session-change", () => retireCoachOffers([chatMessages,floatingChatMessages], [], {all:true}));
   [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {
+    root.addEventListener("auxclick", event => {
+      const link = event.target.closest("a[data-coach-action-account]");
+      if (link && (link.dataset.coachOfferStale || link.dataset.coachActionAccount !== String(me.user.id) ||
+          link.dataset.coachActionSession !== getCoachChatSessionId())) event.preventDefault();
+    });
     root.addEventListener("click", event => {
       const personalLink = event.target.closest("[data-coach-whatsapp-account]");
       if (personalLink) {
@@ -18477,6 +18532,18 @@ async function loadCoachAppPage() {
       if (staleOffer) {
         event.preventDefault?.();
         setCoachChatStatusText("Esa opción ya no está vigente. Usa la más reciente de la conversación.");
+        return;
+      }
+      const scopedAction = event.target.closest("[data-coach-action-account]");
+      if (scopedAction) {
+        if (scopedAction.dataset.coachActionAccount !== String(me.user.id) ||
+            scopedAction.dataset.coachActionSession !== getCoachChatSessionId()) {
+          event.preventDefault();
+          setCoachChatStatusText("Abre esta opción desde la conversación donde la preparaste.");
+        } else if (scopedAction.dataset.coachContactsAction) {
+          event.preventDefault();
+          sendCoachMessage(scopedAction.dataset.coachContactsAction, {displayText:scopedAction.textContent});
+        }
         return;
       }
       const cloudButton = event.target.closest("[data-coach-wa-cloud-send]");

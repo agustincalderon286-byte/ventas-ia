@@ -9497,8 +9497,41 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
 }
 
 /* Revisión de una hoja de referencias en el teléfono. */
-.fourteen-photo-tool { padding: 1rem; border: 1px solid currentColor; border-radius: 12px; }
-.fourteen-photo-tool > h4 { margin: 0 0 .4rem; }
+.fourteen-photo-tool {
+  box-sizing: border-box;
+  width: min(42rem, calc(100% - 1.25rem));
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin: auto;
+  padding: clamp(.85rem, 3vw, 1.5rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  color: #172d43;
+  border: 1px solid #b8c5cf;
+  border-radius: 16px;
+}
+.fourteen-photo-tool:not([open]) { display: none; }
+.fourteen-photo-tool::backdrop { background: rgb(12 28 43 / 65%); }
+.fourteen-photo-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .6rem;
+}
+.fourteen-photo-header h2 { margin: .3rem 0; font-size: clamp(1.05rem, 4vw, 1.35rem); }
+.fourteen-photo-header button { flex: none; min-height: 44px; }
+@media (max-width: 480px) {
+  .fourteen-photo-tool > .dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fourteen-photo-tool > .dashboard-actions > * { min-width: 0; min-height: 46px; justify-content: center; }
+  .fourteen-photo-tool [data-fourteen-photo-read] { grid-column: 1 / -1; }
+}
 .coach-sheets-review { width: min(38rem, calc(100vw - 2rem)); max-height: 85dvh; box-sizing: border-box; overflow: auto; color: #172d43; background: #fff; padding: 1.25rem; border: 1px solid #b8c5cf; border-radius: .8rem; }
 .coach-sheets-review::backdrop { background: rgb(12 28 43 / 60%); }
 .coach-sheets-review h3 { margin: 0; }
