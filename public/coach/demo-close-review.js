@@ -91,12 +91,13 @@
       var sellerDraft = (close.sellerFields || []).includes(key);
       if (!audio) audio = declared;
       var other = formV || declared;
-      var conflict = !!(audio && other && audio !== other && (!conf || sellerDraft));
+      var conflict = !!(audio && other && audio !== other && !conf && !sellerDraft);
       var initial = conflict ? "" : (sellerDraft ? audio : conf || audio || formV);
       var row = make("fieldset", "demo-close-row");
       var legend = make("legend", null, def[0]);
       legend.id = uid + key + "-label";
       row.appendChild(legend);
+      if (sellerDraft && other && audio !== other) row.appendChild(make("p", null, "Dato anterior: " + show(key,other)));
       if (conf) row.appendChild(make("p", null, "Guardado: " + show(key, conf)));
 
       var input;
@@ -171,7 +172,7 @@
       }
       if (close.partial) form.appendChild(make("p", null, "Aviso: el audio se procesó de forma parcial. Revisa y completa lo que falte."));
       if (!renderedSame) form.appendChild(make("p", null, "Esta ficha es de otra visita o cliente. Puedes revisarla y guardarla, pero no se aplicará a las herramientas abiertas."));
-      form.appendChild(make("p", null, "Marca solo lo que quieras guardar. Lo ya guardado que no cambió queda sin marcar."));
+      form.appendChild(make("p", null, "Marca los datos que quieras guardar. Puedes volver a marcar un dato guardado para aplicarlo a sus herramientas."));
 
       var list = make("div");
       form.appendChild(list);

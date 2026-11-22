@@ -79,11 +79,17 @@ export function createDemoCloseService(analyses) {
         .sort({startedAt:-1}).limit(3).select(select+' startedAt').lean();
       return rows.map(doc=>({id:String(doc._id),startedAt:doc.startedAt,close:shape(doc)}));
     },
-    async clarify(owner,id,{visitId,version,text}={},extract) {
+    async clarify(owner,id,{visitId,version,text,conflictField}={},extract) {
       const close = await read(owner,id);
       if (close.visitId!==visitId || version!==close.version) throw fail(409,'El cierre cambió. Vuelve a abrir sus preguntas.');
       if (typeof text!=='string' || !text.trim() || text.length>2000) throw fail(422,'Envía una aclaración breve de esta visita.');
-      const proposal=await extract(text.trim(),{questions:demoCloseQuestions(close),fields:{...(close.declaredOutcome && {outcome:close.declaredOutcome}),...close.fields,...close.confirmed}});
+      let questions=demoCloseQuestions(close);
+      const priorFields={...(close.declaredOutcome && {outcome:close.declaredOutcome}),...close.fields,...close.confirmed};
+      if (typeof conflictField==='string' && Object.hasOwn(labels,conflictField) && Object.hasOwn(close.fields,conflictField) && !close.confirmed[conflictField]) {
+        delete priorFields[conflictField]; // Either conflicting value can be the seller’s answer.
+        questions=[...questions.filter(q=>q.field!==conflictField).slice(0,1),{field:conflictField,question:'¿Qué valor debe quedar para '+labels[conflictField]+' en esta visita?'}];
+      }
+      const proposal=await extract(text.trim(),{questions,fields:priorFields});
       const suggested={...proposal?.fields,...(proposal?.note && {sellerNote:proposal.note})};
       if (!Object.keys(suggested).length) return {close,understood:false};
       const fields=chosenFields(suggested);

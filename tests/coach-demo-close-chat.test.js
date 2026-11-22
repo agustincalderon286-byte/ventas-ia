@@ -4,11 +4,11 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../public/coach/demo-close-chat.js',import.meta.url),'utf8');
-function fixture({question='¿Qué acordaron?', extracted=true, current='visit-a'}={}) {
+function fixture({question='¿Qué acordaron?', extracted=true, current='visit-a', values={}, audio={}}={}) {
   const messages=[],calls=[],listeners={},saved=new Map();
-  const close={visitId:'visit-a',crmId:'',version:0,fields:{},confirmed:{}};
+  const close={visitId:'visit-a',crmId:'',version:0,fields:audio,confirmed:{},sellerFields:[]};
   const element=()=>({children:[],append(...items){this.children.push(...items);},addEventListener(type,fn){this[type]=fn;}});
-  const env={window:{addEventListener:(k,fn)=>{listeners[k]=fn;}},document:{createElement:element},sessionStorage:{
+  const env={window:{TecDemoCloseTools:{snapshot:()=>values},addEventListener:(k,fn)=>{listeners[k]=fn;}},document:{createElement:element},sessionStorage:{
     getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}};
   vm.runInNewContext(source,env);
   async function request(url,options) {
@@ -43,4 +43,13 @@ test('se puede dejar pendiente y un cierre sin dudas no exige grabar otro resume
   assert.equal(f.calls.length,1);assert.equal(f.chat.hasPending(),false);
   const ready=fixture({question:''});await new Promise(setImmediate);
   assert.equal(ready.chat.hasPending(),false);assert.match(ready.messages[0].text,/revisar/);
+});
+
+test('una discrepancia de esta visita pide una aclaración concreta sin abrir herramientas',async()=>{
+  const f=fixture({question:'',audio:{cooksForCount:'4'},values:{cooksForCount:'3'}});
+  await new Promise(setImmediate);
+  assert.match(f.messages[0].text,/«3».*«4»/);
+  assert.equal(f.chat.hasPending(),true);
+  await f.chat.answer('son cuatro');
+  assert.equal(f.calls[1].options.body.conflictField,'cooksForCount');
 });
