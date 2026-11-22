@@ -92,7 +92,7 @@ async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }
   return pcmToWav(chunks);
 }
 
-export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, Socket = WebSocket, timeoutMs = 90000 } = {}) {
+export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, Socket = WebSocket, timeoutMs = 90000, jorgeOnly = false } = {}) {
   const key = () => { if (!env.OPENAI_API_KEY) throw new Error('Voice service unavailable'); return env.OPENAI_API_KEY; };
   return {
     async transcribe(buffer, mimeType, { prompt } = {}) {
@@ -105,7 +105,7 @@ export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, S
       const data = await response.json(); return typeof data.text === 'string' ? data.text.trim() : '';
     },
     async speak(text, userId, { onChunk, signal } = {}) {
-      if (env.AZURE_SPEECH_KEY || env.AZURE_SPEECH_REGION) {
+      if (jorgeOnly || env.AZURE_SPEECH_KEY || env.AZURE_SPEECH_REGION) {
         return speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal });
       }
       const apiKey = key(), model = env.COACH_VOICE_SPEECH_MODEL || 'gpt-realtime-2.1-mini';
@@ -158,7 +158,7 @@ export async function streamVoiceResponse(req,res,provider,text,userId) {
   else res.set('Cache-Control','private, no-store').type('audio/wav').send(audio);
 }
 
-export function registerCoachVoice(app, { requireActive, provider = createCoachVoiceProvider(), now = Date.now, maxRequests = 40 } = {}) {
+export function registerCoachVoice(app, { requireActive, provider = createCoachVoiceProvider({ jorgeOnly: true }), now = Date.now, maxRequests = 40 } = {}) {
   const usage = new Map(), active = new Set();
   const authorize = async (req,res,next) => {
     const auth = await requireActive(req,res); if(!auth)return;
@@ -191,7 +191,8 @@ export function registerCoachVoice(app, { requireActive, provider = createCoachV
     });
   });
   app.post('/api/coach/voice/speech',authorize,async(req,res)=>{
-    const text = typeof req.body?.text === 'string' ? speechText(req.body.text) : '';
+    const raw = typeof req.body?.text === 'string' ? req.body.text : '';
+    const text = req.body?.verbatim === true ? raw.trim() : speechText(raw);
     if(!text || text.length > 12000)return res.status(400).json({error:'La respuesta no tiene un tamaño válido para convertirla en audio.'});
     await run(req,res,'speech',async()=>{
       await streamVoiceResponse(req,res,provider,text,req.coachVoiceUserId);

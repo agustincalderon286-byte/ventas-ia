@@ -31,9 +31,17 @@
       pending+=decoder.decode();if(pending.trim())line(pending);
       if(!complete || !length || length%2)throw new Error('La voz se interrumpió. Puedes reintentar el audio.');
     } finally {reader.cancel().catch(()=>{});}
+    return pcmWave(chunks, length);
+  }
+  function pcmWave(chunks, length) {
     const header=new ArrayBuffer(44), view=new DataView(header), write=(at,text)=>[...text].forEach((char,i)=>view.setUint8(at+i,char.charCodeAt(0)));
     write(0,'RIFF');view.setUint32(4,length+36,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,24000,true);view.setUint32(28,48000,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,length,true);
     return new Blob([header,...chunks],{type:'audio/wav'});
+  }
+  function speechParts(text) {
+    if (text.length <= 3000) return [text];
+    // Word boundaries, with enough room for two UTF-16 units per code point.
+    return text.match(/[\s\S]{1,2999}(?:\s|$)|[\s\S]{1,2999}/gu);
   }
   // Keep a short lead over the speaker clock so normal packet jitter is inaudible.
   function createSpeechBuffer(context, onEnded) {
@@ -83,7 +91,6 @@
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null, liveFinished = null, playbackEpoch = 0;
-    let stopPrivateRead = null;
     function stopLive() {
       playbackEpoch++;
       liveFinished?.();
@@ -98,7 +105,6 @@
     const makeUrl = blob => { const url = URL.createObjectURL(blob); urls.add(url); return url; };
     const release = url => { if(url) { URL.revokeObjectURL(url); urls.delete(url); } };
     const pausePlayback = (except, preserveContext = false) => {
-      stopPrivateRead?.();
       if (!preserveContext) stopLive();
       players.forEach(audio => { if(audio !== except) audio.pause(); });
     };
@@ -257,7 +263,7 @@
       finally {phase='idle';render();}
     }
     const button = (text,handler) => { const node=document.createElement('button');node.type='button';node.textContent=text;if(handler)node.addEventListener('click',handler);return node; };
-    function createPlayer(title, playLabel) {
+    function createPlayer(title, playLabel, isCurrent = () => true) {
       const card = document.createElement('div');
       card.className = 'coach-voice-card';
       const audio = document.createElement('audio');
@@ -275,6 +281,7 @@
       track.append(fill);
       let streamToggle = null, streamPlaying = false, recordedDuration = 0;
       const play = button('', () => {
+        if (!isCurrent()) return;
         if (streamToggle) return streamToggle();
         if (!audio.paused) audio.pause();
         else audio.play().catch(() => { time.textContent = 'Reintentar'; });
@@ -342,7 +349,7 @@
         else if(!gesture && phase==='idle' && !chatBusy && !draft){gesture={item,assistive:true,cancelled:false};start(item);}
       });
       item.status=document.createElement('p');item.status.className='coach-voice-status';item.status.setAttribute('role','status');item.status.setAttribute('aria-live','polite');
-      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent='Mantén el micrófono para hablar';
+      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent=voiceApi ? 'Mantén el micrófono para hablar' : 'Mantén el micrófono para hablar. Jorge lee tu respuesta con Microsoft Azure Speech.';
       item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;item.activity.setAttribute('aria-hidden','true');
       const bin=document.createElement('span');bin.className='coach-voice-bin';bin.innerHTML=BIN_ICON;
       const meter=document.createElement('span');meter.className='coach-voice-meter';item.meter=meter;meter.hidden=true;meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
@@ -358,113 +365,17 @@
       form.querySelector('textarea')?.addEventListener('input',render);
       form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(capturing())cancel();});
     }
-    // This path never submits connection data to the remote speech service.
-    // Each chunk belongs to this reply and is queued only after its predecessor finishes.
-    function readPrivateReply(text, handles, {autoplay = false, isCurrent}) {
-      const synth = window.speechSynthesis;
-      const Utterance = window.SpeechSynthesisUtterance;
-      const panels = (handles || []).map(({card, target}) => {
-        const panel = document.createElement('div');
-        panel.className = 'coach-voice-reply';
-        const toggle = button('Escuchar respuesta completa', () => {
-          if (stopPrivateRead === stop) stop();
-          else play();
-        });
-        const status = document.createElement('small');
-        status.setAttribute('role','status');
-        status.hidden = true;
-        panel.append(toggle, status);
-        card.classList.add('coach-message-with-voice');
-        card.append(panel);
-        if (target) target.scrollTop = target.scrollHeight;
-        return {panel, toggle, status};
-      });
-      const words = text.match(/\S+/gu) || [];
-      const chunks = [];
-      let chunk = '';
-      for (const word of words) {
-        if (chunk && chunk.length + word.length > 150) { chunks.push(chunk); chunk = ''; }
-        chunk += (chunk ? ' ' : '') + word;
-      }
-      if (chunk) chunks.push(chunk);
-
-      let run = 0, utterance = null, timer = null, voicesReady = null;
-      const visible = () => !document.hidden && isCurrent() && panels.some(p => p.panel.getClientRects().length);
-      function display(playing, message = '') {
-        for (const p of panels) {
-          p.toggle.textContent = playing ? 'Detener lectura' : 'Escuchar respuesta completa';
-          p.status.textContent = message;
-          p.status.hidden = !message;
-        }
-      }
-      function clearWait() {
-        window.clearTimeout(timer);
-        if (voicesReady) synth?.removeEventListener?.('voiceschanged', voicesReady);
-        voicesReady = null;
-      }
-      function stop(message = '') {
-        ++run;
-        clearWait();
-        if (stopPrivateRead === stop) {
-          stopPrivateRead = null;
-          if (utterance) synth?.cancel();
-        }
-        utterance = null;
-        display(false, message);
-      }
-      const unavailable = 'Para escuchar la respuesta completa, activa una voz en español en tu dispositivo y toca Escuchar respuesta completa.';
-      function play() {
-        if (!visible() || !chunks.length) return;
-        pausePlayback(null, true);
-        if (liveFinished) stopLive();
-        if (!synth || !Utterance) { display(false, unavailable); return; }
-        stopPrivateRead = stop;
-        const current = ++run;
-        display(true);
-        function start(allowWait) {
-          if (current !== run) return;
-          if (!visible()) { stop(); return; }
-          const voices = synth.getVoices().filter(v => v.localService === true && /^es(?:[-_]|$)/i.test(v.lang));
-          const voice = voices.find(v => v.default) || voices.find(v => /^es[-_](?:US|MX)$/i.test(v.lang)) || voices[0];
-          if (!voice) {
-            if (!allowWait) { stop(unavailable); return; }
-            voicesReady = () => { clearWait(); start(false); };
-            synth.addEventListener?.('voiceschanged', voicesReady);
-            timer = window.setTimeout(voicesReady, 1400);
-            return;
-          }
-          let index = 0;
-          function next() {
-            if (current !== run) return;
-            if (!visible() || index === chunks.length) { utterance = null; stop(); return; }
-            utterance = new Utterance(chunks[index++]);
-            utterance.voice = voice;
-            utterance.lang = voice.lang;
-            utterance.onstart = () => { if (current === run) clearWait(); };
-            utterance.onend = () => { if (current === run) { clearWait(); next(); } };
-            const failed = () => { if (current === run) stop('Toca Escuchar respuesta completa para iniciar la voz en este dispositivo.'); };
-            utterance.onerror = failed;
-            // Some mobile browsers silently block autoplay until the next tap.
-            timer = window.setTimeout(failed, 5000);
-            try { synth.speak(utterance); } catch { failed(); }
-          }
-          next();
-        }
-        start(true);
-      }
-      if (autoplay) play();
-    }
-    window.addEventListener('tec:coach-session-change', () => stopPrivateRead?.());
-    async function speak(text, handles, reference) {
+    window.addEventListener('tec:coach-session-change', () => pausePlayback());
+    async function speak(text, handles, reference, { isCurrent = () => true, verbatim = false } = {}) {
+      if (!isCurrent()) return false;
       const panels = (handles || []).map(({card, target}) => {
         const panel = document.createElement('div');
         panel.className = 'coach-voice-reply';
         const label = document.createElement('small');
         label.setAttribute('role','status');
-        const player = createPlayer('Voz del ' + speaker, 'Reproducir la respuesta del ' + speaker);
+        const player = createPlayer('Voz del ' + speaker, 'Reproducir la respuesta del ' + speaker, isCurrent);
         const retry = button('Reintentar audio', () => {
-          unlockAudio();
-          generate();
+          if (isCurrent()) { unlockAudio(); generate(); }
         });
         player.card.hidden = retry.hidden = true;
         panel.append(label, player.card, retry);
@@ -498,22 +409,20 @@
         } catch { pausePlayback(); }
       }
       async function generate() {
-        if (loading) return;
+        if (loading || !isCurrent()) return false;
         loading = true;
         pausePlayback(null, true);
         if (liveFinished) stopLive();
         context = liveContext;
         const attempt = playbackEpoch;
-        const canPlay = () => attempt === playbackEpoch && !document.hidden &&
+        const canPlay = () => attempt === playbackEpoch && isCurrent() && !document.hidden &&
           context === liveContext && panels.some(p => p.panel.getClientRects().length);
         let skipped = false;
         const queue = context ? createSpeechBuffer(context, complete) : null;
         panels.forEach(p => { p.retry.hidden = true; p.player.card.hidden = true; });
         status('Preparando la voz del ' + speaker + '…');
         try {
-          const payload = voiceApi ? reference : {accountId:String(userId),text};
-          const response = await request(voiceApi?.speech || '/api/coach/voice/speech', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,stream:true})});
-          const blob = await readSpeech(response, bytes => {
+          function enqueue(bytes) {
             if (!queue || skipped) return;
             if (!canPlay() || (context.state !== 'running' && !paused)) { skipped = true; return; }
             if (queue.append(bytes) && !playing) {
@@ -522,8 +431,23 @@
               status('');
               panels.forEach(p => { p.player.setStream(toggle, true); showPlayer(p); });
             }
-          });
-          if (blob.size <= 44) throw new Error('No se completó el audio.');
+          }
+          // Bound synthesis requests while retaining one continuous player for the full reply.
+          const parts = voiceApi ? [text] : speechParts(text);
+          const waves = [];
+          for (const part of parts) {
+            if (!isCurrent()) return false;
+            const payload = voiceApi ? reference : {accountId:String(userId), text:part, verbatim};
+            const response = await request(voiceApi?.speech || '/api/coach/voice/speech', {
+              method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...payload, stream:true})
+            });
+            const wave = await readSpeech(response, enqueue);
+            if (wave.size <= 44) throw new Error('No se completó el audio.');
+            waves.push(wave);
+          }
+          if (!isCurrent()) return false;
+          const pcm = waves.map(wave => wave.slice(44));
+          const blob = waves.length === 1 ? waves[0] : pcmWave(pcm, pcm.reduce((n, part) => n + part.size, 0));
           if (playing && (!canPlay() || skipped)) stopLive();
           const url = makeUrl(blob);
           panels.forEach(p => { p.player.setSource(url); showPlayer(p); });
@@ -537,6 +461,7 @@
           }
           return true;
         } catch (error) {
+          if (!isCurrent()) return false;
           if (context === liveContext && attempt === playbackEpoch) stopLive();
           status(error.message || 'Tu respuesta escrita está lista. Puedes reintentar el audio.');
           panels.forEach(p => { p.player.card.hidden = true; p.retry.hidden = false; });
@@ -550,7 +475,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape' && capturing())cancel();});
     window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
     render();
-    return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak, readPrivateReply,
+    return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
       reset() {
         pausePlayback();
         cancel('');

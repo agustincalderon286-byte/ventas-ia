@@ -103,7 +103,7 @@ function chatFixture(responses, extra = {}) {
   return {send,requests,updates,spoken,context,setSession:value=>{currentSession=value;}};
 }
 
-test('el token pasa una vez a la misma conversación; el resultado privado excluye TTS y las demás respuestas conservan voz',async()=>{
+test('el token pasa una vez a la misma conversación; el resultado sin permiso de voz excluye TTS y las demás respuestas conservan voz',async()=>{
   const agent={respuesta:'Pedido #1035',coachMailAgent:true,coachMailPending:'opaque',coachHelpActions:[{type:'mailConfirm',id:'111111111111'}]};
   const f=chatFixture([agent,{respuesta:'Ya se envió',coachMailAgent:true},{respuesta:'Hola'}]);
   for (const text of ['Leer','Confirmar envío 111111111111','Hola']) assert.equal((await f.send(text,{replyMode:'audio'})).ok,true);
@@ -112,23 +112,24 @@ test('el token pasa una vez a la misma conversación; el resultado privado exclu
   assert.equal(f.updates[0].opts.actions[0].id,'111111111111');
 });
 
-test('lee la respuesta privada completa y los horarios disponibles localmente; solo el turno de voz pide reproducción automática',async()=>{
-  const privateText='Ficha de Julia. Para: julia@example.invalid. Asunto: Llamada. Hola, Julia, ¿te va bien el lunes?';
-  const first='lunes a las doce', second='lunes a las doce y cuarenta y cinco';
+test('solo la nota de voz reproduce con Jorge la respuesta privada y ambos horarios, una sola vez',async()=>{
+  const privateText='Ficha de Julia. Para: ensayo_tec@example.invalid. Asunto: Llamada. Hola, Julia.';
+  const first='lunes a las doce', second='lunes a la una';
   const actions=[{type:'planAction',op:'slot',label:first},{type:'calendarSlot',label:second},
     {type:'planAction',op:'close',label:'Cerrar propuesta'}];
   const agent={coachMailAgent:true,coachPlanAgent:true,coachPrivateVoice:true,respuesta:privateText,coachHelpActions:actions};
-  const read=[],remote=[];
+  const spoken=[];
   const f=chatFixture([agent,agent,{...agent,respuesta:privateText+' '+first},{...agent,coachPrivateVoice:false}],{
-    coachVoice:{pausePlayback(){},speak:text=>remote.push(text),readPrivateReply:(text,handles,options)=>read.push({text,...options})}
+    coachVoice:{pausePlayback(){},speak:(text,handles,reference,options)=>spoken.push({text,...options})}
   });
-  await f.send('Prueba',{replyMode:'audio'});await f.send('Texto');
-  await f.send('Prueba de opciones repetidas',{replyMode:'audio'});await f.send('Fuera del piloto',{replyMode:'audio'});
-  assert.equal(read.length,3);assert.deepEqual(remote,[]);
-  assert.equal(read[0].text,[privateText,first,second].join('\n'));
-  assert.deepEqual(read.map(r=>r.autoplay),[true,false,true]);
-  assert.equal(read[2].text,[privateText+' '+first,second].join('\n'));
-  assert.equal(read[0].isCurrent(),true);f.setSession('otro');assert.equal(read[0].isCurrent(),false);
+  await f.send('Escrito');assert.equal(spoken.length,0);
+  await f.send('Revisa y prepara un correo',{replyMode:'audio'});
+  await f.send('Repite los horarios',{replyMode:'audio'});
+  await f.send('Fuera del piloto',{replyMode:'audio'});
+  assert.deepEqual(spoken.map(r=>r.text),[[privateText,first,second].join('\n'),[privateText+' '+first,second].join('\n')]);
+  assert.ok(spoken.every(r=>r.verbatim && r.isCurrent()));
+  assert.equal(f.requests.length,4);
+  f.setSession('otro');assert.ok(spoken.every(r=>!r.isCurrent()));
 });
 
 test('un cambio de conversación o cuenta descarta el token privado anterior',async()=>{

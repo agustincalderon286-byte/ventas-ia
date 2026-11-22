@@ -118,7 +118,7 @@ test('la lectura privada queda disponible solo en la sesión personal del piloto
     const voice=await send(owner,mixed,{responseMode:'audio',stream:true});
     assert.equal(voice.data.coachPrivateVoice,true);
     const typed=await send(owner,mixed,{responseMode:'text'});
-    assert.equal(typed.data.coachPrivateVoice,true);
+    assert.notEqual(typed.data.coachPrivateVoice,true);
     const switched=await send(owner,mixed,{responseMode:'audio',coachPlanPending:'123'},{switched:true});
     assert.notEqual(switched.data?.coachPrivateVoice,true);
   }

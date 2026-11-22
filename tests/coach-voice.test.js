@@ -40,7 +40,7 @@ async function fixture(t,{provider,maxRequests=40}={}){
  const authorize=async(req,res)=>{const id=req.get('X-Fixture-User');if(!['alice','bob'].includes(id)){res.status(401).json({error:'Sin sesión'});return null;}return{user:{_id:id}};};
  const app=express();app.use(express.json());app.use('/api/coach',createCoachRequestGuard({requireActive:authorize}));registerCoachVoice(app,{requireActive:authorize,provider:implementation,maxRequests});app.use(securityErrorHandler);
  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>{server.closeAllConnections();server.close();});
- const send=(kind,body,{user='alice',account='alice',mime='audio/webm;codecs=opus',origin='https://totalelitecoaching.com',stream=false}={})=>fetch(`http://127.0.0.1:${server.address().port}/api/coach/voice/${kind}`,{method:'POST',headers:{Origin:origin,'X-Fixture-User':user,'X-TEC-Account-ID':account,'Content-Type':kind==='speech'?'application/json':mime},body:kind==='speech'?JSON.stringify({accountId:account,text:body,stream}):body});
+ const send=(kind,body,{user='alice',account='alice',mime='audio/webm;codecs=opus',origin='https://totalelitecoaching.com',stream=false,verbatim=false}={})=>fetch(`http://127.0.0.1:${server.address().port}/api/coach/voice/${kind}`,{method:'POST',headers:{Origin:origin,'X-Fixture-User':user,'X-TEC-Account-ID':account,'Content-Type':kind==='speech'?'application/json':mime},body:kind==='speech'?JSON.stringify({accountId:account,text:body,stream,verbatim}):body});
  return{send,calls};
 }
 test('voice endpoints require active account and origin, accept audio, and return private WAV without touching the chat model',async t=>{
@@ -48,6 +48,12 @@ test('voice endpoints require active account and origin, accept audio, and retur
  r=await f.send('speech','**Respuesta (ES4200)**');assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'audio/wav');assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal((await r.arrayBuffer()).byteLength,48);
  assert.deepEqual(f.calls,[{kind:'transcribe',mime:'audio/webm',bytes:100},{kind:'speech',text:'Respuesta',user:'alice'}]);
  for(const options of [{user:'unsigned'},{user:'bob'},{origin:'https://foreign.example'}])assert.ok([401,403].includes((await f.send('transcribe',Buffer.alloc(100),options)).status));assert.equal(f.calls.length,2);
+});
+test('a private voice reply retains the address, order reference and exact text for Jorge',async t=>{
+ const f=await fixture(t);
+ const text='Para: ensayo_tec@example.invalid. Pedido #1035. https://example.invalid/orden_5';
+ assert.equal((await f.send('speech',text,{verbatim:true})).status,200);
+ assert.deepEqual(f.calls,[{kind:'speech',text,user:'alice'}]);
 });
 test('voice rejects invalid, empty and oversized audio or text before provider calls, and limits repeated use',async t=>{
  const f=await fixture(t,{maxRequests:2});
@@ -156,6 +162,7 @@ test('Azure Speech streams Jorge in Mexican Spanish, escaping the reply and keep
 test('Jorge rejects missing credentials, unsafe regions, failed requests and incomplete audio', async () => {
  const env = { AZURE_SPEECH_KEY:'fixture', AZURE_SPEECH_REGION:'eastus' };
  const unreachable = () => { assert.fail('unexpected network call'); };
+ await assert.rejects(createCoachVoiceProvider({env:{OPENAI_API_KEY:'fixture'},jorgeOnly:true,fetcher:unreachable}).speak('Hola','user'), /configuration/);
  for (const config of [{AZURE_SPEECH_REGION:'eastus'},{...env,AZURE_SPEECH_REGION:'other.example/path'}]) {
    await assert.rejects(createCoachVoiceProvider({env:config,fetcher:unreachable}).speak('Hola','user'), /configuration/);
  }

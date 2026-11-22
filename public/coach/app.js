@@ -18393,13 +18393,13 @@ async function loadCoachAppPage() {
       });
       retireCoachOffers(offerRoots, assistantMessageHandles.map(handle => handle?.card), outcome);
       if (mailAgent) {
-        if (data.coachPrivateVoice === true) {
+        if (options.replyMode === "audio" && data.coachPrivateVoice === true) {
           const slots = actions.filter(action => action?.type === "calendarSlot" ||
             (action?.type === "planAction" && action.op === "slot"));
           const slotLabels = slots.map(action => String(action.label || "").trim()).filter(label => label && !finalReply.includes(label));
           const narration = [finalReply, ...slotLabels].join("\n");
           setCoachChatStatusText("Listo");
-          coachVoice?.readPrivateReply?.(narration, assistantMessageHandles, { autoplay: options.replyMode === "audio", isCurrent: stillMyChat });
+          await coachVoice?.speak(narration, assistantMessageHandles, undefined, { verbatim: true, isCurrent: stillMyChat });
         }
         return { ok: true };
       }
@@ -18431,7 +18431,7 @@ async function loadCoachAppPage() {
       }
       if (options.replyMode === "audio") {
         setCoachChatStatusText("Listo");
-        await coachVoice?.speak(finalReply, assistantMessageHandles);
+        await coachVoice?.speak(finalReply, assistantMessageHandles, undefined, { isCurrent: stillMyChat });
       }
       return { ok: true };
     } catch (error) {

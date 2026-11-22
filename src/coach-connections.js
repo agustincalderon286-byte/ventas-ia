@@ -262,7 +262,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   }
   return async args => {
     const result=await dispatch(args);
-    if (!result?.coachMailAgent) return result;
+    if (!result?.coachMailAgent || args.req?.body?.responseMode !== 'audio') return result;
     const {user,session}=args.auth || {};
     const direct=session?.accessMode==='direct' || (session && !session.accessMode && user?.accountType!=='seat');
     const eligible=user && config.planPilot?.some(email=>email==='*' || email===String(user.email).toLowerCase());
