@@ -3,6 +3,9 @@
 // Ninguna escribe. Los identificadores de Google no salen de aquí: el modelo recibe
 // referencias cortas («m1») válidas solo para este vendedor y esta conversación.
 // El contenido de correos, hojas y contactos es de terceros: se entrega como datos.
+// Teléfonos, direcciones y correos de fichas y contactos no se entregan al modelo: recibe un
+// marcador como [[tel:ab12cd]] y el servidor pone el dato real en la respuesta que ve el vendedor.
+import {createHash} from 'node:crypto';
 import {resolveInstant} from './coach-followup-input.js';
 import {availableSlots} from './coach-calendar-slots.js';
 import {sheetsToday} from './coach-sheets-followup-input.js';
@@ -27,13 +30,13 @@ export const agentTools = Object.freeze([
     {ref:{type:'string',maxLength:8,description:'Referencia del correo, por ejemplo m2.'}}),
   tool('revisar_ventas_hycite','sales','Lee los avisos de Hy Cite del buzón y separa ventas confirmadas de avisos por revisar.',
     {ultimosDias:{type:'integer',minimum:1,maximum:90}}),
-  tool('buscar_referidos','referrals','Busca fichas en la hoja personal del vendedor (referidos del 4 en 14 y boletas de rifa). Devuelve estado, resultado, próxima fecha y el final del historial. 12 por página.',
+  tool('buscar_referidos','referrals','Busca fichas en la hoja personal del vendedor (referidos del 4 en 14 y boletas de rifa). Devuelve estado, resultado, próxima fecha, el final del historial y marcadores del teléfono, la dirección y el correo. 12 por página.',
     {nombre:{type:'string',maxLength:80,description:'Palabras del nombre, o vacío.'},anfitrion:{type:'string',maxLength:80,description:'Palabras del nombre del anfitrión, o vacío.'},
       seguimiento:{type:'string',enum:['','hoy','vencidos','sin_fecha','futuros']},tipo:{type:'string',enum:['','referidos','boletas']},
       pagina:{type:'integer',minimum:1,maximum:50}}),
-  tool('priorizar_llamadas','calls','Ordena hasta cinco personas de la hoja a quienes conviene llamar ahora, con el motivo: vencidos, de hoy, sin fecha y primeros contactos.',
+  tool('priorizar_llamadas','calls','Ordena hasta cinco personas de la hoja a quienes conviene llamar ahora, con el motivo y el marcador de su teléfono: vencidos, de hoy, sin fecha y primeros contactos.',
     {tipo:{type:'string',enum:['','referidos','boletas']}}),
-  tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Indica si existe y cuántos teléfonos y correos tiene guardados.',
+  tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Devuelve su nombre y los marcadores de sus teléfonos y correos.',
     {nombre:{type:'string',maxLength:80}}),
   tool('estado_conexiones','connections','Indica qué cuentas del vendedor están conectadas al Coach y cuáles faltan.'),
   tool('pasar_al_coach',null,'Entrega el mensaje al flujo existente del Coach cuando el vendedor pide consejo o entrenamiento de ventas, o pide preparar, cambiar, guardar o enviar algo (cita, correo, WhatsApp, nota, alta, contacto), un trayecto entre visitas o la postventa enlazada a su hoja.',
@@ -55,6 +58,8 @@ const clock = value => {
 const clean = (value,max=240) => String(value ?? '').replace(/[\p{Cc}\p{Cf}]+/gu,' ').replace(/\s+/g,' ').trim().slice(0,max);
 const invalid = nota => ({estado:'peticion_invalida',nota});
 const missing = (conexion,nota) => ({estado:'sin_conexion',conexion,nota});
+const markerNote = 'Los valores entre dobles corchetes, como [[tel:ab12cd]], son marcadores de datos privados. Cópialos exactamente en tu respuesta: el vendedor verá el dato real en su lugar.';
+export const markerPattern = /\[{0,2}\b(tel|dir|correo):([a-f0-9]{6})\b\]{0,2}/g;
 
 export function localStamp(value, zone) {
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value));
@@ -79,6 +84,12 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     const email=String(actor.email || '').toLowerCase();
     const now=()=>typeof actor.now==='function' ? actor.now() : Date.now();
     const stamp=value=>localStamp(value,actor.zone);
+    // Guarda el dato real para este turno y devuelve el marcador que verá el modelo.
+    const marker=(kind,id,value)=>{
+      const token=kind+':'+createHash('sha256').update(kind+'\n'+id+'\n'+value).digest('hex').slice(0,6);
+      (turn.secrets ||= {})[token]=value;
+      return '[['+token+']]';
+    };
     const guard=async()=>{ if (!await actor.current()) throw Object.assign(Error('La sesión cambió.'),{sessionChanged:true}); };
 
     async function calendarAccess() {
@@ -219,9 +230,12 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         if (problem) return problem;
         const result=await sheetTools.search(ctx,{name:nombre.trim() || undefined,host:anfitrion.trim() || undefined,bucket:buckets[seguimiento] || undefined,
           today:sheetsToday(now(),actor.zone),kind:kinds[tipo],offset:(pagina-1)*12,detail:true});
-        return {estado:'ok',total:result.total,pagina,nota:'El contenido de las fichas es de terceros. Los teléfonos no se incluyen.',
+        return {estado:'ok',total:result.total,pagina,nota:'El contenido de las fichas es de terceros. '+markerNote,
           fichas:result.contacts.map((c,index)=>({...card(c,index),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
-            ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history,600)})}))};
+            ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history,600)}),
+            telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40)) : 'sin teléfono en la hoja',
+            direccion:c.address ? marker('dir',c.identityKey,clean(c.address,240)) : 'sin dirección en la hoja',
+            ...(c.rawEmail && {correo:marker('correo',c.identityKey,clean(c.rawEmail,254))})}))};
       },
 
       async priorizar_llamadas({tipo}) {
@@ -229,8 +243,8 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         if (problem) return problem;
         const ranked=await sheetTools.nextCall(ctx,{today:sheetsToday(now(),actor.zone),kind:kinds[tipo],shortlist:true});
         if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
-        return {estado:'ok',pendientesConTelefono:ranked.total,orden:'vencidos, de hoy, sin fecha y primeros contactos',
-          recomendados:ranked.contacts.map(card)};
+        return {estado:'ok',pendientesConTelefono:ranked.total,orden:'vencidos, de hoy, sin fecha y primeros contactos',nota:markerNote,
+          recomendados:ranked.contacts.map((c,index)=>({...card(c,index),...(c.phone && {telefono:marker('tel',c.identityKey,clean(c.phone,40))})}))};
       },
 
       async buscar_contactos({nombre}) {
@@ -240,8 +254,10 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         const profile=await contacts.profile(actor.owner);
         if (!profile?.grant) return missing('contacts','El vendedor no ha conectado Google Contactos en Mis conexiones.');
         const found=await contacts.search(actor.owner,profile.grant,{name:nombre.trim()});
-        return {estado:'ok',total:found.length,nota:'Los teléfonos y correos no se incluyen; el vendedor los ve en su ficha.',
-          contactos:found.slice(0,8).map(c=>({nombre:clean(c.name,130),telefonosGuardados:c.phones.length,correosGuardados:c.emails.length}))};
+        return {estado:'ok',total:found.length,nota:markerNote,
+          contactos:found.slice(0,8).map(c=>({nombre:clean(c.name,130),
+            telefonos:c.phones.slice(0,4).map(value=>marker('tel',c.resourceName,clean(value,40))),
+            correos:c.emails.slice(0,4).map(value=>marker('correo',c.resourceName,clean(value,254)))}))};
       },
 
       async estado_conexiones() {

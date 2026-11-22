@@ -145,7 +145,7 @@ NODE_ENV=test node scripts/coach-agent-bench.mjs --system router --run
 - `src/coach-sheets-tools.js`: `search` acepta `detail` para devolver estado e historial.
 
 Cambios respecto al diseño:
-- **Privacidad más estricta que lo previsto.** El modelo recibe remitente, asunto y un extracto de cada correo, nunca el texto completo, y nunca recibe teléfonos ni correos de fichas o contactos.
+- **Privacidad más estricta que lo previsto.** El modelo recibe remitente, asunto y un extracto de cada correo, nunca el texto completo, y nunca recibe teléfonos ni correos de fichas o contactos. En su lugar recibe marcadores como `[[tel:ab12cd]]`; el servidor pone el teléfono, la dirección o el correo reales en la respuesta que ve el vendedor (`markerPattern` en `src/coach-agent-tools.js`). La memoria guarda la respuesta con marcadores y, aparte y cifrados, los datos de los últimos 80.
 - **Trayectos, postventa y cambios de contactos se derivan** al flujo actual con `pasar_al_coach`, igual que el consejo de ventas y toda petición de preparar o guardar algo. Sus flujos dependen de varias preguntas encadenadas y entran en la Fase 2.
 - **Con un borrador, una pregunta o una propuesta abierta el ciclo no interviene**, para no invalidar los botones de confirmación.
 - **La memoria corta se adelantó de la Fase 3**, porque sin ella no entiende «¿y pasado mañana?».

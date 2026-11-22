@@ -132,3 +132,24 @@ test('la caché de consulta pertenece a una petición; revalidar revisa la ident
   rows[0].seller='Rigoberto';
   await assert.rejects(tools.revalidate(a,changed.identityKey),/fila/);
 });
+
+test('la búsqueda con detalle pide la dirección y entrega los datos de contacto, salvo el teléfono de quien pidió no ser llamado',async()=>{
+  const seen=[];
+  const base={kind:'referrals',sheetId:9,sheetTitle:'4 en 14',host:'Rosa Silva',seller:'',sellerColumn:false,result:'',status:'',followupDate:'',editable:{}};
+  const google={async readFollowups(access,book,opts) {
+    seen.push(opts);
+    return {locale:'en_US',rows:[
+      {...base,row:4,fullName:'Lidia Ejemplo',phone:'(312) 555-0131',email:'lidia@example.invalid',address:'12 Calle Ficticia',city:'Chicago',history:'Quiere la olla grande.'},
+      {...base,row:5,fullName:'Lidia Prueba',phone:'312-555-0132',email:'',history:'Pidió que no la llamen.'}]};
+  }};
+  const tools=createCoachSheetTools({google});
+  const detailed=await tools.search(ctx('agustin'),{name:'Lidia',today,detail:true});
+  assert.equal(seen[0].withAddress,true);
+  assert.deepEqual(detailed.contacts.map(c=>[c.fullName,c.rawPhone,c.address,c.rawEmail,c.noCalls,c.history]),[
+    ['Lidia Ejemplo','(312) 555-0131','12 Calle Ficticia, Chicago','lidia@example.invalid',false,'Quiere la olla grande.'],
+    ['Lidia Prueba','','','',true,'Pidió que no la llamen.']]);
+  const plain=await tools.search(ctx('rigoberto'),{name:'Lidia',today});
+  assert.equal(seen[1].withAddress,undefined);
+  assert.equal('address' in plain.contacts[0],false);
+  assert.equal('rawPhone' in plain.contacts[0],false);
+});

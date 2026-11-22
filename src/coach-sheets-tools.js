@@ -60,10 +60,10 @@ function contactOf({row,key,id},followup,withPhone=false) {
 export function createCoachSheetTools({google=createSheetsGoogle(),transfer=createSheetsTransfer({google})}={}) {
   // ctx belongs to one authenticated chat request. Only list/search shares a snapshot.
   const searchReads=new WeakMap();
-  async function load(ctx, referralsOnly=false) {
+  async function load(ctx, referralsOnly=false, withAddress=false) {
     const binding=scope(ctx);
     await check(ctx);
-    const data=await google.readFollowups(ctx.access,ctx.workbook,{forPlan:true, ...(referralsOnly && {referralsOnly:true})});
+    const data=await google.readFollowups(ctx.access,ctx.workbook,{forPlan:true, ...(referralsOnly && {referralsOnly:true}), ...(withAddress && {withAddress:true})});
     await check(ctx);
     return {locale:data.locale,rows:data.rows.filter(row=>saleScope(row,ctx.sellerName)).map(row=>{
       const id=identity(binding,row);
@@ -72,13 +72,14 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
   }
 
   return {
-    // detail añade el estado y el final del historial de cada ficha, para lecturas del asistente.
+    // detail añade el estado, el final del historial y los datos de contacto tal como están en la hoja,
+    // para lecturas del asistente. El teléfono se omite si la ficha pide no ser contactada.
     async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind,detail=false}={}) {
       const binding=scope(ctx);
       await check(ctx);
       let cached=searchReads.get(ctx);
       if (cached?.binding!==binding) {
-        cached={binding,pending:load(ctx)};
+        cached={binding,pending:load(ctx,false,detail)};
         searchReads.set(ctx,cached);
       }
       let data;
@@ -96,8 +97,11 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
         const followup=classifySheetsFollowup(row,{today,locale});
         if (bucket && followup?.bucket!==bucket) continue;
         const contact=contactOf({row,key,id},followup,withPhone);
-        matches.push(detail ? {...contact,status:text(row.status),result:text(row.result),followupDate:text(row.followupDate),
-          history:text(row.history).slice(-600)} : contact);
+        if (!detail) { matches.push(contact); continue; }
+        const noCalls=excludesPhoneContact(row);
+        matches.push({...contact,status:text(row.status),result:text(row.result),followupDate:text(row.followupDate),
+          history:text(row.history).slice(-600),noCalls,rawPhone:noCalls ? '' : text(row.phone).slice(0,40),
+          rawEmail:text(row.email).slice(0,254),address:[text(row.address),text(row.city)].filter(Boolean).join(', ').slice(0,240)});
       }
       return {contacts:matches.slice(offset,offset+12),total:matches.length};
     },

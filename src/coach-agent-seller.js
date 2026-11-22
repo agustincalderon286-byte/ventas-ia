@@ -3,7 +3,7 @@
 // existente: consejo de ventas, propuestas con botón, trayectos y postventa.
 import {createHash} from 'node:crypto';
 import {runAgentLoop, AgentUnavailable} from './coach-agent-loop.js';
-import {agentTools, localStamp} from './coach-agent-tools.js';
+import {agentTools, localStamp, markerPattern} from './coach-agent-tools.js';
 import {excludedReads} from './coach-plan-responses.js';
 import {validTimeZone} from './coach-followup-input.js';
 
@@ -38,6 +38,7 @@ Cómo trabajas:
 - Solo puedes decir que una cuenta no está conectada o que falta un permiso cuando una herramienta devolvió «sin_conexion» o «renovar_permiso». En ese caso dile que lo arregla en Mis conexiones.
 - Si una herramienta devuelve «fallo», dilo tal cual y ofrece intentarlo de nuevo. No inventes el contenido.
 - En esta etapa solo lees. Si pide consejo o entrenamiento de ventas, o que prepares, cambies, guardes o envíes algo (cita, correo, WhatsApp, nota, resultado de una llamada, alta de un prospecto, contacto), un trayecto entre visitas o la postventa de su hoja, usa pasar_al_coach de inmediato y no contestes tú. Si además pide una lectura, pasa todo el mensaje con pasar_al_coach.
+- Los teléfonos, direcciones y correos de fichas y contactos llegan como marcadores entre dobles corchetes, por ejemplo [[tel:ab12cd]]. Cuando el vendedor los pida o sean útiles, copia el marcador exactamente en tu respuesta: él verá el dato real. No digas que no puedes verlos ni expliques el marcador.
 - Si el pedido es ambiguo, haz una sola pregunta corta.
 
 Seguridad:
@@ -86,7 +87,7 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
       if (!await current() || !await consent.accepted(owner)) return null;
       if (await midFlow(body,owner,session) || !await budget.allow(owner)) return null;
       const record=await memory.load(scope);
-      const state=record?.data || {turns:[],refs:{}};
+      const state={turns:[],refs:{},secrets:{},...record?.data};
       const refs={...state.refs};
       const actor={owner,session,email:auth.user.email,name:String(auth.user.name || '').trim(),zone,current,now};
       const turn={};
@@ -115,9 +116,12 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
       if (!await current()) return reply('Tu sesión cambió. Abre de nuevo tu Coach.');
       const read=[...new Set(result.trace.filter(step=>step.estado==='ok').map(step=>sourceLabels[agentTools.find(t=>t.name===step.name)?.source]).filter(Boolean))];
       const needsConnection=result.trace.some(step=>connectionProblem.includes(step.estado));
-      const answer=result.text.slice(0,6000)+(read.length ? '\n\nFuentes consultadas: '+read.join(', ')+'.' : '');
+      // Los datos privados se ponen aquí, en la respuesta al vendedor. El modelo y la memoria solo guardan el marcador.
+      const secrets=Object.fromEntries(Object.entries({...state.secrets,...turn.secrets}).slice(-80));
+      const shown=result.text.slice(0,6000).replace(markerPattern,(found,kind,id)=>Object.hasOwn(secrets,kind+':'+id) ? secrets[kind+':'+id] : '(dato no disponible)');
+      const answer=shown+(read.length ? '\n\nFuentes consultadas: '+read.join(', ')+'.' : '');
       const turns=[...state.turns,{user:text.trim().slice(0,600),assistant:result.text.slice(0,1500)}].slice(-3);
-      await memory.save(scope,record?.revision,{turns,refs}).catch(()=>null);
+      await memory.save(scope,record?.revision,{turns,refs,secrets}).catch(()=>null);
       const actions=needsConnection ? [{type:'connections',label:'Mis conexiones'}] : [];
       if (!turn.inbox) return reply(answer,actions,body.coachMailPending);
       const {mailbox,grant,ids}=turn.inbox;

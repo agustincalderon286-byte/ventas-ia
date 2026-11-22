@@ -107,10 +107,11 @@ function services(overrides={}) {
     sheets:{access:async()=>({token:'t',grant:'sg',spreadsheetId:'s',ticketsSheetId:1,referralsSheetId:2}),current:async()=>true},
     sheetTools:{
       search:async(ctx,args)=>{calls.push(['search',args]);return {total:1,contacts:[{fullName:'Pedro Ficticio',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:7,
-        bucket:'overdue',date:'2026-11-20',reason:'Seguimiento vencido',status:'Pendiente',result:'No contestó',followupDate:'2026-11-20',history:'20/11 no contestó',phone:'3125550101'}]};},
-      nextCall:async(ctx,args)=>{calls.push(['nextCall',args]);return {total:3,contacts:[{fullName:'Ana Demostración',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:3,bucket:'today',date:'2026-11-23',reason:'Toca hoy',phone:'3125550102'}]};}
+        bucket:'overdue',date:'2026-11-20',reason:'Seguimiento vencido',status:'Pendiente',result:'No contestó',followupDate:'2026-11-20',history:'20/11 no contestó',identityKey:'id-pedro',noCalls:false,rawPhone:'(312) 555-0101',rawEmail:'pedro@example.invalid',address:'5 Av. Ficticia, Chicago'},
+        {fullName:'Luis Ejemplo',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:8,identityKey:'id-luis',noCalls:true,rawPhone:'',rawEmail:'',address:''}]};},
+      nextCall:async(ctx,args)=>{calls.push(['nextCall',args]);return {total:3,contacts:[{fullName:'Ana Demostración',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:3,bucket:'today',date:'2026-11-23',reason:'Toca hoy',identityKey:'id-ana',phone:'+13125550102'}]};}
     },
-    contacts:{profile:async()=>({grant:'cg'}),search:async(o,g,person)=>{calls.push(['contacts',person]);return [{name:'Ana Demostración',phones:['3125550102'],emails:[]}];}},
+    contacts:{profile:async()=>({grant:'cg'}),search:async(o,g,person)=>{calls.push(['contacts',person]);return [{resourceName:'people/c1',name:'Ana Demostración',phones:['312-555-0102','312-555-0103'],emails:['ana@example.invalid']}];}},
     readConnections:async()=>({gmail:'missing',send:'missing',calendar:'connected',availability:'connected',sheets:'unknown'}),
     ...overrides
   };
@@ -159,18 +160,30 @@ test('los horarios libres respetan lo ocupado y no reservan',async()=>{
   assert.equal((await execute('buscar_horarios_libres',{dia:'2026-11-22',desdeHora:'09:00',hastaHora:'10:00',minutos:30})).estado,'peticion_invalida');
 });
 
-test('la hoja y los contactos se entregan sin teléfonos ni identificadores',async()=>{
-  const {execute,calls}=services();
+test('la hoja y los contactos entregan marcadores: el teléfono, la dirección y el correo reales no llegan al modelo',async()=>{
+  const turnState={};
+  const {execute,calls}=services({turn:turnState});
   const found=await execute('buscar_referidos',{nombre:'Pedro',anfitrion:'',seguimiento:'vencidos',tipo:'referidos',pagina:2});
   assert.deepEqual(calls[0][1],{name:'Pedro',host:undefined,bucket:'overdue',today:'2026-11-23',kind:'referrals',offset:12,detail:true});
-  assert.equal(found.fichas[0].historial,'20/11 no contestó');
-  assert.equal(found.fichas[0].seguimiento.estado,'vencido');
+  const [pedro,luis]=found.fichas;
+  assert.equal(pedro.historial,'20/11 no contestó');
+  assert.equal(pedro.seguimiento.estado,'vencido');
+  for (const [field,kind] of [['telefono','tel'],['direccion','dir'],['correo','correo']]) assert.match(pedro[field],new RegExp('^\\[\\['+kind+':[a-f0-9]{6}\\]\\]$'));
+  assert.equal(turnState.secrets[pedro.telefono.slice(2,-2)],'(312) 555-0101');
+  assert.equal(turnState.secrets[pedro.direccion.slice(2,-2)],'5 Av. Ficticia, Chicago');
+  assert.equal(turnState.secrets[pedro.correo.slice(2,-2)],'pedro@example.invalid');
+  assert.match(luis.telefono,/^no llamar/);
+  assert.equal(luis.direccion,'sin dirección en la hoja');
+  assert.equal('correo' in luis,false);
   const ranked=await execute('priorizar_llamadas',{tipo:''});
   assert.equal(calls[1][1].shortlist,true);
   assert.equal(ranked.pendientesConTelefono,3);
+  assert.equal(turnState.secrets[ranked.recomendados[0].telefono.slice(2,-2)],'+13125550102');
   const contacts=await execute('buscar_contactos',{nombre:'Ana'});
-  assert.deepEqual(contacts.contactos,[{nombre:'Ana Demostración',telefonosGuardados:1,correosGuardados:0}]);
-  assert.doesNotMatch(JSON.stringify([found,ranked,contacts]),/312555|identityKey|"key"/);
+  assert.equal(contacts.contactos[0].telefonos.length,2);
+  assert.notEqual(contacts.contactos[0].telefonos[0],contacts.contactos[0].telefonos[1]);
+  assert.equal(turnState.secrets[contacts.contactos[0].correos[0].slice(2,-2)],'ana@example.invalid');
+  assert.doesNotMatch(JSON.stringify([found,ranked,contacts]),/555-?01|Ficticia, Chicago|@example|identityKey|id-pedro|people\/c1|"key"/);
   const state=await execute('estado_conexiones',{});
   assert.deepEqual({gmail:state.gmail,sheets:state.sheets,calendar:state.calendar},{gmail:'falta conectar',sheets:'sin verificar',calendar:'conectado'});
 });
@@ -206,12 +219,13 @@ test('Gmail entrega extractos con referencias cortas y el hilo solo acepta refer
 });
 
 // --- Asistente del vendedor ---------------------------------------------------
-function seller({run,config={},body={},stored=null,midPlan=null,mailKind='',allow=true,live=true,consented=true}={}) {
+function seller({run,config={},body={},stored=null,midPlan=null,mailKind='',allow=true,live=true,consented=true,secrets=null}={}) {
   const saved=[], charged=[];
   const auth={user:{_id:owner,email:'A@example.invalid',name:'Agustín',accountType:'owner'},session:{tokenHash:'th',accessMode:'direct'}};
   const agent=createSellerAgent({
     config:{loopPilot:['a@example.invalid'],agentModel:'gpt-6.2-sol',...config},
-    bindTools:(actor,refs,turnState)=>async(name)=>{ if (name==='leer_bandeja') turnState.inbox={mailbox:'a@example.invalid',grant:'mg',ids:['MSG1']}; return {estado:'ok'}; },
+    bindTools:(actor,refs,turnState)=>async(name)=>{ if (name==='leer_bandeja') turnState.inbox={mailbox:'a@example.invalid',grant:'mg',ids:['MSG1']};
+      if (secrets) turnState.secrets={...secrets}; return {estado:'ok'}; },
     memory:{load:async()=>stored,save:async(scope,revision,data)=>{saved.push({revision,data});return 'rev2';}},
     plans:{load:async()=>midPlan},
     mailContext:async()=>mailKind,inboxToken:({ids,grant})=>'ficha:'+grant+':'+ids.join(','),
@@ -238,6 +252,24 @@ test('el asistente responde con las fuentes leídas, guarda la conversación y c
   assert.equal(saved[0].revision,'rev1');
   assert.equal(saved[0].data.turns.length,2);
   assert.deepEqual(charged,[{inputTokens:10,cachedInputTokens:0,outputTokens:5}]);
+});
+
+test('el vendedor ve el teléfono y la dirección reales; el modelo y la memoria solo conservan el marcador',async()=>{
+  const inputs=[];
+  const first=seller({secrets:{'tel:aaaaaa':'(312) 555-0101','dir:bbbbbb':'5 Av. Ficticia, Chicago'},
+    run:async options=>{inputs.push(options.input);await options.execute('buscar_referidos',{});
+      return done('Lidia Ejemplo vive en [[dir:bbbbbb]] y su teléfono es tel:aaaaaa. Otro dato: [[tel:cccccc]].',[{name:'buscar_referidos',estado:'ok'}]);}});
+  const reply=await first.ask('dame la direccion y el telefono de Lidia');
+  assert.equal(reply.respuesta,'Lidia Ejemplo vive en 5 Av. Ficticia, Chicago y su teléfono es (312) 555-0101. Otro dato: (dato no disponible).\n\nFuentes consultadas: Google Sheets.');
+  const saved=first.saved[0].data;
+  assert.match(saved.turns[0].assistant,/\[\[dir:bbbbbb\]\]/);
+  assert.doesNotMatch(saved.turns[0].assistant,/555|Ficticia/);
+  assert.equal(saved.secrets['tel:aaaaaa'],'(312) 555-0101');
+
+  // En el siguiente mensaje el modelo recibe su respuesta anterior con el marcador y puede reutilizarlo.
+  const later=seller({stored:{revision:'rev1',data:saved},run:async options=>{inputs.push(options.input);return done('Su teléfono es [[tel:aaaaaa]].');}});
+  assert.equal((await later.ask('repiteme su telefono')).respuesta,'Su teléfono es (312) 555-0101.');
+  assert.doesNotMatch(JSON.stringify(inputs),/555-0101|Ficticia, Chicago/);
 });
 
 test('una bandeja leída deja los botones y la ficha de Gmail; sin lectura conserva la ficha anterior',async()=>{
