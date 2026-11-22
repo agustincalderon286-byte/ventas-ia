@@ -72,7 +72,8 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
   }
 
   return {
-    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind}={}) {
+    // detail añade el estado y el final del historial de cada ficha, para lecturas del asistente.
+    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind,detail=false}={}) {
       const binding=scope(ctx);
       await check(ctx);
       let cached=searchReads.get(ctx);
@@ -94,7 +95,9 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
         if (!matchWords(row.fullName,nameKey) || !matchWords(row.host,hostKey)) continue;
         const followup=classifySheetsFollowup(row,{today,locale});
         if (bucket && followup?.bucket!==bucket) continue;
-        matches.push(contactOf({row,key,id},followup,withPhone));
+        const contact=contactOf({row,key,id},followup,withPhone);
+        matches.push(detail ? {...contact,status:text(row.status),result:text(row.result),followupDate:text(row.followupDate),
+          history:text(row.history).slice(-600)} : contact);
       }
       return {contacts:matches.slice(offset,offset+12),total:matches.length};
     },

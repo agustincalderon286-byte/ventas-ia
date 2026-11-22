@@ -4,6 +4,10 @@ import {createCoachRouteAgent} from './coach-route-agent.js';
 import {createPostSaleReader} from './coach-postsale.js';
 import {createConversationPlan} from './coach-conversation-plan.js';
 import {agentConnectionReader,sellerAgentModel} from './coach-agent-pilot.js';
+import {createSellerAgent,loopSellers} from './coach-agent-seller.js';
+import {createAgentTools} from './coach-agent-tools.js';
+import {createAgentBudget} from './coach-agent-budget.js';
+import {createAgentConsent} from './coach-agent-consent.js';
 import {readCoachAgenda} from './coach-agenda.js';
 import {createPlanStore} from './coach-plan-store.js';
 import {createPlanChannels} from './coach-plan-channels.js';
@@ -33,6 +37,7 @@ const page = '/mis-conexiones/';
 const pendingFields = {...coachPendingFields,sheets:'coachSheetsPending',route:'coachRoutePending',contacts:'coachContactsPending'};
 const api = '/api/coach/conexiones/gmail/';
 const waProfileApi = '/api/coach/conexiones/whatsapp/';
+const assistantApi = '/api/coach/conexiones/asistente/';
 const random = () => randomBytes(32).toString('base64url');
 const digest = data => createHash('sha256').update(data).digest('base64url');
 const schema = new mongoose.Schema({
@@ -55,11 +60,12 @@ export function connectionConfig(env) {
     'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
   const sheetsReady = Boolean(clientId && secret && key.length===32 && sheetsPickerKey && /^\d+$/.test(sheetsAppId));
   const planPilot=(env.COACH_PLAN_PILOT_EMAILS ?? 'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
-  return { key, origin, pilot, planPilot, agentModel:env.COACH_AGENT_PILOT_MODEL ?? 'gpt-6.2-sol', domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
+  const loopMicros=Number(env.COACH_AGENT_LOOP_MONTHLY_MICROS ?? 5_000_000);
+  return { key, origin, pilot, planPilot, loopPilot:loopSellers(env), loopMonthlyMicros:Number.isSafeInteger(loopMicros) && loopMicros>0 ? loopMicros : 0, agentModel:env.COACH_AGENT_PILOT_MODEL ?? 'gpt-6.2-sol', domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, contactsStore, contactsGoogle, contactsDependencies={}, routeDependencies={}, readSheetsSession, sheetsStore, sheetsGoogle, sheetsReader=createSheetsGoogle(), planDependencies={}, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
+  calendarStore, calendarGoogle, contactsStore, contactsGoogle, contactsDependencies={}, routeDependencies={}, agentDependencies={}, agentConsent=createAgentConsent(), readSheetsSession, sheetsStore, sheetsGoogle, sheetsReader=createSheetsGoogle(), planDependencies={}, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
   waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
   // Gmail time offers need the real Mongo stores unless a test injects its own.
@@ -94,9 +100,12 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       const contactsRequest=req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && typeof req.query.state==='string' && req.query.state.startsWith('people.'));
       if (contactsRequest && !contactsPilot) return res.status(403).send('Abre Contactos desde tu propia cuenta del piloto.');
       if (sheetsRequest && !sheetsPilot) return res.status(403).send('Abre Google Sheets desde tu propia cuenta del piloto.');
-      if (!sheetsRequest && !contactsRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
+      const assistantPilot = direct && Boolean(config.loopPilot?.some(value => value==='*' || value===email));
+      const assistantRequest = req.path.startsWith(assistantApi);
+      if (assistantRequest && !assistantPilot) return res.status(403).send('Esta cuenta aún no participa en el piloto del asistente.');
+      if (!sheetsRequest && !contactsRequest && !assistantRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
       if (req.method === 'POST' && req.body?.csrf !== session) return res.status(403).send('La sesión cambió. Vuelve a abrir Mis conexiones.');
-      if (req.method === 'POST' && (sheetsRequest || contactsRequest || req.path.startsWith(waProfileApi))) {
+      if (req.method === 'POST' && (sheetsRequest || contactsRequest || assistantRequest || req.path.startsWith(waProfileApi))) {
         const site = req.get('Sec-Fetch-Site');
         const fromPanel = site ? site === 'same-origin' : req.get('Origin') === req.protocol + '://' + req.get('host');
         if (!fromPanel) return res.status(403).send('Abre el formulario desde Mis conexiones.');
@@ -108,7 +117,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
           fresh.session.tokenHash!==auth.session.tokenHash) return false;
         return fresh.session.accessMode==='direct' || (!fresh.session.accessMode && fresh.user.accountType!=='seat');
       };
-      await handler(req, res, { id, session, pilot, sheetsPilot, contactsPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
+      await handler(req, res, { id, session, pilot, sheetsPilot, contactsPilot, assistantPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
     } catch (error) {
       if (req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && req.query?.state?.startsWith?.('people.'))) return back(res,error.reauthorize?'contactsReconnect':'contactsFailed');
       if (req.path === sheetsApi+'picker-token') return res.status(error.status || 503).json({error:'Vuelve a abrir Google Sheets en Mis conexiones.'});
@@ -116,6 +125,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
         return back(res,error.reauthorize ? 'sheetsReconnect' : error.status===422 ? 'sheetsFileUnavailable' : 'sheetsFailed');
       }
       if (req.path.startsWith(waProfileApi)) return back(res, 'waProfileFailed');
+      if (req.path.startsWith(assistantApi)) return back(res, 'assistantFailed');
       if (req.path.startsWith('/api/coach/conexiones/calendar/') ||
           (req.path === api + 'callback' && typeof req.query.state === 'string' && req.query.state.startsWith('cal.'))) {
         return back(res, error.reauthorize ? 'calendarReconnect' : 'calendarFailed');
@@ -138,18 +148,27 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     await waProfile.remove(id);
     return back(res, 'waProfileRemoved');
   }));
-  app.get(page, own(async (req, res, { id, session, pilot, sheetsPilot, contactsPilot, email }) => {
+  app.post(assistantApi + 'accept', own(async (_req,res,{id}) => {
+    await agentConsent.accept(id);
+    return back(res, 'assistantOn');
+  }));
+  app.post(assistantApi + 'revoke', own(async (_req,res,{id}) => {
+    await agentConsent.revoke(id);
+    return back(res, 'assistantOff');
+  }));
+  app.get(page, own(async (req, res, { id, session, pilot, sheetsPilot, contactsPilot, assistantPilot, email }) => {
     const personalWhatsAppReady = config.key?.length === 32;
     // Solo el email exacto del piloto ve la línea Business, y solo con el alta completa (igual que el chat);
     // mientras tanto conserva el flujo manual. El estado lo confirma Graph en cada carga.
     const businessSeller = waCloudSeller(waCloud?.config, { email });
     const businessPending = !businessSeller && Boolean(waCloud?.config?.email) && email === waCloud.config.email;
-    const [doc, cal, sheetProfile, senderPhone, businessLine, contactsProfile] = await Promise.all([
+    const [doc, cal, sheetProfile, senderPhone, businessLine, contactsProfile, assistantAccepted] = await Promise.all([
       pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, pilot ? calendar.panel(id) : null, sheetsPilot ? sheets.panel(id) : null,
       pilot && personalWhatsAppReady && !businessSeller ? waProfile.load(id).catch(() => null) : null,
       businessSeller ? (personalWhatsAppReady ? waCloud.verify().catch(() => ({ ok:false, reason:'unreachable' }))
         : { ok:false, reason:'notConfigured' }) : null,
-      contactsPilot && config.contactsReady ? contacts.panel(id) : null
+      contactsPilot && config.contactsReady ? contacts.panel(id) : null,
+      assistantPilot ? agentConsent.accepted(id) : null
     ]);
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
@@ -158,7 +177,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
     res.send(connectionsPage({ doc, cal, pilot, contacts:contactsProfile, contactsPilot, contactsReady:config.contactsReady, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
       personalWhatsAppReady, senderPhone, businessLine, businessPending,
-      businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), coachEmail:email, csrf:session, message }));
+      businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), assistant: assistantPilot ? {acceptedAt:assistantAccepted} : null, coachEmail:email, csrf:session, message }));
   }));
 
   const startAuthorization = requestSend => own(async (_req, res, { id, session }) => {
@@ -264,6 +283,22 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     },
     sheetTools,readSales:createPostSaleReader({config,store,gmail}),channels:createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts}),
     readSession:readSheetsSession,switched,...planDependencies});
+  // Asistente con ciclo de herramientas. Solo actúa para COACH_AGENT_LOOP_EMAILS; para los demás devuelve null.
+  const mailAad=(owner,session,grant)=>'draft-question:'+owner+':'+session+':'+grant;
+  const runLoop=createSellerAgent({config,plans:createPlanStore({key:config.key}),memory:createPlanStore({key:config.key}),
+    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,
+      readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service})}),
+    // Mismo formato y vínculo que la ficha de bandeja del agente de Gmail, para que «Responde al primero» continúe allí.
+    inboxToken:({owner,session,grant,ids})=>sealToken(JSON.stringify({kind:'inbox',ids,until:Date.now()+30*60000}),config.key,mailAad(owner,session,grant)),
+    mailContext:async(owner,session,token)=>{
+      const doc=await store.findById(owner,'grant').lean();
+      if (!doc?.grant || token.length>40000) return '';
+      try {
+        const saved=JSON.parse(openToken(token,config.key,mailAad(owner,session,doc.grant)));
+        return saved.until>Date.now() ? saved.kind || 'pending' : '';
+      } catch { return ''; }
+    },
+    budget:createAgentBudget({limitMicros:config.loopMonthlyMicros}),consent:agentConsent,readSession:readSheetsSession,switched,...agentDependencies});
   async function dispatch(args) {
     const body = args.req?.body;
     const {user,session}=args.auth || {};
@@ -278,6 +313,10 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     if (direct && !(direct.literal && planFocused)) {
       const agent = direct.channel === 'mail' ? runMail : runWhatsApp;
       return agent({...args,literalDraftInput:direct.literal});
+    }
+    if (!direct?.literal && !/^TEC(?:PLAN|PERSON|ROUTE) /.test(args.text) && !/\b[a-f0-9]{12,32}[.!]?\s*$/i.test(args.text)) {
+      const looped=await runLoop(args);
+      if (looped) return looped;
     }
     if (!direct?.literal && !/^TECPLAN /.test(args.text)) {
       const routed=/^TECPERSON /.test(args.text) ? await runContacts(args) : await runRoute(args) || await runContacts(args);

@@ -2,6 +2,9 @@ const actions = '/api/coach/conexiones/gmail/';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const date = value => new Intl.DateTimeFormat('es-US', { dateStyle: 'medium', timeZone: 'America/Chicago' }).format(new Date(value));
 export const notices = {
+  assistantOn:'Listo. El asistente ya puede consultar tus cuentas para responderte.',
+  assistantOff:'Retiraste el permiso. El Coach sigue funcionando como antes.',
+  assistantFailed:'No se pudo guardar tu decisión. Inténtalo de nuevo.',
   contactsMissingScope:'Para usar la agenda, elige el permiso de Contactos en Google.',
   contactsNoOffline:'Vuelve a conectar Contactos para permitir el acceso desde tu Coach.',
   contactsConnected:'Contactos de Google ya está conectado. Puedes buscar y preparar cambios desde el chat.',
@@ -68,7 +71,7 @@ function businessSection(line, coachEmail, template) {
     <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>`;
 }
 
-export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, coachEmail, csrf, message }) {
+export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, assistant = null, coachEmail, csrf, message }) {
   // Alta de la línea Business incompleta: se mantiene el flujo manual y se avisa sin datos de la configuración.
   const pendingNote = businessPending ? '<p class="notice">TEC todavía no completó la conexión de tu línea de WhatsApp Business con Meta. Mientras tanto, prepara tus borradores aquí y envíalos desde tu app.</p>' : '';
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
@@ -136,7 +139,26 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contact
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${results}${contactsPilot && coachEmail==='agustincalderon286@gmail.com' ? '<p><a href="/mis-conexiones/contexto-para-gemini.pdf" download>Descargar el contexto de TEC para Gemini (PDF)</a></p>' : ''}</main></body></html>`;
+    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}${contactsPilot && coachEmail==='agustincalderon286@gmail.com' ? '<p><a href="/mis-conexiones/contexto-para-gemini.pdf" download>Descargar el contexto de TEC para Gemini (PDF)</a></p>' : ''}</main></body></html>`;
+}
+
+// Permiso para el asistente con ciclo de herramientas. El texto debe describir exactamente lo que
+// src/coach-agent-tools.js entrega al modelo; si eso cambia, cambia este texto y CONSENT_VERSION.
+function assistantSection({form,assistant}) {
+  const api='/api/coach/conexiones/asistente/';
+  const on=Boolean(assistant.acceptedAt);
+  return `<section id="asistente"><h2>Asistente que consulta tus cuentas</h2>
+    <p><strong>${on ? 'Permiso activo desde el '+date(assistant.acceptedAt)+'.' : 'Permiso sin activar.'}</strong></p>
+    <p>Con tu permiso, el Coach entiende lo que le pides con tus propias palabras y revisa tu agenda, tu correo, tus ventas de Hy Cite, tu hoja de referidos y tus contactos antes de responderte.</p>
+    <p>Para hacerlo, TEC envía a OpenAI, su proveedor de inteligencia artificial, tu mensaje y lo que el Coach lea para contestarlo:</p>
+    <ul><li><div>De tu calendario: los títulos y horarios de tus citas y tus bloques ocupados.</div></li>
+    <li><div>De tu correo: el remitente, el asunto, la fecha y un extracto corto de cada mensaje. Nunca el texto completo.</div></li>
+    <li><div>De tu hoja: el nombre, el anfitrión, el estado y el historial de cada ficha.</div></li>
+    <li><div>De tus contactos: el nombre y cuántos teléfonos y correos tiene guardados.</div></li></ul>
+    <p>No se envían los teléfonos ni los correos de tus fichas y contactos. TEC guarda cifrados los tres últimos intercambios de la conversación durante 20 minutos para entender tus preguntas de seguimiento.</p>
+    <p>El asistente solo lee. Nada se envía, se reserva ni se guarda sin que pulses el botón de confirmar.</p>
+    <p>Puedes retirar el permiso cuando quieras y el Coach seguirá funcionando como antes. Más detalles en la <a href="/coach/privacidad/">política de privacidad</a>.</p>
+    ${on ? form('revoke','Retirar el permiso',true,api) : form('accept','Permitir que el asistente consulte mis cuentas',false,api)}</section>`;
 }
 
 const sheetsActions='/api/coach/conexiones/sheets/';
