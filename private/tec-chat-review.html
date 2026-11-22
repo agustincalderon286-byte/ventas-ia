@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>Conversaciones del Coach | Total Elite Coaching</title>
+  <link rel="icon" href="/coach/icons/favicon-64.png"><link rel="stylesheet" href="/control/tec.css?v=20261022-tower1">
+  <style>
+    .chat-entry{border-top:1px solid var(--line);padding:18px 0}.chat-entry header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+    .chat-entry h3{margin:0;font-size:1rem}.chat-entry .turn{margin:10px 0 0;padding:12px 14px;border-radius:12px;background:#f8fafc}
+    .chat-entry .turn.answer{background:#fff;border:1px solid var(--line)}.chat-entry .turn strong{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+    .chat-entry pre{margin:0}.chat-entry .mark{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.chat-entry .mark input{flex:1 1 260px;min-width:0}
+    .chat-entry[data-flagged=true]{border-left:4px solid #a31831;padding-left:14px}.chat-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+  </style>
+</head>
+<body>
+  <header class="topbar"><a href="/control/" aria-label="Volver a la Torre"><img src="/coach/assets/brand/tec-total-elite-coaching-transparent.png" alt="TEC Total Elite Coaching"></a><div><span class="eyebrow">Administración privada</span><h1>Conversaciones del Coach</h1></div><a class="button secondary" href="/control/">Volver a la Torre</a></header>
+  <main>
+    <section class="intro"><div><span class="eyebrow">Para mejorar al Coach</span><h2>Qué preguntan los vendedores y qué les responde.</h2><p id="retention">Lee las conversaciones, busca un tema y marca las respuestas que haya que corregir.</p></div></section>
+    <section class="panel" aria-labelledby="chats-title">
+      <div class="section-heading"><h2 id="chats-title">Preguntas y respuestas</h2><small id="count"></small></div>
+      <form id="filters" class="chat-filters">
+        <label>Vendedor<select id="seller"><option value="">Todos</option></select></label>
+        <label>Origen<select id="source"><option value="">Todos</option><option value="coach">Coach</option><option value="asistente">Asistente de cuentas</option></select></label>
+        <label>Desde<input id="from" type="date"></label><label>Hasta<input id="to" type="date"></label>
+        <label>Buscar<input id="search" type="search" maxlength="80" placeholder="precio, garantía, cita…"></label>
+        <label class="check"><input id="flagged" type="checkbox"> Solo las marcadas</label>
+        <button class="button" type="submit">Buscar</button>
+      </form>
+      <p id="feedback" role="status" aria-live="polite">Cargando conversaciones…</p>
+      <div id="chats"></div>
+      <nav class="pagination" aria-label="Páginas de conversaciones"><button id="previous" class="button secondary" type="button">Anterior</button><span id="page-label"></span><button id="next" class="button secondary" type="button">Siguiente</button></nav>
+    </section>
+  </main><footer>TEC · Acceso exclusivo del administrador autorizado. Las conversaciones se borran solas al cumplir su plazo.</footer>
+  <script type="module" src="/control/chats.js?v=20261122-review1"></script>
+</body></html>

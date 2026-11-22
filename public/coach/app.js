@@ -9611,6 +9611,12 @@ function renderCoachMessageActions(card, actions = []) {
       element.dataset.coachWhatsappAccount = action.accountId;
       element.dataset.coachWhatsappSession = action.sessionId;
       element.textContent = "Abrir en mi WhatsApp";
+    } else if (action?.type === "callOpen") {
+      // Marca el teléfono de una ficha que el asistente mencionó en su respuesta.
+      if (typeof action.to !== "string" || !/^\+[1-9]\d{6,14}$/.test(action.to)) return;
+      element = document.createElement("a");
+      element.href = "tel:" + action.to;
+      element.textContent = String(action.label || "Llamar").slice(0,140);
     } else if (action?.type === "smsOpen") {
       // Abre la aplicación de mensajes del teléfono con el número y el texto puestos; el vendedor lo envía.
       // «?&body=» es la forma que aceptan tanto iPhone como Android.
@@ -9731,6 +9737,70 @@ function retireCoachOffers(roots, keepCards, outcome) {
   });
 }
 
+// Teléfonos de Estados Unidos escritos con separadores, o un número internacional completo con «+».
+const coachPhonePattern = /(?<![\d+])(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}(?!\d)|\+[1-9]\d{7,14}(?!\d)/g;
+
+function coachDialNumber(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (raw.startsWith("+")) return /^[1-9]\d{7,14}$/.test(digits) ? "+" + digits : "";
+  if (digits.length === 10) return "+1" + digits;
+  return digits.length === 11 && digits.startsWith("1") ? "+" + digits : "";
+}
+
+// Escribe el texto de una respuesta con sus teléfonos y direcciones como enlaces: tocar un teléfono
+// marca y tocar una dirección abre el mapa. `links` trae del servidor los textos exactos de las fichas
+// ({kind:"tel",text,to} o {kind:"map",text}); además se reconocen los teléfonos escritos en el texto.
+// Solo se crean nodos de texto y enlaces con destino fijo: nada del texto se interpreta como HTML.
+function renderCoachMessageText(paragraph, content, links = []) {
+  const text = String(content ?? "");
+  let parts = [{ text }];
+  const known = (Array.isArray(links) ? links : []).slice(0, 40).map(link => {
+    const label = typeof link?.text === "string" ? link.text : "";
+    if (link?.kind === "tel" && label.length >= 7 && label.length <= 60 && /^\+[1-9]\d{6,14}$/.test(link.to)) return { text: label, href: "tel:" + link.to };
+    if (link?.kind === "map" && label.trim().length >= 5 && label.length <= 240) {
+      return { text: label, href: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(label), external: true };
+    }
+    return null;
+  }).filter(Boolean).sort((a, b) => b.text.length - a.text.length);
+  known.forEach(link => {
+    parts = parts.flatMap(part => {
+      if (part.href || !part.text.includes(link.text)) return [part];
+      return part.text.split(link.text).flatMap((piece, index) => index ? [{ ...link }, { text: piece }] : [{ text: piece }]);
+    });
+  });
+  parts = parts.flatMap(part => {
+    if (part.href) return [part];
+    const pieces = [];
+    let last = 0;
+    for (const match of part.text.matchAll(coachPhonePattern)) {
+      const to = coachDialNumber(match[0]);
+      if (!to) continue;
+      pieces.push({ text: part.text.slice(last, match.index) }, { text: match[0], href: "tel:" + to });
+      last = match.index + match[0].length;
+    }
+    pieces.push({ text: part.text.slice(last) });
+    return pieces;
+  });
+  if (!parts.some(part => part.href)) {
+    paragraph.textContent = text;
+    return;
+  }
+  paragraph.textContent = "";
+  parts.filter(part => part.text).forEach(part => {
+    if (!part.href) {
+      paragraph.appendChild(document.createTextNode(part.text));
+      return;
+    }
+    const link = document.createElement("a");
+    link.className = "coach-message-link";
+    link.href = part.href;
+    link.textContent = part.text;
+    if (part.external) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+    paragraph.appendChild(link);
+  });
+}
+
 function addCoachMessage(container, role, content, options = {}) {
   const targets = getCoachMessageTargets(container);
 
@@ -9743,7 +9813,8 @@ function addCoachMessage(container, role, content, options = {}) {
     card.className = `coach-message ${role}`;
 
     const paragraph = document.createElement("p");
-    paragraph.textContent = content;
+    if (role === "assistant") renderCoachMessageText(paragraph, content, options?.links);
+    else paragraph.textContent = content;
     card.appendChild(paragraph);
     renderCoachMessageActions(card, Array.isArray(options?.actions) ? options.actions : []);
     target.appendChild(card);
@@ -9760,7 +9831,9 @@ function updateCoachMessage(messageHandles, content, options = {}) {
       return;
     }
 
-    handle.paragraph.textContent = content;
+    // Mientras la respuesta se va escribiendo se muestra como texto; al terminar se añaden los enlaces.
+    if (options?.final) renderCoachMessageText(handle.paragraph, content, options.links);
+    else handle.paragraph.textContent = content;
     renderCoachMessageActions(handle.card, Array.isArray(options?.actions) ? options.actions : []);
     handle.target.scrollTop = handle.target.scrollHeight;
   });
@@ -18473,6 +18546,8 @@ async function loadCoachAppPage() {
       // Only the agent that answered replaces its own context; general replies keep them all.
       const outcome = coachAgentContexts.record(requestBody, data, actions);
       updateCoachMessage(assistantMessageHandles, finalReply, {
+        final: true,
+        links: mailAgent && Array.isArray(data.coachLinks) ? data.coachLinks : [],
         actions: mailAgent ? actions.map(action => ["waOpen", "planAction", "planCall", "routeMap", "contactsAction"].includes(action?.type)
           ? { ...action, accountId: requestBody.accountId, sessionId: requestBody.sessionId }
           : data.coachOfferAgent && ["calendarSlot","calendarConfirm","calendarCancel"].includes(action?.type) ? { ...action, fromOffer: true } : action)

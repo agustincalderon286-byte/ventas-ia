@@ -5651,6 +5651,14 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   margin-top: 12px;
 }
 
+.coach-message-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
 .coach-message-action {
   min-height: 34px;
   padding: 0 12px;

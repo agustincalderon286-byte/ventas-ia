@@ -20,14 +20,14 @@ class Element {
  setPointerCapture(id){this.capture=id;}
  releasePointerCapture(id){this.capture=null;this.fire('lostpointercapture',{pointerId:id});}
 }
-function fixture({deferred=false,fail=false,denied=false,speech=false,replyText='Respuesta del Coach',permissionState,userAgent}={}){
+function fixture({deferred=false,fail=false,denied=false,speech=false,replyText='Respuesta del Coach',permissionState,userAgent,audioSession,singleContext=false}={}){
  let now=0,captureResolve,trackStops=0,urlCount=0,micRequests=0;const calls=[],sent=[],intervals=new Map(),contexts=[],sources=[];
  const form=new Element('form'),textarea=new Element('textarea'),submit=new Element('button'),dialog=new Element('dialog');submit.type='submit';form.dialog=dialog;form.append(textarea,submit);
  const document=new Element('document');document.createElement=tag=>new Element(tag);document.hidden=false;
  const window=new Element('window');Object.assign(window,{setInterval(fn){intervals.set(1,fn);return 1;},clearInterval(id){intervals.delete(id);},setTimeout(){return 2;},clearTimeout(){}});
  const track={stop(){trackStops++;}},stream={getTracks:()=>[track]};
  const permission = {state:permissionState};
- const navigator={userAgent,permissions:permissionState ? {query:async()=>permission} : undefined,mediaDevices:{getUserMedia(){
+ const navigator={userAgent,...(audioSession && {audioSession}),permissions:permissionState ? {query:async()=>permission} : undefined,mediaDevices:{getUserMedia(){
    micRequests++;
    if(denied)return Promise.reject(Object.assign(new Error('denied'),{name:'NotAllowedError'}));
    if(deferred)return new Promise(resolve=>{captureResolve=resolve;});
@@ -43,7 +43,7 @@ function fixture({deferred=false,fail=false,denied=false,speech=false,replyText=
  class Clock extends Date {static now(){return now;}}
  window.MediaRecorder=Recorder;
  if(speech)window.AudioContext=class {
-  constructor(){this.state='suspended';this.currentTime=0;contexts.push(this);}
+  constructor(){if(singleContext && contexts.length)throw new Error('sin otro contexto');this.state='suspended';this.currentTime=0;contexts.push(this);}
   resume(){if(gestureRunning)this.state='running';return Promise.resolve();}
   close(){this.state='closed';return Promise.resolve();}
   createBuffer(channels, samples, rate){return {duration:samples/rate,getChannelData:()=>new Float32Array(samples)};}
@@ -148,8 +148,10 @@ test('failed transcription retains the recording; only explicit retry resends an
 test('audio chat keeps the transcription visible and starts playback with the microphone gesture',async()=>{
  const f=fixture({speech:true});
  f.down();await turn();f.advance(1250);f.up();await turn();
- assert.equal(f.contexts.length,1,'sending must retain the context unlocked by the microphone');
- assert.equal(f.contexts[0].state,'running');
+ // La respuesta suena en un contexto creado al soltar, ya con el micrófono cerrado; el de la grabación se cierra.
+ assert.equal(f.contexts.length,2,'the reply plays in a context created after the microphone closed');
+ assert.equal(f.contexts[0].state,'closed');
+ assert.equal(f.contexts[1].state,'running','the release gesture unlocks the new context');
  assert.equal(f.question.children[0],f.transcript);
  assert.equal(f.transcript.textContent,'Pregunta grabada');
  assert.equal(f.question.children[1].className,'coach-voice-card');
@@ -174,10 +176,39 @@ test('la nota larga se reproduce completa por el servicio del Coach usando la cu
  const player=f.answer.children[0].children[1];
  assert.equal(player.classes.has('is-playing'),true);
  f.switchChat();
- assert.equal(f.contexts[0].state,'closed');
+ assert.deepEqual(f.contexts.map(context=>context.state),['closed','closed']);
  assert.equal(player.classes.has('is-playing'),false);
  player.children[0].fire('click');
  assert.equal(f.sources.length,requests.length);
  assert.equal(await f.controller.speak('Respuesta antigua',[{card:f.answer}],undefined,{isCurrent:()=>false}),false);
  assert.equal(f.calls.length,requests.length+1);
+});
+
+test('si el contexto nuevo no puede crearse, la respuesta suena en el que desbloqueó el micrófono',async()=>{
+ const f=fixture({speech:true,singleContext:true});
+ f.down();await turn();f.advance(1250);f.up();await turn();
+ assert.equal(f.contexts.length,1);
+ assert.equal(f.contexts[0].state,'running');
+ assert.equal(f.sources.length,1,'the first audio must play without a second gesture');
+});
+
+test('en iPhone el audio pasa a modo de reproducción al soltar el micrófono y vuelve al automático al terminar',async()=>{
+ const session={type:'auto'}, seen=[];
+ const audioSession={get type(){return session.type;},set type(value){session.type=value;seen.push(value);}};
+ const f=fixture({speech:true,audioSession});
+ f.down();await turn();
+ assert.equal(session.type,'play-and-record');
+ f.advance(1250);f.up();await turn();
+ assert.equal(session.type,'playback','the spoken reply must not play in call mode');
+ assert.equal(f.sources.length,1);
+ f.sources[0].onended();
+ assert.equal(session.type,'auto','other recorders on the page get the default mode back');
+ assert.deepEqual(seen,['play-and-record','playback','auto']);
+ // Cancelar la grabación o negar el micrófono no deja el modo cambiado.
+ const cancelled=fixture({audioSession});
+ cancelled.down();await turn();cancelled.advance(1200);cancelled.move(200);cancelled.up();await turn();
+ assert.equal(session.type,'auto');
+ const denied=fixture({denied:true,audioSession});
+ denied.down();await turn();
+ assert.equal(session.type,'auto');
 });

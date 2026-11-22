@@ -9,6 +9,7 @@ import {agentTools, localStamp, markerPattern} from './coach-agent-tools.js';
 import {excludedReads} from './coach-plan-responses.js';
 import {initialPlan, planView} from './coach-conversation-plan.js';
 import {validTimeZone} from './coach-followup-input.js';
+import {dialNumber} from './coach-postsale.js';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const direct = auth => !!(auth?.user && auth.session?.tokenHash) &&
@@ -16,12 +17,13 @@ const direct = auth => !!(auth?.user && auth.session?.tokenHash) &&
 // `pending` conserva o renueva la ficha de Gmail del cliente: sin ella, el chat la descarta
 // y «Responde al primero» dejaría de funcionar después de una lectura.
 // `plan` mantiene vigente la propuesta abierta cuando la respuesta es solo una lectura: sin él, el chat retira sus botones.
-const reply = (respuesta,actions=[],pending,plan) => ({mode:'coach',coachMailAgent:true,coachAgentLoop:true,respuesta,coachHelpActions:actions,
+const reply = (respuesta,actions=[],pending,plan,links=[]) => ({mode:'coach',coachMailAgent:true,coachAgentLoop:true,respuesta,coachHelpActions:actions,
+  ...(links.length && {coachLinks:links.slice(0,40)}),
   ...(typeof pending==='string' && pending && {coachMailPending:pending}),...(plan && {coachPlanPending:plan})});
 const legacyQuestions = ['calendar','whatsapp','sheets','contacts','route'];
 const sourceLabels = {agenda:'Google Calendar',slots:'Google Calendar',inbox:'Gmail',thread:'Gmail',sales:'Gmail',
-  referrals:'Google Sheets',calls:'Google Sheets',contacts:'Contactos de Google'};
-const excludedSources = {agenda:['agenda','slots','appointment'],inbox:['inbox','thread'],sales:['sales'],sheet:['referrals','calls','note','add','sms']};
+  referrals:'Google Sheets',calls:'Google Sheets',distance:'Google Maps',contacts:'Contactos de Google'};
+const excludedSources = {agenda:['agenda','slots','appointment'],inbox:['inbox','thread'],sales:['sales'],sheet:['referrals','calls','distance','note','add','sms']};
 const proposalSources = ['note','appointment','add','sms'];
 const unconfirmed = step => ['ready','retry'].includes(step?.status);
 // El asistente no escribe: cualquier frase en primera persona que dé algo por guardado, agendado o enviado es falsa.
@@ -53,7 +55,7 @@ Cómo trabajas:
 - Los mensajes de texto se escriben en su nombre, cortos, naturales y sin presionar; firma con su nombre de pila. No prepares mensajes para una ficha que pide no ser contactada.
 - Si pide consejo o entrenamiento de ventas, un correo, un WhatsApp, cambios en sus Contactos de Google, varias altas a la vez o capturar una hoja del 4 en 14, un trayecto entre visitas o la postventa de su hoja, usa pasar_al_coach de inmediato y no contestes tú.
 - Los teléfonos, direcciones y correos de fichas y contactos llegan como marcadores entre dobles corchetes, por ejemplo [[tel:ab12cd]]. Cuando el vendedor los pida o sean útiles, copia el marcador exactamente en tu respuesta: él verá el dato real. No digas que no puedes verlos ni expliques el marcador.
-- Cuando pida leads cercanos a un lugar («estoy en Blue Island, dame los más cercanos»), usa leads_por_zona: primero con zonas vacías para ver qué ciudades y códigos postales hay en su hoja; después con las zonas de esa lista ordenadas de la más cercana a la más lejana según tu conocimiento de la geografía, empezando por el lugar que dijo. Aclara que la cercanía es aproximada por ciudad.
+- Cuando pida leads cercanos a un lugar («estoy en Blue Island, dame los más cercanos»), usa primero leads_por_zona con zonas vacías para ver qué ciudades y códigos postales hay en su hoja. Después elige de esa lista las zonas más cercanas al lugar que dijo, ordenadas de la más cercana a la más lejana según tu conocimiento de la geografía, y llama a leads_por_distancia con ese lugar como origen: devuelve las fichas por minutos reales de manejo. Copia el marcador de minutos junto a cada persona. Si responde «no_disponible», usa leads_por_zona con las mismas zonas y aclara que la cercanía es aproximada por ciudad. Si no dijo dónde está, pregúntaselo.
 - Para trabajar los leads piensa como un buen vendedor: combina zona, urgencia del seguimiento y lo que dicen las notas, y explica en una frase por qué recomiendas a cada persona.
 - Si el pedido es ambiguo, haz una sola pregunta corta.
 
@@ -67,7 +69,8 @@ Respuesta: breve y útil. Empieza por lo que encontraste. Usa listas cortas con 
 // bindTools(actor, refs, turn) → execute(name,args). memory y plans: almacenes cifrados con load/save.
 // consent.accepted(owner) → fecha del permiso vigente o null.
 // mailContext(owner,session,token) → tipo de la ficha de Gmail pendiente. inboxToken(...) crea la ficha de una bandeja leída.
-export function createSellerAgent({config,bindTools,memory,plans,mailContext,inboxToken,budget,consent,readSession,switched,run=runAgentLoop,now=Date.now,log=console.warn}) {
+// reviewLog.record(...) guarda el intercambio 30 días, sin datos de contacto, para la revisión del administrador (coach-chat-review.js).
+export function createSellerAgent({config,bindTools,memory,plans,mailContext,inboxToken,budget,consent,reviewLog,readSession,switched,run=runAgentLoop,now=Date.now,log=console.warn}) {
   // Con un borrador, una pregunta o una propuesta abierta del flujo existente, el mensaje pertenece a ese flujo.
   // Una propuesta que preparó este asistente la sigue atendiendo él, salvo mientras se confirma o si una
   // confirmación quedó sin resultado claro: ahí manda el plan de conversación.
@@ -108,7 +111,7 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
       const planRecord=await plans.load(planScope);
       if (await midFlow(body,owner,session,planRecord?.data) || !await budget.allow(owner)) return null;
       const record=await memory.load(scope);
-      const state={turns:[],refs:{},secrets:{},...record?.data};
+      const state={turns:[],refs:{},secrets:{},labels:{},...record?.data};
       const refs={...state.refs};
       const actor={owner,session,email:auth.user.email,name:String(auth.user.name || '').trim(),zone,current,now};
       // Propuesta propia que el vendedor tiene a la vista y aún no confirma: se puede corregir o ampliar.
@@ -121,11 +124,17 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
         '. Si pide corregirla, vuelve a preparar esa parte con los datos nuevos; el resto se conserva. Si pregunta otra cosa, respóndele: la propuesta sigue disponible con su botón.'}] : [];
       const input=[...state.turns.flatMap(turn=>[{role:'user',content:turn.user},{role:'assistant',content:turn.assistant}]),...openNote,{role:'user',content:text.trim()}];
       const instructions=sellerInstructions({name:actor.name,zone,now:now()});
-      const usage={inputTokens:0,cachedInputTokens:0,outputTokens:0};
+      const usage={inputTokens:0,cachedInputTokens:0,cacheWriteTokens:0,longCacheWriteTokens:0,outputTokens:0};
+      // El consumo se cobra aunque el modelo no termine el turno: el ciclo lo informa tras cada petición.
       const attempt=async extra=>{
-        const result=await run({model:config.agentModel,instructions,input:[...input,...extra],tools,execute,now});
-        for (const key of Object.keys(usage)) usage[key]+=result.usage[key];
-        return result;
+        let spent=null;
+        try {
+          const result=await run({model:config.agentModel,instructions,input:[...input,...extra],tools,execute,now,onUsage:value=>{spent=value;}});
+          spent=result.usage;
+          return result;
+        } finally {
+          if (spent) for (const key of Object.keys(usage)) usage[key]+=spent[key] || 0;
+        }
       };
       let result;
       try {
@@ -147,6 +156,18 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
       const needsConnection=result.trace.some(step=>connectionProblem.includes(step.estado));
       // Los datos privados se ponen aquí, en la respuesta al vendedor. El modelo y la memoria solo guardan el marcador.
       const secrets=Object.fromEntries(Object.entries({...state.secrets,...turn.secrets}).slice(-80));
+      const labels=Object.fromEntries(Object.entries({...state.labels,...turn.labels}).filter(([token])=>Object.hasOwn(secrets,token)));
+      // Teléfonos y direcciones de fichas que aparecen en la respuesta: el chat los vuelve enlaces para marcar o abrir el mapa,
+      // y ofrece un botón de llamada por persona.
+      const links=[], calls=[];
+      for (const token of new Set([...result.text.matchAll(markerPattern)].map(found=>found[1]+':'+found[2]))) {
+        if (!Object.hasOwn(secrets,token)) continue;
+        if (token.startsWith('dir:')) links.push({kind:'map',text:secrets[token]});
+        const to=token.startsWith('tel:') ? dialNumber(secrets[token]) : '';
+        if (!to) continue;
+        links.push({kind:'tel',text:secrets[token],to});
+        if (labels[token] && calls.length<5 && !calls.some(call=>call.to===to)) calls.push({type:'callOpen',to,label:'Llamar a '+labels[token]});
+      }
       const fill=value=>value.replace(markerPattern,(found,kind,id)=>Object.hasOwn(secrets,kind+':'+id) ? secrets[kind+':'+id] : '(dato no disponible)');
       const parts=[fill(result.text.slice(0,6000))];
       // La propuesta se guarda una sola vez, al final, y se muestra con la misma vista y los mismos botones del plan de conversación.
@@ -163,15 +184,17 @@ export function createSellerAgent({config,bindTools,memory,plans,mailContext,inb
       if (read.length) parts.push('Fuentes consultadas: '+read.join(', ')+'.');
       const answer=parts.join('\n\n');
       const turns=[...state.turns,{user:text.trim().slice(0,600),assistant:result.text.slice(0,1500)}].slice(-3);
-      await memory.save(scope,record?.revision,{turns,refs:Object.fromEntries(Object.entries(refs).slice(-80)),secrets}).catch(()=>null);
-      const actions=[...messages.map(message=>({type:'smsOpen',to:message.to,text:message.text,label:'Abrir Mensajes · '+message.name})),
+      await memory.save(scope,record?.revision,{turns,refs:Object.fromEntries(Object.entries(refs).slice(-80)),secrets,labels}).catch(()=>null);
+      // Lo que se conserva es el texto del modelo, con marcadores en lugar de teléfonos, direcciones y correos.
+      if (reviewLog) await reviewLog.record({owner,question:text.trim(),answer:result.text,tools:result.trace}).catch(()=>null);
+      const actions=[...calls,...messages.map(message=>({type:'smsOpen',to:message.to,text:message.text,label:'Abrir Mensajes · '+message.name})),
         ...(needsConnection ? [{type:'connections',label:'Mis conexiones'}] : [])];
       const mailLinks=turn.inbox ? turn.inbox.ids.map((id,index)=>({type:'mailSource',mailbox:turn.inbox.mailbox,id,label:'Abrir correo '+(index+1)})) : [];
-      if (planReply) return {...reply(answer,[...planReply.coachHelpActions,...mailLinks,...actions]),coachPlanAgent:true,coachPlanPending:planReply.coachPlanPending};
+      if (planReply) return {...reply(answer,[...planReply.coachHelpActions,...mailLinks,...actions],'','',links),coachPlanAgent:true,coachPlanPending:planReply.coachPlanPending};
       const keepPlan=open ? body.coachPlanPending : '';
-      if (!turn.inbox) return reply(answer,actions,body.coachMailPending,keepPlan);
+      if (!turn.inbox) return reply(answer,actions,body.coachMailPending,keepPlan,links);
       const {grant,ids}=turn.inbox;
-      return reply(answer,[...mailLinks,...actions],ids.length ? inboxToken({owner,session,grant,ids}) : undefined,keepPlan);
+      return reply(answer,[...mailLinks,...actions],ids.length ? inboxToken({owner,session,grant,ids}) : undefined,keepPlan,links);
     } catch (error) {
       if (!(error instanceof AgentUnavailable)) log('TEC agent loop',{name:error?.name,status:Number(error?.status) || undefined});
       return null;

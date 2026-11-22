@@ -95,12 +95,42 @@
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null, liveFinished = null, playbackEpoch = 0;
+    // En iPhone, mientras el micrófono captura, el sistema pone el audio en modo de llamada, que suena más bajo.
+    // Al soltar el micrófono se pide el modo de reproducción para la respuesta hablada y, cuando termina,
+    // se vuelve al automático para no estorbar a otras grabaciones de la página.
+    let sessionTimer = null;
+    function audioSession(type) {
+      const session = navigator.audioSession;
+      if (!session) return;
+      window.clearTimeout(sessionTimer);
+      sessionTimer = null;
+      try { if (session.type !== type) session.type = type; } catch {}
+      if (type === 'playback') sessionTimer = window.setTimeout(() => audioSession('auto'), 120000);
+    }
     function stopLive() {
       playbackEpoch++;
       liveFinished?.();
       const previous = liveContext;
       liveContext = null;
       previous?.close().catch(() => {});
+      audioSession('auto');
+    }
+    // La respuesta se reproduce en un contexto de audio creado después de cerrar el micrófono: el que estuvo
+    // abierto durante la grabación conserva el volumen bajo del modo de llamada. Si el nuevo no arranca,
+    // se conserva el anterior, que ya estaba desbloqueado por el gesto.
+    function refreshAudio() {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      const previous = liveContext;
+      if (!Context || !previous || liveFinished) return;
+      let fresh;
+      try { fresh = new Context(); } catch { return; }
+      const settle = () => {
+        if (fresh.state === 'running' && liveContext === previous && !liveFinished) {
+          liveContext = fresh;
+          previous.close().catch(() => {});
+        } else fresh.close().catch(() => {});
+      };
+      Promise.resolve(fresh.resume()).then(settle, settle);
     }
     function unlockAudio(){
       if(!liveContext){try{const Context=window.AudioContext || window.webkitAudioContext;if(Context)liveContext=new Context();}catch{}}
@@ -143,7 +173,13 @@
         update();
       } catch { stopMeter(); }
     }
-    const stopTracks = () => { stopMeter(); stream?.getTracks().forEach(track => track.stop()); stream = null; };
+    const stopTracks = () => {
+      stopMeter();
+      if (!stream) return;
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      audioSession('playback');
+    };
     const clearTimer = () => { window.clearInterval(timer); timer = null; };
     const notify = text => { if(active) active.status.textContent = text; };
     const capturing = () => ['requesting','recording','finishing','ready'].includes(phase);
@@ -190,6 +226,7 @@
     }
     function cancel(message = phase === 'requesting' ? 'Vuelve a mantener presionado para grabar.' : 'Audio borrado.') {
       generation++; resetGesture();clearTimer();stopRecording();recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
+      audioSession('auto');
     }
     function finish() {
       if(!gesture)return;
@@ -197,9 +234,9 @@
       if(cancelled){cancel();return;}
       if(phase==='requesting'){cancel();return;}
       unlockAudio();
-      if(phase==='recording'){stopRecording('send');render();}
-      else if(phase==='finishing')finishAction='send';
-      else if(phase==='ready'){phase='idle';send();}
+      if(phase==='recording'){stopRecording('send');refreshAudio();render();}
+      else if(phase==='finishing'){finishAction='send';refreshAudio();}
+      else if(phase==='ready'){refreshAudio();phase='idle';send();}
     }
     async function start(item) {
       if(chatBusy || phase !== 'idle' || draft)return;
@@ -210,9 +247,10 @@
       pausePlayback();unlockAudio();seconds=0;
       const token=++generation;phase='requesting';notify('Preparando micrófono…');render();
       try {
+        audioSession('play-and-record');
         micRequest=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
         const captured=await micRequest;
-        if(token!==generation || document.hidden || !gesture){captured.getTracks().forEach(track=>track.stop());if(token===generation){phase='idle';render();}return;}
+        if(token!==generation || document.hidden || !gesture){captured.getTracks().forEach(track=>track.stop());audioSession('auto');if(token===generation){phase='idle';render();}return;}
         stream=captured;const mime=recordingMime(),chunks=[];
         const recording=new MediaRecorder(captured,mime?{mimeType:mime}:{});recorder=recording;const started=Date.now();
         recording.addEventListener('dataavailable',event=>{if(event.data.size && token===generation)chunks.push(event.data);});
@@ -228,7 +266,7 @@
         recording.start(500);monitorVolume(item, captured);phase='recording';notify('Grabando. Suelta para enviar o desliza a la izquierda para borrar.');render();
         timer=window.setInterval(()=>{seconds++;render();if(seconds>=MAX_SECONDS)stopRecording();},1000);
       } catch(error) {
-        if(token!==generation)return;stopTracks();resetGesture();phase='idle';
+        if(token!==generation)return;stopTracks();audioSession('auto');resetGesture();phase='idle';
         notify(error.name==='NotAllowedError' ? 'El micrófono está bloqueado. ' + microphoneSettings() : 'No pude abrir el micrófono. Revisa que esté disponible.');render();
       } finally {
         micRequest=null;
@@ -401,6 +439,7 @@
         panels.forEach(p => p.player.setStream(null));
         status('');
         if (liveFinished === complete) liveFinished = null;
+        audioSession('auto');
       }
       async function toggle() {
         if (!playing || context !== liveContext) return;

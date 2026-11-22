@@ -189,6 +189,23 @@ Decisiones de esta parte:
 - **Los correos siguen en el flujo existente** (`pasar_al_coach`). Su redactor recibe la dirección del destinatario, y el permiso del asistente dice que los correos de las fichas no se envían al modelo. Para traerlos al ciclo hay que redactar sin la dirección o cambiar el texto del permiso y subir `CONSENT_VERSION`.
 - **El permiso no cambió de versión**: el modelo recibe los mismos datos que antes. Se actualizó el texto de Mis conexiones y de la política de privacidad, que decían «solo lee».
 
+**Trabajo en la calle (22 de noviembre de 2026, en el árbol de trabajo, sin publicar).**
+- **Teléfonos y direcciones presionables.** La respuesta del asistente lleva `coachLinks` con el texto exacto de cada teléfono y dirección de ficha que mencionó; el chat (`renderCoachMessageText` en `public/coach/app.js`) los convierte en enlaces `tel:` y de Google Maps, y además reconoce los teléfonos escritos en cualquier respuesta del Coach. Solo crea nodos de texto y enlaces de destino fijo.
+- **Botón «Llamar a …»** (`callOpen`) por cada persona cuyo teléfono aparece en la respuesta, hasta cinco.
+- **`leads_por_distancia`**: ordena hasta ocho fichas con calle y número por minutos de manejo con tráfico (`createTrafficRoutes`, la misma conexión y el mismo cupo gratuito mensual de los trayectos: `COACH_MAPS_ROUTES_KEY`, `COACH_MAPS_FREE_MONTH`, `COACH_MAPS_FREE_REQUESTS`). Cada ficha medida consume una consulta del cupo. Sin clave, sin cupo del mes o sin direcciones reconocibles responde `no_disponible` y el asistente vuelve a `leads_por_zona`. Los minutos llegan al vendedor con un marcador `[[min:…]]`: el modelo conoce el orden, no el tiempo, así que el permiso no cambia.
+- **Consumo.** El ciclo informa el consumo tras cada petición (`onUsage`) y cuenta lo que el proveedor guarda en caché; el presupuesto mensual cobra también un turno que el modelo no terminó.
+
+**Voz de Jorge (misma fecha, sin publicar).**
+- **Volumen de la primera lectura** (`public/coach/coach-voice.js`): la respuesta se reproducía en el contexto de audio abierto durante la grabación, que en iPhone queda en modo de llamada. Ahora se crea un contexto nuevo al soltar el micrófono y, donde existe `navigator.audioSession`, se pide el modo `playback` hasta que termina la respuesta. Es una hipótesis sin comprobar en un teléfono.
+- **Palabras en inglés** (`src/knowledge/place-pronunciation.js`): rumbo, abreviaturas de calle, estado y unas noventa ciudades y calles del área de Chicago escritas «como suenan», con el mismo mecanismo de alias del catálogo. Falta que Agustín las escuche. La solución general sería una voz bilingüe, que requiere su aprobación previa.
+
+**Revisión de conversaciones (22 de noviembre de 2026, sin publicar).** Agustín aprobó el aviso de privacidad y los plazos.
+- `src/coach-chat-review.js`: lista las preguntas y respuestas del Coach normal (colección `Message`, `intent` `coach_chat` y `coach_help`) emparejadas por conversación, y las del asistente, que ahora se guardan cifradas en `CoachAssistantTurn` con el texto del modelo: marcadores en lugar de teléfonos, direcciones y correos, y además se quitan los teléfonos y correos escritos a mano.
+- **Plazos:** Coach normal, 6 meses (borrado diario en `iniciarServidor`, que también vacía la última pregunta del perfil de quien lleva 6 meses sin usarlo); asistente, 30 días (caducidad de Mongo). La primera ejecución borra lo que ya tenga más de 6 meses.
+- **Acceso:** `/control/conversaciones/` y `/api/control/coach-chats`. Hay que ser administrador de la Torre y además figurar en `COACH_CHAT_REVIEW_EMAILS`; con la lista vacía nadie entra. La Torre tiene hoy dos administradores, por eso existe la lista aparte.
+- **Marca «mala» con nota** (`CoachReviewFlag`), que caduca junto con la conversación.
+- **Permiso versión 3:** el asistente pasa de no conservar nada a conservar 30 días, así que cada vendedor del piloto debe aceptarlo de nuevo. `eraseSeller` atiende una solicitud de eliminación; todavía no tiene botón en la pantalla.
+
 Pendiente de la Fase 2: correos dentro del ciclo, varias altas a la vez y la hoja del 4 en 14 por foto, WhatsApp, contactos, trayectos y postventa; los casos de propuesta en `scripts/coach-agent-bench.mjs` (su ejecutor ficticio aún no conoce las herramientas nuevas); y probar el enlace de Mensajes en un teléfono real.
 
 ### Fase 3 · Continuidad y alcance

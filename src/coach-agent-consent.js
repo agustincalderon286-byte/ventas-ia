@@ -3,7 +3,9 @@
 import mongoose from 'mongoose';
 
 // 2 (22-nov-2026): el modelo recibe también la ciudad o el código postal de las fichas, para ordenar por cercanía.
-export const CONSENT_VERSION = 2;
+// 3 (22-nov-2026): TEC conserva 30 días cada pregunta y respuesta del asistente, sin datos de contacto, para que el
+//   administrador las revise (coach-chat-review.js). Antes no se conservaba nada más de 20 minutos.
+export const CONSENT_VERSION = 3;
 const schema = new mongoose.Schema({_id:String,version:Number,acceptedAt:Date},{versionKey:false,writeConcern:{w:'majority'}});
 const Store = mongoose.models.CoachAgentConsent || mongoose.model('CoachAgentConsent',schema);
 

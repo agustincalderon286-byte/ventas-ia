@@ -77,7 +77,8 @@ test('Mis conexiones muestra el permiso solo al piloto del asistente y lo activa
   // Un permiso de una versión anterior no vale y la página pide revisarlo.
   store.rows.get('a').version=CONSENT_VERSION-1;
   const outdated=await open('a');
-  assert.match(outdated.body,/Cambió lo que el asistente puede consultar/);
+  assert.match(outdated.body,/Cambiaron las condiciones del asistente/);
+  assert.match(outdated.body,/conserva cifradas durante 30 días/);
   assert.match(outdated.body,/asistente\/accept/);
   assert.match(outdated.body,/su ciudad o código postal/);
   store.rows.get('a').version=CONSENT_VERSION;

@@ -40,6 +40,17 @@ test('el ciclo ejecuta la herramienta, devuelve su resultado al modelo y entrega
   assert.deepEqual(second[3],{type:'function_call_output',call_id:'c1',output:JSON.stringify({estado:'ok',citas:[{titulo:'Demo'}]})});
 });
 
+test('el ciclo informa el consumo acumulado tras cada petición, también si después no termina, y cuenta lo guardado en caché',async()=>{
+  const written={input_tokens:1000,input_tokens_details:{cached_tokens:200,cache_write_tokens:300,cache_write_tokens_details:{ttl_12h_tokens:100}},output_tokens:100};
+  const step={status:'completed',usage:written,output:[call('consultar_agenda',{desde:'2026-11-23',hasta:'2026-11-23'})]};
+  const reports=[];
+  await assert.rejects(runAgentLoop({...base,...model(step,{status:'incomplete',output:[],usage:written}),execute:async()=>({estado:'ok'}),onUsage:value=>reports.push(value)}),AgentUnavailable);
+  assert.deepEqual(reports.map(value=>[value.requests,value.inputTokens,value.cachedInputTokens,value.cacheWriteTokens,value.longCacheWriteTokens,value.outputTokens]),
+    [[1,1000,200,300,100,100],[2,2000,400,600,200,200]]);
+  // Sin el aviso, el ciclo funciona igual.
+  assert.equal((await runAgentLoop({...base,...model(turn(say('Hola.'))),execute:async()=>({})})).usage.cacheWriteTokens,0);
+});
+
 test('varias lecturas en un paso, argumentos inválidos y fallos se devuelven al modelo sin inventar datos',async()=>{
   const {fetchImpl,requests}=model(
     turn(call('consultar_agenda',{desde:'2026-11-23',hasta:'2026-11-23'},'a'),call('leer_bandeja',{soloNoLeidos:true},'b'),call('borrar_todo',{},'c')),
@@ -278,7 +289,7 @@ test('el asistente responde con las fuentes leídas, guarda la conversación y c
   assert.match(seen[0].instructions,/lunes 2026-11-23 09:00/);
   assert.equal(saved[0].revision,'rev1');
   assert.equal(saved[0].data.turns.length,2);
-  assert.deepEqual(charged,[{inputTokens:10,cachedInputTokens:0,outputTokens:5}]);
+  assert.deepEqual(charged,[{inputTokens:10,cachedInputTokens:0,cacheWriteTokens:0,longCacheWriteTokens:0,outputTokens:5}]);
 });
 
 test('el vendedor ve el teléfono y la dirección reales; el modelo y la memoria solo conservan el marcador',async()=>{
@@ -365,6 +376,8 @@ test('configuración, instrucciones y presupuesto mensual',async()=>{
   assert.match(text,/terceros/);
   assert.equal(turnMicros('gpt-6.2-sol',{inputTokens:1000,cachedInputTokens:200,outputTokens:100}),2620);
   assert.equal(turnMicros('otro',{inputTokens:1,cachedInputTokens:0,outputTokens:1}),0);
+  // 600 de entrada normal, 200 leídos de caché, 100 guardados en caché y otros 100 guardados por 12 horas.
+  assert.equal(turnMicros('gpt-6.2-sol',{inputTokens:1000,cachedInputTokens:200,cacheWriteTokens:200,longCacheWriteTokens:100,outputTokens:100}),1200+20+250+500+1000);
   const rows=new Map();
   const store={findById:id=>({lean:async()=>rows.get(id) || null}),
     updateOne:async({_id},{$inc})=>{const row=rows.get(_id) || {usedMicros:0,turns:0};rows.set(_id,{usedMicros:row.usedMicros+$inc.usedMicros,turns:row.turns+1});}};
@@ -432,4 +445,11 @@ test('en el reparto, el ciclo lee la bandeja y su ficha permite continuar con «
   await ask(on,'Confirmar envío ABCDEF123456');
   await ask(on,'TECPLAN 0123456789abcdef01234567 close 0');
   assert.equal(seen.runs,2);
+});
+
+test('si el modelo no termina el turno, el asistente se aparta pero cobra lo que ya consumió',async()=>{
+  const spent={inputTokens:900,cachedInputTokens:0,cacheWriteTokens:50,longCacheWriteTokens:0,outputTokens:40,requests:1};
+  const {ask,charged}=seller({run:async options=>{options.onUsage(spent);throw new AgentUnavailable('El modelo no completó la respuesta');}});
+  assert.equal(await ask('que tengo mañana'),null);
+  assert.deepEqual(charged,[{inputTokens:900,cachedInputTokens:0,cacheWriteTokens:50,longCacheWriteTokens:0,outputTokens:40}]);
 });

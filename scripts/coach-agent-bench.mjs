@@ -63,7 +63,7 @@ export function routerOutcome(intent,example) {
     case 'capabilities': return outcome('selector',['connections']);
     case 'clarify': return outcome('selector:aclara');
     case 'unsupported': return outcome('selector:sin herramienta');
-    case 'unavailable': return outcome('selector:no interpretó');
+    case 'unavailable': return {...outcome('selector:no interpretó'),unavailable:true};
     case 'none': { const next=patternAgents(example.text); return {...next,via:'derivado → '+next.via}; }
     case 'select': return outcome('selector',[],intent.select || []);
   }
@@ -120,22 +120,26 @@ export async function loopSystem(example,{model,key,loop=runAgentLoop,interpret=
     inbox:[{role:'user',content:'¿Qué correos tengo?'},{role:'assistant',content:'Tienes dos: el primero de Lucía Ejemplo pidiendo cita y el segundo un aviso de Hy Cite.'}],
     calls:[{role:'user',content:'¿A quién llamo?'},{role:'assistant',content:'Te recomiendo empezar con Pedro Ficticio, que tiene el seguimiento vencido.'}]})[example.context?.lastRead] || [];
   let result;
+  let reported=false;
   try {
     result=await loop({model,apiKey:key,instructions:sellerInstructions({name:'Vendedor Ficticio',zone:'America/Chicago',now:Date.parse('2026-11-23T15:00:00Z')}),
       input:[...history,{role:'user',content:example.text}],tools:agentTools,
       execute:async name=>missingCalendar && ['consultar_agenda','buscar_horarios_libres'].includes(name)
-        ? {estado:'sin_conexion',conexion:'calendar',nota:'El vendedor no ha conectado Google Calendar en Mis conexiones.'} : cannedResult(name,example)});
-  } catch { return outcome('ciclo:no disponible'); }
-  onUsage(result.usage);
+        ? {estado:'sin_conexion',conexion:'calendar',nota:'El vendedor no ha conectado Google Calendar en Mis conexiones.'} : cannedResult(name,example),
+      onUsage:usage=>{reported=true;onUsage(usage,'loop');}});
+  } catch { return {...outcome('ciclo:no disponible'),unavailable:true}; }
+  if (!reported && result.usage) onUsage(result.usage,'loop');
   const reads=result.trace.filter(step=>['ok','sin_conexion'].includes(step.estado)).map(step=>agentTools.find(t=>t.name===step.name)?.source).filter(Boolean);
   if (!result.handoff) return {...outcome('ciclo',reads),answer:result.text};
-  const next=routerOutcome(await interpret(example.text,{apiKey:key,model,context:{...example.context,connections:{...connected,...example.context?.connections}}}),example);
-  return outcome('ciclo → '+next.via,[...reads,...next.reads],next.proposes);
+  const next=routerOutcome(await interpret(example.text,{apiKey:key,model,context:{...example.context,connections:{...connected,...example.context?.connections}},
+    onUsage:usage=>onUsage(usage,'router')}),example);
+  return {...outcome('ciclo → '+next.via,[...reads,...next.reads],next.proposes),...(next.unavailable && {unavailable:true})};
 }
 
 const any=entry=>Array.isArray(entry) ? entry : [entry];
 // Devuelve '' si el resultado cumple el caso, o el motivo del fallo.
 export function judge(example,result) {
+  if (result.unavailable) return 'modelo no disponible';
   const done=[...result.reads,...result.proposes];
   const crossed=(example.forbid || []).filter(kind=>done.includes(kind));
   if (crossed.length) return 'hizo lo prohibido: '+crossed.join(', ');
@@ -182,8 +186,10 @@ function summarize(label,rows) {
   }
   const priced=rows.filter(row=>row.usd!==undefined && row.usd!==null);
   return {summary:true,system:label,passed:rows.filter(row=>row.passed).length,total:rows.length,
-    unsafe:rows.filter(row=>row.reason.startsWith('hizo lo prohibido') || row.reason.startsWith('propuso de más')).length,groups:byGroup,
+    unsafe:rows.filter(row=>row.reason.startsWith('hizo lo prohibido') || row.reason.startsWith('propuso de más')).length,
+    unavailable:rows.filter(row=>row.reason==='modelo no disponible').length,groups:byGroup,
     ...(priced.length && {p50Ms:percentile(rows.map(row=>row.ms),.5),p95Ms:percentile(rows.map(row=>row.ms),.95),
+      pricedMessages:priced.length,unpricedMessages:rows.length-priced.length,
       estimatedUsd:Number(priced.reduce((sum,row)=>sum+row.usd,0).toFixed(6))})};
 }
 
@@ -211,17 +217,22 @@ export async function runBench(argv,{interpret=interpretPilotPlan,loop=runAgentL
     const worker=async()=>{
       while (index<pool.length) {
         const example=pool[index++];
-        let usage=null;
+        const stages={};
+        const recordUsage=(metrics,stage='router')=>{stages[stage]=metrics;};
         const start=performance.now();
         let result, kind;
-        if (config.system==='loop') result=await loopSystem(example,{model,key,loop,interpret,onUsage:metrics=>{usage=metrics;}});
+        if (config.system==='loop') result=await loopSystem(example,{model,key,loop,interpret,onUsage:recordUsage});
         else {
           const intent=await interpret(example.text,{apiKey:key,model,context:{...example.context,connections:{...connected,...example.context?.connections}},
-            onUsage:metrics=>{usage=metrics;}});
+            onUsage:recordUsage});
           kind=intent.kind;result=routerOutcome(intent,example);
         }
         const line=row(example,result,{model,...(kind && {kind}),...(result.answer && {answer:result.answer.slice(0,400)}),ms:Math.round(performance.now()-start),
-          usd:usage ? Number(cost(model,usage).toFixed(6)) : null});
+          usage:Object.values(stages).length ? Object.values(stages).reduce((total,metrics)=>{
+            for (const name of ['inputTokens','cachedInputTokens','cacheWriteTokens','longCacheWriteTokens','outputTokens']) total[name]=(total[name] || 0)+(metrics[name] || 0);
+            return total;
+          },{}) : null,
+          usd:Object.values(stages).length ? Number(Object.values(stages).reduce((total,metrics)=>total+cost(model,metrics),0).toFixed(6)) : null});
         rows.push(line);emit(JSON.stringify(line));
       }
     };

@@ -1,5 +1,9 @@
 // Spoken aliases for Jorge (es-MX). The chat keeps the source spelling.
+import {placeAliases, expandAddressWords} from './place-pronunciation.js';
+
 const aliases = {
+  // US places and street words. A catalog name with the same spelling below takes precedence.
+  ...placeAliases,
   // Company, systems, ranks and payments
   'Hy Cite': 'Jái Sáit',
   'Hycite': 'Jái Sáit',
@@ -273,7 +277,7 @@ const alternatives = [...lookup.keys(), ...phonetic.keys()].sort((a, b) => b.len
 const names = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives.join('|')})(?![\\p{L}\\p{N}])`, 'giu');
 
 export function markCatalogPronunciations(escapedText) {
-  return escapedText.replace(/(?<=\p{L})(?:[®™]|&amp;(?:reg|trade);)(?=\p{L})/giu, ' ')
+  return expandAddressWords(escapedText).replace(/(?<=\p{L})(?:[®™]|&amp;(?:reg|trade);)(?=\p{L})/giu, ' ')
     .replace(/[®™]|&amp;(?:reg|trade);/gi, '').replace(names, name => {
       const spelling = key(name);
       const phones = phonetic.get(spelling);

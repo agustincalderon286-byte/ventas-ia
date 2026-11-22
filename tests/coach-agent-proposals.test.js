@@ -158,8 +158,9 @@ function planCollection() {
     create:async doc=>{ if (docs.has(doc._id)) throw Object.assign(Error('dup'),{code:11000}); docs.set(doc._id,{...doc}); },
     updateOne:async({_id,revision},{$set})=>{ const doc=docs.get(_id); if (!doc || doc.revision!==revision) return {matchedCount:0}; docs.set(_id,{...doc,...$set}); return {matchedCount:1}; }};
 }
-function desk({script}) {
+function desk({script,prepare=()=>{}}) {
   const w=world();
+  prepare(w.deps);
   const plans=createPlanStore({key:w.deps.config.key,store:planCollection(),now:()=>NOW});
   const memory=createPlanStore({key:w.deps.config.key,store:planCollection(),now:()=>NOW});
   const inputs=[];
@@ -329,4 +330,112 @@ test('el chat conserva la ficha de la propuesta tras una lectura del asistente y
   // Sin la ficha en la respuesta, la propuesta se retira.
   assert.equal(contexts.record(send(),{...loop},[]).retiredPlan,true);
   assert.equal('coachPlanPending' in send(),false);
+});
+
+test('el teléfono y la dirección de una ficha llegan al chat como enlaces, con un botón para llamar a la persona',async()=>{
+  const saved=[];
+  const {ask,inputs}=desk({script:[async call=>{
+    const {fichas}=await call('buscar_referidos',find);
+    saved.push(fichas[0]);
+    return 'Pedro Ficticio vive en '+fichas[0].direccion+' y su teléfono es '+fichas[0].telefono+'. Luis pide no ser llamado.';
+  },async()=>'Su teléfono es '+saved[0].telefono+'.']});
+  const reply=await ask('dame el telefono y la direccion de pedro');
+  assert.match(reply.respuesta,/^Pedro Ficticio vive en 5 Av\. Ficticia, Chicago y su teléfono es \(312\) 555-0101\./);
+  assert.deepEqual(reply.coachLinks,[{kind:'map',text:'5 Av. Ficticia, Chicago'},{kind:'tel',text:'(312) 555-0101',to:'+13125550101'}]);
+  assert.deepEqual(reply.coachHelpActions,[{type:'callOpen',to:'+13125550101',label:'Llamar a Pedro Ficticio'}]);
+  // En el turno siguiente el marcador recordado conserva el nombre para el botón, y el modelo sigue sin ver el dato.
+  const later=await ask('repiteme su telefono');
+  assert.deepEqual(later.coachHelpActions,[{type:'callOpen',to:'+13125550101',label:'Llamar a Pedro Ficticio'}]);
+  assert.doesNotMatch(JSON.stringify(inputs),/555-0101|Av\. Ficticia/);
+});
+
+test('el chat vuelve presionables los teléfonos y las direcciones sin interpretar el texto como HTML',()=>{
+  const app=fs.readFileSync(new URL('../public/coach/app.js',import.meta.url),'utf8');
+  const node=tag=>({tag,children:[],set textContent(value) { this.text=value; this.children=[]; },get textContent() { return this.text; },appendChild(item) { this.children.push(item); }});
+  const document={createElement:node,createTextNode:text=>({tag:'#text',text})};
+  const render=vm.runInNewContext(app.slice(app.indexOf('const coachPhonePattern'),app.indexOf('function addCoachMessage('))+';renderCoachMessageText',{document});
+  const shape=paragraph=>paragraph.children.map(child=>child.tag==='a' ? [child.text,child.href,child.target || ''] : child.text);
+
+  const p=node('p');
+  render(p,'Lidia vive en 12 Calle Ficticia, Blue Island. Tel: 3125550131 o (312) 555-0132. Pedido 4455667788, <b>hoy</b>.',
+    [{kind:'map',text:'12 Calle Ficticia, Blue Island'},{kind:'tel',text:'3125550131',to:'+13125550131'},
+      {kind:'tel',text:'Tel',to:'javascript:alert(1)'},{kind:'map',text:'<b>'},{kind:'web',text:'Lidia',href:'https://example.invalid'}]);
+  assert.deepEqual(shape(p),['Lidia vive en ',
+    ['12 Calle Ficticia, Blue Island','https://www.google.com/maps/search/?api=1&query=12%20Calle%20Ficticia%2C%20Blue%20Island','_blank'],
+    '. Tel: ',['3125550131','tel:+13125550131',''],' o ',['(312) 555-0132','tel:+13125550132',''],'. Pedido 4455667788, <b>hoy</b>.']);
+
+  // Formatos comunes de teléfono; fechas, pedidos y números sueltos no se tocan.
+  const formats=node('p');
+  render(formats,'312-555-0101, 312.555.0102, +1 312 555 0103, 1-312-555-0104 y +523312345678; el 2026-11-23 a las 18:00, orden 12345678901.');
+  assert.deepEqual(formats.children.filter(child=>child.tag==='a').map(child=>child.href),
+    ['tel:+13125550101','tel:+13125550102','tel:+13125550103','tel:+13125550104','tel:+523312345678']);
+  const plain=node('p');
+  render(plain,'Mañana tienes una demo a las 4.');
+  assert.equal(plain.text,'Mañana tienes una demo a las 4.');
+  assert.equal(plain.children.length,0);
+
+  const card={children:[],dataset:{},querySelector:()=>null,get childElementCount() { return this.children.length; },appendChild(item) { this.children.push(item); }};
+  const element=tag=>({tag,children:[],dataset:{},get childElementCount() { return this.children.length; },appendChild(item) { this.children.push(item); }});
+  const actions=vm.runInNewContext(app.slice(app.indexOf('function renderCoachMessageActions'),app.indexOf('function createCoachAgentContexts'))+';renderCoachMessageActions',{document:{createElement:element}});
+  actions(card,[{type:'callOpen',to:'+13125550101',label:'Llamar a Pedro Ficticio'},{type:'callOpen',to:'312-555-0101'}]);
+  assert.deepEqual(card.children[0].children.map(link=>[link.href,link.textContent]),[['tel:+13125550101','Llamar a Pedro Ficticio']]);
+});
+
+test('los leads por distancia se ordenan por minutos de manejo reales y el tiempo llega al vendedor, no al modelo',async()=>{
+  const {deps,actor}=world();
+  const fichas=[
+    {identityKey:'id-a',fullName:'Ana Lejos',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:4,address:'900 Calle Larga, Chicago',rawPhone:'312-555-0111',rawEmail:'',noCalls:false,zoneIndex:1},
+    {identityKey:'id-b',fullName:'Beto Cerca',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:5,address:'12 Calle Corta, Blue Island',rawPhone:'312-555-0112',rawEmail:'',noCalls:false,zoneIndex:0},
+    {identityKey:'id-c',fullName:'Caro Sin Calle',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:6,address:'Blue Island',rawPhone:'',rawEmail:'',noCalls:false,zoneIndex:0},
+    {identityKey:'id-d',fullName:'Dora Dudosa',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:7,address:'1 Calle Rara, Harvey',rawPhone:'',rawEmail:'',noCalls:false,zoneIndex:1}];
+  const asked=[];
+  deps.sheetTools.byZone=async(ctx,args)=>{asked.push(['byZone',args]);return {total:9,perZone:[2,7],contacts:fichas};};
+  const minutes={'900 Calle Larga, Chicago':34,'12 Calle Corta, Blue Island':6};
+  deps.routes={enabled:true,minutes:async(origin,destination,departure)=>{
+    asked.push(['minutes',origin,destination,departure]);
+    if (!minutes[destination]) throw Object.assign(Error('Ubicación por verificar.'),{partialAddress:true});
+    return minutes[destination];
+  }};
+  const turn={};
+  const execute=createAgentTools(deps)(actor,{},turn);
+  const near=await execute('leads_por_distancia',{origen:' Blue Island, IL ',zonas:['Blue Island','Chicago'],tipo:'referidos',maximo:5});
+  assert.deepEqual(asked[0],['byZone',{zones:['Blue Island','Chicago'],today:'2026-11-23',kind:'referrals',limit:8}]);
+  // La ficha sin calle no se mide; la que Google no reconoce queda sin medir.
+  assert.deepEqual(asked.slice(1).map(call=>call.slice(1,3)),[['Blue Island, IL','900 Calle Larga, Chicago'],['Blue Island, IL','12 Calle Corta, Blue Island'],['Blue Island, IL','1 Calle Rara, Harvey']]);
+  assert.equal(asked[1][3],NOW);
+  assert.deepEqual(near.fichas.map(ficha=>ficha.nombre),['Beto Cerca','Ana Lejos']);
+  assert.deepEqual([near.medidas,near.sinMedir,near.fichasEnEsasZonas],[2,2,9]);
+  assert.match(near.fichas[0].manejo,/^\[\[min:[a-f0-9]{6}\]\]$/);
+  assert.equal(turn.secrets[near.fichas[0].manejo.slice(2,-2)],'6 min en auto');
+  assert.equal(turn.secrets[near.fichas[1].manejo.slice(2,-2)],'34 min en auto');
+  assert.doesNotMatch(JSON.stringify(near),/555|Calle|6 min|34 min/);
+
+  // Sin Google Maps activo, con el cupo agotado o sin direcciones reconocibles, el asistente recurre a la cercanía por ciudad.
+  deps.routes={enabled:false,minutes:async()=>{throw Error('no debe llamarse');}};
+  const off=await createAgentTools(deps)(actor,{},{})('leads_por_distancia',{origen:'Blue Island, IL',zonas:['Blue Island'],tipo:'',maximo:5});
+  assert.equal(off.estado,'no_disponible');
+  assert.match(off.nota,/leads_por_zona/);
+  deps.routes={enabled:true,minutes:async()=>{throw Object.assign(Error('Cupo'),{freeAllowance:true});}};
+  assert.match((await createAgentTools(deps)(actor,{},{})('leads_por_distancia',{origen:'Blue Island, IL',zonas:['Blue Island'],tipo:'',maximo:5})).nota,/cupo gratuito/);
+  deps.routes={enabled:true,minutes:async()=>{throw Object.assign(Error('Ubicación'),{partialAddress:true});}};
+  assert.match((await createAgentTools(deps)(actor,{},{})('leads_por_distancia',{origen:'por aquí',zonas:['Blue Island'],tipo:'',maximo:5})).nota,/cruce de calles/);
+  assert.equal((await execute('leads_por_distancia',{origen:'',zonas:['Blue Island'],tipo:'',maximo:5})).estado,'peticion_invalida');
+  assert.equal((await execute('leads_por_distancia',{origen:'Blue Island, IL',zonas:[],tipo:'',maximo:5})).estado,'peticion_invalida');
+});
+
+test('el vendedor ve los minutos de manejo junto a cada lead y la fuente Google Maps',async()=>{
+  const d=desk({prepare:deps=>{
+    deps.sheetTools.byZone=async()=>({total:1,perZone:[1],contacts:[{identityKey:'id-b',fullName:'Beto Cerca',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:5,
+      address:'12 Calle Corta, Blue Island',rawPhone:'312-555-0112',rawEmail:'',noCalls:false,zoneIndex:0}]});
+    deps.routes={enabled:true,minutes:async()=>6};
+  },script:[async call=>{
+    const {fichas}=await call('leads_por_distancia',{origen:'Blue Island, IL',zonas:['Blue Island'],tipo:'',maximo:5});
+    return 'El más cercano es '+fichas[0].nombre+', a '+fichas[0].manejo+'. Su teléfono: '+fichas[0].telefono+'.';
+  }]});
+  const reply=await d.ask('estoy en blue island, dame el lead mas cercano');
+  assert.match(reply.respuesta,/^El más cercano es Beto Cerca, a 6 min en auto\. Su teléfono: 312-555-0112\./);
+  assert.match(reply.respuesta,/Fuentes consultadas: Google Maps\.$/);
+  assert.deepEqual(reply.coachHelpActions,[{type:'callOpen',to:'+13125550112',label:'Llamar a Beto Cerca'}]);
+  const text=sellerInstructions({name:'Agustín',zone:ZONE,now:NOW});
+  assert.match(text,/leads_por_distancia/);
 });

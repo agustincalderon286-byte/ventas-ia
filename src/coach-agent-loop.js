@@ -30,6 +30,8 @@ const count = value => Number.isSafeInteger(value) && value>=0 ? value : 0;
 function addUsage(total, usage) {
   total.inputTokens+=count(usage?.input_tokens);
   total.cachedInputTokens+=count(usage?.input_tokens_details?.cached_tokens);
+  total.cacheWriteTokens+=count(usage?.input_tokens_details?.cache_write_tokens);
+  total.longCacheWriteTokens+=count(usage?.input_tokens_details?.cache_write_tokens_details?.ttl_12h_tokens);
   total.outputTokens+=count(usage?.output_tokens);
 }
 
@@ -41,12 +43,12 @@ function serialize(result) {
 // tools: [{name, description, parameters}]. execute(name,args) devuelve un objeto con `estado`.
 // Devuelve {text, trace, steps, usage}. Lanza AgentUnavailable si el modelo no completa el turno.
 export async function runAgentLoop({model='gpt-6.2-sol', instructions, input, tools, execute, maxSteps=6, deadlineMs=40000,
-  fetchImpl=globalThis.fetch, apiKey=process.env.OPENAI_API_KEY, now=Date.now}) {
+  fetchImpl=globalThis.fetch, apiKey=process.env.OPENAI_API_KEY, now=Date.now, onUsage=()=>{}}) {
   if (!modelIds.has(model) || !apiKey) throw unavailable('Modelo no disponible');
   const started=now();
   const items=[...input];
   const trace=[];
-  const usage={inputTokens:0,cachedInputTokens:0,outputTokens:0,requests:0};
+  const usage={inputTokens:0,cachedInputTokens:0,cacheWriteTokens:0,longCacheWriteTokens:0,outputTokens:0,requests:0};
   const definitions=tools.map(({name,description,parameters})=>({type:'function',name,description,strict:true,parameters}));
   for (let step=1; step<=maxSteps+1; step++) {
     const remaining=deadlineMs-(now()-started);
@@ -65,6 +67,8 @@ export async function runAgentLoop({model='gpt-6.2-sol', instructions, input, to
     const body=await response.json();
     usage.requests++;
     addUsage(usage,body.usage);
+    // Entrega el consumo acumulado incluso si un paso posterior no termina.
+    onUsage({...usage});
     if (body.status!=='completed' || !Array.isArray(body.output)) throw unavailable('El modelo no completó la respuesta');
     const calls=body.output.filter(item=>item.type==='function_call');
     if (!calls.length) {

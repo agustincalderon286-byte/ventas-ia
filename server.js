@@ -45,6 +45,7 @@ import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js
 import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
+import { createAssistantLog, createChatReview, registerChatReview } from "./src/coach-chat-review.js";
 import { createUsageModel, registerTecUsage } from "./src/tec-usage.js";
 import { createAdminPasskeyModels, registerAdminPasskeys } from "./src/tec-admin-passkeys.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
@@ -32996,6 +32997,35 @@ registerTecAudioLab(app, {
   ObjectId: mongoose.Types.ObjectId, analyses: CoachDemoAnalysis
 });
 
+// Revisión de conversaciones del Coach para mejorarlo. Además de ser administrador de la Torre, la cuenta
+// debe figurar en COACH_CHAT_REVIEW_EMAILS: sin esa lista nadie puede leer conversaciones.
+const coachChatReviewers = parseCoachEmailList(process.env.COACH_CHAT_REVIEW_EMAILS || "");
+const puedeRevisarConversaciones = userDoc => usuarioPuedeVerTorreControl(userDoc) && coachChatReviewers.includes(normalizarEmail(userDoc.email));
+const coachChatReview = createChatReview({ Message, Users: CoachUser, Profiles: CoachDistributorProfile,
+  assistant: createAssistantLog({ key: personalConnectionsConfig.key }) });
+registerChatReview(app, {
+  review: coachChatReview,
+  requireAdmin: async (req, res) => {
+    const auth = await requireControlTowerAccess(req, res);
+    if (!auth) return null;
+    if (!puedeRevisarConversaciones(auth.user)) {
+      responderCoachError(res, 403, "La revisión de conversaciones no está habilitada para tu cuenta.");
+      return null;
+    }
+    return auth;
+  },
+  // Una página de otro sitio no puede enviar JSON con la sesión del administrador.
+  sameOrigin: req => ["same-origin", undefined, ""].includes(req.get("Sec-Fetch-Site") || undefined) && Boolean(req.is("application/json"))
+});
+app.get(["/control/conversaciones", "/control/conversaciones/"], async (req, res) => {
+  const auth = await obtenerCoachAuth(req);
+  if (!auth.user) return res.redirect("/coach/login/");
+  if (!puedeRevisarConversaciones(auth.user)) return res.redirect("/control/");
+  if (await coachAdminPasskeys.needsVerification(auth)) return res.redirect("/coach/seguridad/?volver=torre");
+  res.set("Cache-Control", "private, no-store");
+  res.sendFile(path.join(PRIVATE_DIR, "tec-chat-review.html"));
+});
+
 app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
 
@@ -34891,6 +34921,18 @@ async function iniciarServidor() {
     void expireFollowups();
     const followupTimer = setInterval(expireFollowups, 15 * 60 * 1000);
     followupTimer.unref();
+    // Las conversaciones del Coach se borran al cumplir 6 meses, como dice la política de privacidad.
+    let purgingChats = false;
+    async function purgeCoachChats() {
+      if (purgingChats) return;
+      purgingChats = true;
+      try { await coachChatReview.purge(); }
+      catch { console.warn("No se completó la limpieza de conversaciones del Coach."); }
+      finally { purgingChats = false; }
+    }
+    void purgeCoachChats();
+    const chatPurgeTimer = setInterval(purgeCoachChats, 24 * 60 * 60 * 1000);
+    chatPurgeTimer.unref();
     let recoveryTimer;
     if (tecSendMail) {
       await recoveryJobs.init();
@@ -34912,8 +34954,8 @@ async function iniciarServidor() {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { clearInterval(followupTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => expiringFollowups || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { clearInterval(followupTimer); clearInterval(chatPurgeTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => expiringFollowups || purgingChats || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

@@ -10,8 +10,10 @@ const rates = {'gpt-6-luna':{input:0.10,cached:0.01,output:0.50},'gpt-6.2-sol':{
 export function turnMicros(model, usage) {
   const price=rates[model];
   if (!price) return 0;
-  const fresh=Math.max(0,usage.inputTokens-usage.cachedInputTokens);
-  return Math.ceil(fresh*price.input+usage.cachedInputTokens*price.cached+usage.outputTokens*price.output);
+  // Lo que el proveedor guarda en caché se cobra con recargo: 1,25 veces la entrada, o 2,5 si lo conserva 12 horas.
+  const written=usage.cacheWriteTokens || 0, long=usage.longCacheWriteTokens || 0;
+  const fresh=Math.max(0,usage.inputTokens-usage.cachedInputTokens-written);
+  return Math.ceil(fresh*price.input+usage.cachedInputTokens*price.cached+(written-long)*price.input*1.25+long*price.input*2.5+usage.outputTokens*price.output);
 }
 
 export function createAgentBudget({limitMicros,store=Store,now=Date.now}) {

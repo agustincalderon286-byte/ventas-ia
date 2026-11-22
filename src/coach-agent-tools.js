@@ -44,6 +44,10 @@ export const agentTools = Object.freeze([
   tool('leads_por_zona','referrals','Fichas de la hoja por cercanía aproximada. Con «zonas» vacío devuelve las ciudades y códigos postales que aparecen en la hoja y cuántas fichas tiene cada uno. Con zonas, devuelve las fichas de esas ciudades o códigos postales en el orden dado (de la más cercana a la más lejana) y, dentro de cada zona, por urgencia del seguimiento.',
     {zonas:{type:'array',maxItems:12,items:{type:'string',maxLength:40},description:'Ciudades o códigos postales escritos como aparecen en la hoja, del más cercano al más lejano. Vacío para ver el catálogo.'},
       tipo:{type:'string',enum:['','referidos','boletas']},maximo:{type:'integer',minimum:1,maximum:15}}),
+  tool('leads_por_distancia','distance','Fichas de la hoja ordenadas por minutos reales de manejo, con tráfico, desde donde está el vendedor (Google Maps). Mide hasta ocho fichas con calle y número dentro de las zonas indicadas. Antes consulta el catálogo con leads_por_zona y zonas vacías. Si responde «no_disponible», usa leads_por_zona y di que la cercanía es aproximada.',
+    {origen:{type:'string',maxLength:120,description:'Lugar de salida como lo dijo el vendedor, con ciudad y estado: «Blue Island, IL» o «127th St y Western Ave, Blue Island, IL».'},
+      zonas:{type:'array',maxItems:12,items:{type:'string',maxLength:40},description:'Ciudades o códigos postales del catálogo de la hoja, del más cercano al más lejano.'},
+      tipo:{type:'string',enum:['','referidos','boletas']},maximo:{type:'integer',minimum:1,maximum:8}}),
   tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Devuelve su nombre y los marcadores de sus teléfonos y correos.',
     {nombre:{type:'string',maxLength:80}}),
   tool('estado_conexiones','connections','Indica qué cuentas del vendedor están conectadas al Coach y cuáles faltan.'),
@@ -80,7 +84,7 @@ const clean = (value,max=240) => String(value ?? '').replace(/[\p{Cc}\p{Cf}]+/gu
 const invalid = nota => ({estado:'peticion_invalida',nota});
 const missing = (conexion,nota) => ({estado:'sin_conexion',conexion,nota});
 const markerNote = 'Los valores entre dobles corchetes, como [[tel:ab12cd]], son marcadores de datos privados. Cópialos exactamente en tu respuesta: el vendedor verá el dato real en su lugar.';
-export const markerPattern = /\[{0,2}\b(tel|dir|correo):([a-f0-9]{6})\b\]{0,2}/g;
+export const markerPattern = /\[{0,2}\b(tel|dir|correo|min):([a-f0-9]{6})\b\]{0,2}/g;
 
 export function localStamp(value, zone) {
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value));
@@ -100,7 +104,8 @@ const pendingNote = 'Quedó como propuesta: no se ha guardado, reservado ni envi
 
 // channels: el mismo preparador de citas que usa el plan de conversación. Los correos siguen en el flujo existente:
 // su redactor recibe la dirección del destinatario, y el asistente no entrega direcciones al modelo.
-export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections,channels}) {
+// routes: minutos de manejo de Google Maps, dentro del cupo gratuito que administra coach-route-allowance.js.
+export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections,channels,routes}) {
   const inList = (list,email) => Boolean(list?.some(item=>item==='*' || item===email));
 
   // actor: {owner,session,email,name,zone,current,now}. refs conserva las referencias entre turnos.
@@ -110,9 +115,11 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     const now=()=>typeof actor.now==='function' ? actor.now() : Date.now();
     const stamp=value=>localStamp(value,actor.zone);
     // Guarda el dato real para este turno y devuelve el marcador que verá el modelo.
-    const marker=(kind,id,value)=>{
+    // `person` es el nombre de la ficha o del contacto: el chat lo usa para el botón «Llamar a …».
+    const marker=(kind,id,value,person='')=>{
       const token=kind+':'+createHash('sha256').update(kind+'\n'+id+'\n'+value).digest('hex').slice(0,6);
       (turn.secrets ||= {})[token]=value;
+      if (person) (turn.labels ||= {})[token]=clean(person,80);
       return '[['+token+']]';
     };
     const guard=async()=>{ if (!await actor.current()) throw Object.assign(Error('La sesión cambió.'),{sessionChanged:true}); };
@@ -172,7 +179,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     // Ficha completa para el modelo: datos de gestión en claro y datos de contacto como marcadores.
     const ficha=(c,historyLength)=>({...card(c),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
       ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history.slice(-historyLength),historyLength)}),
-      telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40)) : 'sin teléfono en la hoja',
+      telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40),c.fullName) : 'sin teléfono en la hoja',
       direccion:c.address ? marker('dir',c.identityKey,clean(c.address,240)) : 'sin dirección en la hoja',
       ...(c.rawEmail && {correo:marker('correo',c.identityKey,clean(c.rawEmail,254))})});
 
@@ -324,13 +331,38 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           fichas:result.contacts.map(c=>({...ficha(c,240),zona:clean(zones[c.zoneIndex],40)}))};
       },
 
+      async leads_por_distancia({origen,zonas,tipo,maximo}) {
+        const origin=clean(origen,120), zones=zonas.map(zone=>zone.trim()).filter(Boolean);
+        if (!origin || !zones.length) return invalid('Indica el lugar de salida y las zonas candidatas del catálogo de la hoja.');
+        const fallback='Usa leads_por_zona y di que la cercanía es aproximada por ciudad.';
+        if (!routes?.enabled) return {estado:'no_disponible',nota:'La medición con Google Maps no está activada este mes. '+fallback};
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const result=await sheetTools.byZone(ctx,{zones,today:sheetsToday(now(),actor.zone),kind:kinds[tipo],limit:8});
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
+        // Solo se mide una dirección con calle y número: una ciudad sola daría una precisión que no existe.
+        const located=result.contacts.filter(c=>/\d/.test(c.address.split(',')[0]));
+        const measured=await Promise.all(located.map(async c=>{
+          try { return {c,minutes:await routes.minutes(origin,c.address,now())}; }
+          catch (error) { return {c,error}; }
+        }));
+        const timed=measured.filter(item=>item.minutes!=null).sort((a,b)=>a.minutes-b.minutes || a.c.row-b.c.row);
+        if (!timed.length) {
+          if (measured.some(item=>item.error?.freeAllowance)) return {estado:'no_disponible',nota:'Se agotó el cupo gratuito de Google Maps de este mes. '+fallback};
+          return {estado:'no_disponible',nota:(located.length ? 'Google Maps no reconoció el lugar de salida o las direcciones de esas fichas. Pide al vendedor una dirección o un cruce de calles con ciudad y estado, o ' : 'Las fichas de esas zonas no tienen calle y número. ')+fallback};
+        }
+        return {estado:'ok',origen:origin,fichasEnEsasZonas:result.total,medidas:timed.length,sinMedir:result.contacts.length-timed.length,
+          nota:'Están ordenadas de menos a más minutos de manejo con el tráfico de ahora, según Google Maps. El tiempo llega como marcador en «manejo»: cópialo. Solo se midieron las fichas con calle y número; si quedaron fichas sin medir o fuera de las ocho revisadas, dilo. '+markerNote,
+          fichas:timed.slice(0,maximo).map(({c,minutes})=>({...ficha(c,240),manejo:marker('min',c.identityKey+'\n'+origin,minutes+' min en auto')}))};
+      },
+
       async priorizar_llamadas({tipo}) {
         const {ctx,problem}=await sheetAccess();
         if (problem) return problem;
         const ranked=await sheetTools.nextCall(ctx,{today:sheetsToday(now(),actor.zone),kind:kinds[tipo],shortlist:true});
         if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
         return {estado:'ok',pendientesConTelefono:ranked.total,orden:'vencidos, de hoy, sin fecha y primeros contactos',nota:markerNote,
-          recomendados:ranked.contacts.map(c=>({...card(c),...(c.phone && {telefono:marker('tel',c.identityKey,clean(c.phone,40))})}))};
+          recomendados:ranked.contacts.map(c=>({...card(c),...(c.phone && {telefono:marker('tel',c.identityKey,clean(c.phone,40),c.fullName)})}))};
       },
 
       async buscar_contactos({nombre}) {
@@ -342,7 +374,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         const found=await contacts.search(actor.owner,profile.grant,{name:nombre.trim()});
         return {estado:'ok',total:found.length,nota:markerNote,
           contactos:found.slice(0,8).map(c=>({nombre:clean(c.name,130),
-            telefonos:c.phones.slice(0,4).map(value=>marker('tel',c.resourceName,clean(value,40))),
+            telefonos:c.phones.slice(0,4).map(value=>marker('tel',c.resourceName,clean(value,40),c.name)),
             correos:c.emails.slice(0,4).map(value=>marker('correo',c.resourceName,clean(value,254)))}))};
       },
 
@@ -439,7 +471,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
       if (!Object.hasOwn(handlers,name)) return {estado:'herramienta_desconocida'};
       const source=agentTools.find(t=>t.name===name).source;
       const connection=({agenda:'calendar',slots:'calendar',appointment:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',
-        referrals:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',contacts:'contacts'})[source];
+        referrals:'sheets',distance:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',contacts:'contacts'})[source];
       try {
         await guard();
         const result=await handlers[name](args);

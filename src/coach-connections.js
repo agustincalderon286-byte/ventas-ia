@@ -1,6 +1,8 @@
 import {createCoachContactsAgent} from './coach-contacts-agent.js';
 import {createCoachContactsConnections} from './coach-contacts-connections.js';
 import {createCoachRouteAgent} from './coach-route-agent.js';
+import {createTrafficRoutes} from './coach-route-google.js';
+import {createAssistantLog} from './coach-chat-review.js';
 import {createPostSaleReader} from './coach-postsale.js';
 import {createConversationPlan} from './coach-conversation-plan.js';
 import {agentConnectionReader,sellerAgentModel} from './coach-agent-pilot.js';
@@ -288,7 +290,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   // Asistente con ciclo de herramientas. Solo actúa para COACH_AGENT_LOOP_EMAILS; para los demás devuelve null.
   const mailAad=(owner,session,grant)=>'draft-question:'+owner+':'+session+':'+grant;
   const runLoop=createSellerAgent({config,plans:createPlanStore({key:config.key}),memory:createPlanStore({key:config.key}),
-    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,channels:planChannels,
+    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,channels:planChannels,routes:createTrafficRoutes(config),
       readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service})}),
     // Mismo formato y vínculo que la ficha de bandeja del agente de Gmail, para que «Responde al primero» continúe allí.
     inboxToken:({owner,session,grant,ids})=>sealToken(JSON.stringify({kind:'inbox',ids,until:Date.now()+30*60000}),config.key,mailAad(owner,session,grant)),
@@ -300,7 +302,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
         return saved.until>Date.now() ? saved.kind || 'pending' : '';
       } catch { return ''; }
     },
-    budget:createAgentBudget({limitMicros:config.loopMonthlyMicros}),consent:agentConsent,readSession:readSheetsSession,switched,...agentDependencies});
+    budget:createAgentBudget({limitMicros:config.loopMonthlyMicros}),consent:agentConsent,reviewLog:createAssistantLog({key:config.key}),readSession:readSheetsSession,switched,...agentDependencies});
   async function dispatch(args) {
     const body = args.req?.body;
     const {user,session}=args.auth || {};
