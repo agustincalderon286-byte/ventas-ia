@@ -236,7 +236,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
     } catch (error) {
       if (readTool === 'inbox') {
         const kind = error.reconnect ? 'credential' : error.reauthorize ? 'authorization' : error.clientConfiguration ? 'client' :
-          ['Error','TypeError','RangeError','TimeoutError','CastError','MongoServerError'].includes(error.name) ? error.name : 'other';
+          ['Error','TypeError','RangeError','SyntaxError','ReferenceError','AbortError','TimeoutError','CastError','MongoServerError'].includes(error.name) ? error.name : 'other';
         console.warn('TEC Gmail read', { stage:readStage, kind, status:Number(error.status) || undefined });
       }
       if (error.reconnect) return answer('Tu buzón figura como conectado, pero TEC necesita que vuelvas a vincular Gmail en Mis conexiones.', [connections]);

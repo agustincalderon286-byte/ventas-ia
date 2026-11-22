@@ -72,7 +72,9 @@ function rawMessage({ from, to, subject, body, thread }) {
 }
 
 function inboxQuery({ unread, from, days, since, before, subject, hyCite }, domains) {
-  const params = new URLSearchParams({ labelIds: 'INBOX', maxResults: '5', fields: 'messages(id)' });
+  // With no matching messages, Google can omit the repeated messages field.
+  // Keep the result count so that even an empty filtered response contains JSON.
+  const params = new URLSearchParams({ labelIds: 'INBOX', maxResults: '5', fields: 'messages(id),resultSizeEstimate' });
   if (unread !== undefined && typeof unread !== 'boolean') throw new TypeError('Filtro de lectura no válido.');
   if (unread) params.append('labelIds', 'UNREAD');
   const filters = [];
@@ -132,7 +134,16 @@ export function gmailClient(config) {
     refresh: refresh_token => token({ grant_type: 'refresh_token', refresh_token }),
     profile: access => read(api + '/profile', access),
     async inbox(access, options = {}) {
-      const list = await read(api + '/messages?' + inboxQuery(options, config.domains), access);
+      const query = inboxQuery(options, config.domains);
+      let list;
+      try { list = await read(api + '/messages?' + query, access); }
+      catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        // Retry only the listing, keeping the seller's filters. The default list
+        // representation contains IDs and a count, never email content.
+        query.delete('fields');
+        list = await read(api + '/messages?' + query, access);
+      }
       const params = new URLSearchParams({ format: 'metadata', fields: 'id,internalDate,snippet,payload/headers' });
       for (const name of ['From', 'Subject']) params.append('metadataHeaders', name);
       const rows = await Promise.all((list.messages || []).slice(0, 5).map(async ({ id }) => {

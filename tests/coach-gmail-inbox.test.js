@@ -47,7 +47,7 @@ test('lista únicamente cinco mensajes, selecciona encabezados y entrega extract
     if (url.pathname.endsWith('/messages')) {
       assert.deepEqual(query.getAll('labelIds'), ['INBOX','UNREAD']);
       assert.equal(query.get('q'), 'from:"team+sales@example.com" newer_than:7d');
-      assert.equal(query.get('maxResults'), '5'); assert.equal(query.get('fields'), 'messages(id)');
+      assert.equal(query.get('maxResults'), '5'); assert.equal(query.get('fields'), 'messages(id),resultSizeEstimate');
       return Response.json({ messages:Array.from({length:6},(_,i)=>({id:String(i+1)})) });
     }
     const id = url.pathname.split('/').pop();
@@ -80,7 +80,7 @@ test('valida los filtros antes de consultar y maneja una bandeja vacía', async 
   const fetch = t.mock.method(globalThis,'fetch',async address=>{
     const query = new URL(address).searchParams;
     assert.deepEqual(query.getAll('labelIds'),['INBOX']);assert.equal(query.has('q'),false);
-    return Response.json({});
+    return query.get('fields')?.includes('resultSizeEstimate') ? Response.json({resultSizeEstimate:0}) : new Response('');
   });
   for (const options of [{from:'foo OR bar'},{unread:'false'},{days:-1},{days:700},{days:0.5}]) {
     await assert.rejects(gmail.inbox('token-de-prueba',options),TypeError);
@@ -92,6 +92,17 @@ test('valida los filtros antes de consultar y maneja una bandeja vacía', async 
 test('un permiso revocado se distingue de una bandeja vacía', async t => {
   t.mock.method(globalThis,'fetch',async()=> Response.json({}, {status:401}));
   await assert.rejects(gmail.inbox('token-de-prueba'),error => error.reauthorize === true);
+});
+
+test('una respuesta parcial vacía se comprueba con la lista normal manteniendo todos los filtros', async t => {
+  const read = t.mock.method(globalThis, 'fetch', async address => {
+    const params = new URL(address).searchParams;
+    assert.equal(params.get('q'),'subject:"Prueba sin coincidencias"');
+    assert.equal(params.get('labelIds'),'INBOX');
+    return params.has('fields') ? new Response('') : Response.json({resultSizeEstimate:0});
+  });
+  assert.deepEqual(await gmail.inbox('token', {subject:'Prueba sin coincidencias'}), []);
+  assert.equal(read.mock.callCount(),2);
 });
 
 test('Mis conexiones explica cómo leer correos, consultar ventas y solicitar envío en el chat', () => {
