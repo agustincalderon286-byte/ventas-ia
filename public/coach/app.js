@@ -17441,7 +17441,7 @@ function initCoachDemoRecorder(closePilot = false) {
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.TecPwaSafety?.createAudioJournal) {
-      setRecorderMessage("Este navegador no permite grabar audio. Prueba Safari o Chrome actualizado.", "error");
+      setRecorderMessage("La grabación no está disponible en este dispositivo.", "error");
       return;
     }
 
@@ -17450,7 +17450,7 @@ function initCoachDemoRecorder(closePilot = false) {
     outcome.value = "unknown";
     state.processing = true;
     updateControls();
-    setRecorderMessage("Solicitando permiso para usar el micrófono…", "info");
+    setRecorderMessage("Preparando micrófono…", "info");
 
     try {
       state.stream = await navigator.mediaDevices.getUserMedia({
@@ -17563,7 +17563,7 @@ function initCoachDemoRecorder(closePilot = false) {
       }
       setRecorderMessage(
         error?.name === "NotAllowedError"
-          ? "El micrófono no tiene permiso. Permite el acceso en tu navegador y confirma el consentimiento para volver a intentar."
+          ? "El micrófono está bloqueado. " + (window.TecCoachVoice?.microphoneSettings?.() || "Activa el micrófono para TEC y vuelve a intentarlo.")
           : error.message,
         "error"
       );

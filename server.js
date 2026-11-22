@@ -22,7 +22,7 @@ import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
-import { createLiveCoach, createLiveLedger, registerLiveJorge } from "./src/coach-live-jorge.js";
+import { createLiveCoach, createLiveLedger, liveTurnBody, liveTurnPath, registerLiveJorge } from "./src/coach-live-jorge.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
 import { canReadDownline, downlineScope, downlineMembers, analysisViewerIds } from "./src/tec-team-supervision.js";
@@ -2485,6 +2485,7 @@ const coachMetaWebhook = createCoachMetaWebhook({ store: createCoachMetaInboundM
 app.get(COACH_META_WEBHOOK_PATH, coachMetaWebhook.verify);
 app.post(COACH_META_WEBHOOK_PATH, coachMetaWebhook.rawBody, coachMetaWebhook.receive);
 app.post(COACH_REFERRAL_PHOTO_PATH, express.json({ limit: "3mb" }));
+app.post(liveTurnPath, liveTurnBody);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(["/api/coach", "/api/control", "/chat"], createCoachRequestGuard({ requireActive: requireCoachActivo, publicOrigin: process.env.APP_BASE_URL }));

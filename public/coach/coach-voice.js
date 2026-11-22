@@ -3,10 +3,14 @@
   const MAX_BYTES = 8 * 1024 * 1024, MAX_SECONDS = 90;
   function microphoneSettings() {
     const ua = navigator.userAgent || '';
-    if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    if (/\bTEC-iOS\//i.test(ua) || window.webkit?.messageHandlers?.tecCapture) {
+      return 'Abre Configuración → Privacidad y seguridad → Micrófono y activa TEC Coach.';
+    }
+    const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (ios && !navigator.standalone && /Version\/.*Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)) {
       return 'En Safari, abre el menú de página de TEC → Ajustes del sitio web → Micrófono → Permitir.';
     }
-    return 'Abre los permisos de este sitio junto a la dirección de TEC y guarda Micrófono en Permitir.';
+    return 'Activa el acceso al micrófono para TEC en los permisos del sitio.';
   }
   function recordingMime(Recorder = window.MediaRecorder) {
     return ['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(type => Recorder?.isTypeSupported?.(type)) || '';
@@ -184,15 +188,14 @@
       const previous=gesture;gesture=null;
       if(previous?.pointerId != null){try{previous.item.record.releasePointerCapture(previous.pointerId);}catch{}}
     }
-    function cancel(message = phase === 'requesting' && micPermission?.state !== 'granted'
-      ? 'Si aparece el aviso de micrófono, elige Permitir para este sitio. Después, mantén presionado para grabar. ' + microphoneSettings() : 'Audio borrado.') {
+    function cancel(message = phase === 'requesting' ? 'Vuelve a mantener presionado para grabar.' : 'Audio borrado.') {
       generation++; resetGesture();clearTimer();stopRecording();recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
     }
     function finish() {
       if(!gesture)return;
       const cancelled=gesture.cancelled;resetGesture();
       if(cancelled){cancel();return;}
-      if(phase==='requesting'){cancel(micPermission?.state === 'granted' ? 'Mantén presionado un poco más para grabar.' : undefined);return;}
+      if(phase==='requesting'){cancel();return;}
       unlockAudio();
       if(phase==='recording'){stopRecording('send');render();}
       else if(phase==='finishing')finishAction='send';
@@ -201,9 +204,9 @@
     async function start(item) {
       if(chatBusy || phase !== 'idle' || draft)return;
       active=item;
-      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {resetGesture();notify('Este navegador no permite grabar. Puedes escribir tu pregunta.');return;}
+      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {resetGesture();notify('La grabación no está disponible. Puedes escribir tu pregunta.');return;}
       if(micPermission?.state === 'denied') {resetGesture();notify('El micrófono está bloqueado. ' + microphoneSettings());return;}
-      if(micRequest) {resetGesture();notify('El navegador todavía está esperando tu permiso para el micrófono.');return;}
+      if(micRequest) {resetGesture();notify('Preparando micrófono…');return;}
       pausePlayback();unlockAudio();seconds=0;
       const token=++generation;phase='requesting';notify('Preparando micrófono…');render();
       try {
@@ -349,7 +352,7 @@
         else if(!gesture && phase==='idle' && !chatBusy && !draft){gesture={item,assistive:true,cancelled:false};start(item);}
       });
       item.status=document.createElement('p');item.status.className='coach-voice-status';item.status.setAttribute('role','status');item.status.setAttribute('aria-live','polite');
-      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent=voiceApi ? 'Mantén el micrófono para hablar' : 'Mantén el micrófono para hablar. Jorge lee tu respuesta con Microsoft Azure Speech.';
+      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent='Mantén presionado para hablar. Suelta para enviar.';
       item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;item.activity.setAttribute('aria-hidden','true');
       const bin=document.createElement('span');bin.className='coach-voice-bin';bin.innerHTML=BIN_ICON;
       const meter=document.createElement('span');meter.className='coach-voice-meter';item.meter=meter;meter.hidden=true;meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
@@ -493,5 +496,5 @@
         }
       } };
   }
-  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech,createSpeechBuffer});
+  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech,createSpeechBuffer,microphoneSettings});
 })();

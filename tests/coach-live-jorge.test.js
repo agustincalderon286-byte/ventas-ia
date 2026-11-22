@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { createLiveCoach, createLiveLedger, liveLimits, registerLiveJorge } from '../src/coach-live-jorge.js';
+import express from 'express';
+import { createLiveCoach, createLiveLedger, liveLimits, liveTurnBody, liveTurnPath, registerLiveJorge } from '../src/coach-live-jorge.js';
 import { jorgeSpeechDocument } from '../src/coach-voice.js';
 
 const agustin = 'agustincalderon286@gmail.com';
@@ -25,6 +26,8 @@ function collection() {
       assert.equal(options.returnDocument,'after');
       const row=rows.get(filter._id);
       if (!row || ('operation' in filter && row.operation!==filter.operation) ||
+          ('reservedMicros' in filter && row.reservedMicros!==filter.reservedMicros) ||
+          (filter.$or && row.reservedMicros!==undefined && !filter.$or.some(f=>f.reservedMicros===row.reservedMicros)) ||
           (filter.busyUntil && row.busyUntil > filter.busyUntil.$lte) ||
           (filter.usedMicros && row.usedMicros > filter.usedMicros.$lte) ||
           (filter.turnIds && row.turnIds.includes(filter.turnIds.$ne))) return null;
@@ -32,7 +35,7 @@ function collection() {
       Object.assign(row,update.$set);
       if (update.$push) row.turnIds.push(update.$push.turnIds);
       if (update.$pull) row.turnIds=row.turnIds.filter(id => id!==update.$pull.turnIds);
-      if (update.$unset) delete row.operation;
+      for (const field of Object.keys(update.$unset||{})) delete row[field];
       return {usedMicros:row.usedMicros};
     }
   };
@@ -141,4 +144,91 @@ test('el navegador no puede gastar en otra cuenta ni usar una sesión delegada',
   assert.equal((await run('POST',{auth:auth(),header:'agustin-id',switched:true})).code,403);
   assert.equal((await run('POST',{auth:auth(),header:'agustin-id'})).code,200);
   assert.equal(calls.length,1);
+});
+
+function liveWav(seconds = 1) {
+  const frames = Math.round(16_000 * seconds);
+  const wav = Buffer.alloc(44 + frames * 2);
+  wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8,4); wav.write('WAVEfmt ',8); wav.writeUInt32LE(16,16);
+  wav.writeUInt16LE(1,20); wav.writeUInt16LE(1,22); wav.writeUInt32LE(16_000,24); wav.writeUInt32LE(32_000,28);
+  wav.writeUInt16LE(2,32); wav.writeUInt16LE(16,34); wav.write('data',36); wav.writeUInt32LE(frames*2,40);
+  wav.writeInt16LE(90,46);
+  return wav;
+}
+function audioRequest(wav) { return { conversationId:randomUUID(),turnId:randomUUID(),audioBase64:wav.toString('base64') }; }
+
+test('el respaldo usa gpt-transcribe multipart con el WAV real una vez, dentro de la misma reserva y sin guardar audio', async()=>{
+  for (const seconds of [0.24,15]) {
+    const wav=liveWav(seconds), body=audioRequest(wav), urls=[];
+    const fixture=setup({voice:undefined,env:{...env,COACH_VOICE_TRANSCRIPTION_MODEL:'a-different-model'},fetcher:async (url,init)=>{
+      urls.push(url);
+      assert.equal((await fixture.ledger.read(agustin)).usedMicros,liveLimits.audioReserveMicros);
+      if (url.endsWith('/audio/transcriptions')) {
+        assert.equal(init.method,'POST'); assert.equal(init.body.get('model'),'gpt-transcribe');
+        const file=init.body.get('file'); assert.equal(file.name,'coach-audio.wav'); assert.equal(file.type,'audio/wav');
+        assert.deepEqual(Buffer.from(await file.arrayBuffer()),wav);
+        return Response.json({text:'¿Qué enseño primero?',languages:[{code:'es'}]});
+      }
+      if (url.endsWith('/chat/completions')) {
+        const prompt=JSON.parse(init.body);
+        assert.equal(prompt.messages.at(-1).content,'¿Qué enseño primero?');
+        return Response.json({choices:[{message:{content:'Empieza por la necesidad.'}}],usage:{prompt_tokens:400,completion_tokens:20}});
+      }
+      assert.equal(new URL(url).host,'eastus.tts.speech.microsoft.com');
+      return new Response(Buffer.alloc(8));
+    }});
+    const completed=await fixture.service.turn(auth(),body);
+    assert.equal(urls.length,3);
+    assert.equal(completed.transcript,'¿Qué enseño primero?'); assert.equal(completed.text,'Empieza por la necesidad.');
+    assert.equal(completed.canStartTurn,true); assert.equal(completed.canTranscribeAudio,true);
+    assert.equal(completed.budget.usedMicros,4500+120+Buffer.byteLength(jorgeSpeechDocument(completed.text))*25);
+    assert.ok(!JSON.stringify([...fixture.histories.values(),...fixture.mongo.rows.values()]).includes(body.audioBase64));
+    await assert.rejects(fixture.service.turn(auth(),body),{status:409});
+    await assert.rejects(fixture.service.turn(auth(),{conversationId:body.conversationId,turnId:body.turnId,utterance:'Lo mismo'}),{status:409});
+    assert.equal(urls.length,3);
+  }
+});
+test('rechaza silencio, WAV modificado, tamaños falsos, base64 no canónico y payload ambiguo antes de reservar',async()=>{
+  const invalid=[liveWav(0.239),liveWav(15.001),Buffer.alloc(44),Buffer.alloc(10000),Buffer.concat([liveWav(1),Buffer.alloc(4)])];
+  for (const index of [0,4,8,12,16,20,22,24,28,32,34,36,40]) {
+    const wav=liveWav(); wav[index]^=0x80; invalid.push(wav);
+  }
+  const silent=liveWav(); silent.fill(0,44); invalid.push(silent);
+  const cases=invalid.map(audioRequest);
+  const body=audioRequest(liveWav());
+  cases.push({...body,audioBase64:' '.repeat(4)+body.audioBase64},{...body,utterance:'a'},{...body,utterance:null},{...body,audioBase64:null});
+  const fixture=setup({voice:{transcribe:async()=>assert.fail('STT was invoked')}});
+  for (const invalidBody of cases) await assert.rejects(fixture.service.turn(auth(),invalidBody),{status:422});
+  assert.equal(fixture.mongo.rows.size,0);
+});
+test('si la transcripción falla después del envío, se conserva solo su costo una vez; sin saldo ni autorización no hay transcripción',async()=>{
+  const body=audioRequest(liveWav()),calls=[];
+  const fixture=setup({voice:{transcribe:async()=>{calls.push('stt');throw new Error('timeout');}}});
+  await assert.rejects(fixture.service.turn(auth(),body),{status:503,publicCode:'transcription_unavailable'});
+  assert.equal((await fixture.ledger.read(agustin)).usedMicros,4500);
+  await assert.rejects(fixture.service.turn(auth(),body),{status:409});
+  fixture.mongo.rows.get(agustin).usedMicros=liveLimits.limitMicros-liveLimits.audioReserveMicros+1;
+  await assert.rejects(fixture.service.turn(auth(),audioRequest(liveWav())),{status:402});
+  assert.equal(calls.length,1);
+});
+test('una reserva de texto previa al despliegue solo se puede liquidar al importe anterior',async()=>{
+  const mongo=collection(),ledger=createLiveLedger(mongo);
+  const id=randomUUID(),operation=await ledger.reserve(agustin,id);
+  delete mongo.rows.get(agustin).reservedMicros;
+  await assert.rejects(ledger.settle(agustin,operation,id,20,true));
+  assert.equal((await ledger.settle(agustin,operation,id,20)).usedMicros,20);
+});
+test('el parser admite 15s y rechaza cargas excesivas, JSON inválido y formularios antes de la ruta',async t=>{
+  const app=express();let requests=0;
+  app.post(liveTurnPath,liveTurnBody,(_req,res)=>{requests++;res.sendStatus(204);});
+  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const url='http://127.0.0.1:'+server.address().port+liveTurnPath;
+  const send=(input,type='application/json')=>fetch(url,{method:'POST',headers:{'Content-Type':type},body:input});
+  assert.equal((await send(JSON.stringify(audioRequest(liveWav(15))))).status,204);
+  assert.equal((await send(JSON.stringify({audioBase64:'a'.repeat(680000)}))).status,413);
+  const invalid=await send('{"audioBase64":"not-for-logs"');
+  assert.equal(invalid.status,400); assert.ok(!(await invalid.text()).includes('not-for-logs'));
+  assert.equal((await send('audioBase64=x','application/x-www-form-urlencoded')).status,415);
+  assert.equal(requests,1);
 });

@@ -100,7 +100,8 @@ test('a slow browser prompt is never duplicated and a granted site records after
  const first=fixture({deferred:true,permissionState:'prompt',userAgent:'iPhone'});
  await turn();assert.equal(first.micRequests,0);
  first.down();first.window.fire('blur');first.up();await turn();
- assert.match(first.find('coach-voice-status').textContent,/Ajustes del sitio web.*Permitir/);
+ assert.match(first.find('coach-voice-status').textContent,/mantener presionado/i);
+ assert.doesNotMatch(first.find('coach-voice-status').textContent,/Safari|Configuración|Permitir/);
  first.down();await turn();assert.equal(first.micRequests,1);
  first.permission.state='granted';first.resolveCapture();await turn();assert.equal(first.stopped,1);assert.equal(first.calls.length,0);
  const reopened=fixture({permissionState:'granted',userAgent:'iPhone'});
@@ -109,11 +110,23 @@ test('a slow browser prompt is never duplicated and a granted site records after
  assert.equal(reopened.micRequests,1);assert.equal(reopened.sent.length,1);assert.equal(reopened.stopped,1);
 });
 test('a saved denial shows how to change the site setting and a later grant uses the mic',async()=>{
- const f=fixture({permissionState:'denied',userAgent:'iPhone'});
+ const f=fixture({permissionState:'denied',userAgent:'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Version/27.0 Mobile Safari/604.1'});
  await turn();f.down();await turn();assert.equal(f.micRequests,0);
  assert.match(f.find('coach-voice-status').textContent,/Safari.*Micrófono.*Permitir/);
  f.permission.state='granted';f.down();await turn();f.advance(700);f.up();await turn();
  assert.equal(f.micRequests,1);assert.equal(f.sent.length,1);assert.equal(f.stopped,1);
+});
+test('la app solo muestra cómo habilitar su micrófono tras una denegación', async()=>{
+ const app=fixture({denied:true,userAgent:'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 TEC-iOS/0.7.1'});
+ assert.equal(app.find('coach-voice-hint').textContent,'Mantén presionado para hablar. Suelta para enviar.');
+ assert.equal(app.find('coach-voice-status').textContent,'');
+ app.down();await turn();
+ const notice=app.find('coach-voice-status').textContent;
+ assert.match(notice,/Configuración.*Micrófono.*TEC Coach/);
+ assert.doesNotMatch(notice,/Safari|Azure/);
+ const chrome=fixture({permissionState:'denied',userAgent:'Mozilla/5.0 (iPhone) CriOS/155.0 Mobile Safari/604.1'});
+ await turn();chrome.down();await turn();
+ assert.doesNotMatch(chrome.find('coach-voice-status').textContent,/Safari|TEC Coach/);
 });
 test('pointer cancellation, loss of capture, dialog close, blur and hiding cancel without sending',async()=>{
  for(const cancel of [f=>f.record.fire('pointercancel',{pointerId:1}),f=>f.record.fire('lostpointercapture',{pointerId:1}),f=>f.dialog.fire('close'),f=>f.window.fire('blur'),f=>{f.document.hidden=true;f.document.fire('visibilitychange');}]){
