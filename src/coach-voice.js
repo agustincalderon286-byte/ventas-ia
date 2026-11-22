@@ -46,6 +46,10 @@ function jorgeSpeechMarkup(text) {
     });
 }
 
+export function jorgeSpeechDocument(text) {
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${jorgeSpeechMarkup(text)}</mstts:express-as></voice></speak>`;
+}
+
 async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }) {
   const key = env.AZURE_SPEECH_KEY;
   const region = env.AZURE_SPEECH_REGION?.trim().toLowerCase();
@@ -71,7 +75,7 @@ async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }
         'X-Microsoft-OutputFormat': 'raw-24khz-16bit-mono-pcm',
         'User-Agent': 'TEC-Coach'
       },
-      body: `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${jorgeSpeechMarkup(part)}</mstts:express-as></voice></speak>`
+      body: jorgeSpeechDocument(part)
     });
     if (!response.ok || !response.body) {
       await response.body?.cancel();

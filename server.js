@@ -22,6 +22,7 @@ import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
+import { createLiveCoach, createLiveLedger, registerLiveJorge } from "./src/coach-live-jorge.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
 import { canReadDownline, downlineScope, downlineMembers, analysisViewerIds } from "./src/tec-team-supervision.js";
@@ -29945,6 +29946,33 @@ registerCoachTeamChat(app, {
 });
 
 registerCoachVoice(app, { requireActive: requireCoachActivo });
+
+const liveHistorySchema = new mongoose.Schema({
+  _id: String, expiresAt: { type: Date, expires: 0 }, messages: [{ _id: false, role: String, content: String }]
+}, { versionKey: false });
+const liveHistory = mongoose.models.CoachLiveHistory || mongoose.model("CoachLiveHistory", liveHistorySchema);
+registerLiveJorge(app, {
+  requireActive: requireCoachActivo,
+  switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE]),
+  service: createLiveCoach({
+    ledger: createLiveLedger(mongoose.connection.collection("coachlivejorgeledgers")),
+    history: liveHistory.collection, knowledge: construirContextoEstaticoCoach,
+    async personalContext(user, question) {
+      const profile = { vendedor: String(user.name || "").slice(0, 80) };
+      if (/\b(leads?|seguimientos?|pendientes?|citas?|agenda|llamar|llamada|prospectos?)\b/i.test(question)) {
+        // The native conversation reads only the signed-in seller's own TEC CRM records.
+        const records = await CoachCrmRecord.find({ ownerUserId: user._id, closedAt: null, nextActionAt: { $type: "date" } })
+          .sort({ nextActionAt: 1 }).limit(5).select("leadName nextAction nextActionAt -_id").lean();
+        profile.ahoraUTC = new Date().toISOString();
+        profile.primerosSeguimientosCRM = records.map(record => ({
+          nombre: String(record.leadName || "").slice(0, 70),
+          pendiente: String(record.nextAction || "").slice(0, 80), fechaUTC: record.nextActionAt
+        }));
+      }
+      return JSON.stringify(profile);
+    }
+  })
+});
 
 registerCoachAnnouncementRead(app, {
   requireActive: requireCoachActivo,
