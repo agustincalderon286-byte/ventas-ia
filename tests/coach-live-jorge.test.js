@@ -157,6 +157,39 @@ function liveWav(seconds = 1) {
 }
 function audioRequest(wav) { return { conversationId:randomUUID(),turnId:randomUUID(),audioBase64:wav.toString('base64') }; }
 
+test('Jorge lee conexiones del dueño por voz, conserva su fuente y cobra solo la transcripción y síntesis utilizadas', async()=>{
+  const lookups = [], spoken = [];
+  const fixture = setup({
+    voice: {
+      transcribe: async () => 'Revisa mi cuatro en catorce',
+      speak: async (text, owner) => { spoken.push({text, owner}); return Buffer.from('audio de prueba'); }
+    },
+    readRecords: async (viewer, question, recent) => {
+      lookups.push({owner:viewer.user._id, question, recent:structuredClone(recent)});
+      if (question.includes('catorce')) return {text:'Tienes una referencia de prueba en tu hoja.',sources:['sheets414']};
+      if (question.includes('correo')) return {text:'Encontré un correo de prueba de Hy Cite.',sources:['gmail']};
+      return null;
+    }
+  });
+  const body = audioRequest(liveWav());
+  const sheet = await fixture.service.turn(auth(), body);
+  assert.deepEqual(sheet.sources,['sheets414']);
+  assert.equal(sheet.transcript,lookups[0].question);
+  assert.equal(sheet.budget.usedMicros,4500+Buffer.byteLength(jorgeSpeechDocument(sheet.text))*25);
+  const mail = await fixture.service.turn(auth(), {...turn(), conversationId:body.conversationId, utterance:'¿Y mi correo?'});
+  assert.deepEqual(lookups[1].recent.at(-1).sources,['sheets414']);
+  assert.deepEqual(mail.sources,['gmail']);
+  assert.equal(fixture.calls.length,0);
+  assert.deepEqual(spoken.map(x=>x.owner),['agustin-id','agustin-id']);
+  const general = {...turn(), conversationId:body.conversationId};
+  await fixture.service.turn(auth(),general);
+  assert.ok(!JSON.stringify(fixture.calls[0]).includes(sheet.text));
+  assert.ok(!JSON.stringify(fixture.calls[0]).includes(mail.text));
+  await fixture.service.turn(auth(rigo),{...general, turnId:randomUUID(),utterance:'Revisa mi correo'});
+  assert.equal(lookups[3].owner,'rigo-id');
+  assert.deepEqual(lookups[3].recent,[]);
+});
+
 test('el respaldo usa gpt-transcribe multipart con el WAV real una vez, dentro de la misma reserva y sin guardar audio', async()=>{
   for (const seconds of [0.24,15]) {
     const wav=liveWav(seconds), body=audioRequest(wav), urls=[];

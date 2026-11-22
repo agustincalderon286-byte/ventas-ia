@@ -22,6 +22,7 @@ import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
+import { createLiveRecordReader } from "./src/coach-live-records.js";
 import { createLiveCoach, createLiveLedger, liveTurnBody, liveTurnPath, registerLiveJorge } from "./src/coach-live-jorge.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
@@ -29949,15 +29950,42 @@ registerCoachTeamChat(app, {
 registerCoachVoice(app, { requireActive: requireCoachActivo });
 
 const liveHistorySchema = new mongoose.Schema({
-  _id: String, expiresAt: { type: Date, expires: 0 }, messages: [{ _id: false, role: String, content: String }]
+  _id: String, expiresAt: { type: Date, expires: 0 },
+  messages: [{ _id: false, role: String, content: String, sources: { type: [String], default: undefined } }]
 }, { versionKey: false });
 const liveHistory = mongoose.models.CoachLiveHistory || mongoose.model("CoachLiveHistory", liveHistorySchema);
+
+async function liveSellerSessionCurrent(auth) {
+  if (!auth?.user?._id || !auth.session?._id || !auth.session.tokenHash) return false;
+  const session = await CoachSession.findOne({
+    _id: auth.session._id, tokenHash: auth.session.tokenHash, userId: auth.user._id, expiresAt: { $gt: new Date() }
+  }).select("userId tokenHash accessMode credentialVersion")
+    .populate("userId", "email name credentialVersion accountType teamOwnerUserId seatStatus subscriptionActive")
+    .lean();
+  const user = session?.userId;
+  if (!user || String(user._id) !== String(auth.user._id) || !coachSessionCredentialsMatch(session, user) ||
+      !inDemoClosePilot({ user, session }, false) || normalizarEmail(user.email) !== normalizarEmail(auth.user.email) ||
+      String(user.name || "") !== String(auth.user.name || "") ||
+      String(resolverCoachOwnerUserId(user)) !== String(resolverCoachOwnerUserId(auth.user))) return false;
+  return coachTieneAccesoOperativo(user);
+}
+
 registerLiveJorge(app, {
   requireActive: requireCoachActivo,
   switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE]),
   service: createLiveCoach({
     ledger: createLiveLedger(mongoose.connection.collection("coachlivejorgeledgers")),
     history: liveHistory.collection, knowledge: construirContextoEstaticoCoach,
+    readRecords: createLiveRecordReader({
+      config: personalConnectionsConfig,
+      gmailStore: mongoose.models.CoachPersonalGmail,
+      programSheets: CoachProgramSheet,
+      programQuery: user => construirCoachProgramSheetWorkspaceQuery(user, {
+        programType: "4_en_14", ...coachPersonalCaptureFilter(user)
+      }),
+      personalProgramSheets: CoachPersonalProgramSheet,
+      sessionCurrent: liveSellerSessionCurrent
+    }),
     async personalContext(user, question) {
       const profile = { vendedor: String(user.name || "").slice(0, 80) };
       if (/\b(leads?|seguimientos?|pendientes?|citas?|agenda|llamar|llamada|prospectos?)\b/i.test(question)) {
