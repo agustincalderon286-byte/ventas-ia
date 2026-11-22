@@ -87,3 +87,16 @@ test('distingue 0, acceso pendiente y lectura fallida; descarta datos si la conc
   f=fixture();const delegated=user(0);delegated.session.accessMode='switched';
   assert.deepEqual((await f.read(delegated,'Revisa mi correo')).sources,[]);assert.equal(f.calls.length,0);
 });
+test('solo enumera fuentes que pudo leer y nunca atribuye ventas fuera de los 90 días',async()=>{
+  const missing=fixture({gmailStore:{findById:()=>({lean:async()=>null})}});
+  const combined=await missing.read(user(0),'Revisa mi correo y mi 4 en 14');
+  assert.match(combined.text,/Conecta tu Gmail/);
+  assert.deepEqual(combined.sources,['tec414','sheets414']);
+  const {read,calls}=fixture();
+  const rejected=await read(user(0),'¿Cuántas ventas confirmadas hubo en 2024?');
+  assert.deepEqual(rejected.sources,[]);assert.match(rejected.text,/90 días/);assert.ok(!calls.some(c=>c[0]==='notices'));
+  const old=new Date(at-91*86_400_000).toISOString(),future=new Date(at+86_400_000).toISOString();
+  const bounded=fixture({gmail:{refresh:async()=>({access_token:'m'}),notices:async()=>({confirmed:[{date:old},{date:future}],review:[]})}});
+  const result=await bounded.read(user(0),'Revisa mis ventas confirmadas de Hy Cite');
+  assert.match(result.text,/0 ventas confirmadas/);assert.deepEqual(result.sources,['gmail']);
+});

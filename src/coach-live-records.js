@@ -21,6 +21,7 @@ const sales = /\b(?:ventas? (?:confirmad[ao]s?|aprobad[ao]s?)|(?:mis|cuantas|que
 const ordinalWords = ['primero','segundo','tercero','cuarto','quinto'];
 const dateFormatter = new Intl.DateTimeFormat('es-US',{month:'short',day:'numeric',timeZone:'America/Chicago'});
 const sessionChanged = () => ({ text:'Tu sesión cambió. Vuelve a abrir Jorge desde tu propia cuenta.',sources:[] });
+const unavailable = text => ({text,verified:false});
 const permitted = (list,email) => Array.isArray(list) && (list.includes('*') || list.includes(email));
 
 function clean(value, max=60) {
@@ -33,7 +34,7 @@ function subject(value) {
 }
 function ordinal(text) {
   const word=fold(text).match(/\b(primer[oa]?|segund[oa]|tercer[oa]?|cuart[oa]|quint[oa])\b/);
-  if (word && !/\bcuatro en catorce\b/.test(word[0])) return ordinalWords.findIndex(val=>val.slice(0,4)===word[0].slice(0,4));
+  if (word) return ordinalWords.findIndex(val=>val.slice(0,4)===word[0].slice(0,4));
   const num=fold(text).match(/\b(?:correo|mensaje|numero|referido|boleta) (?:numero )?([1-5])\b/);
   return num?Number(num[1])-1:-1;
 }
@@ -113,7 +114,8 @@ function inboxSummary(rows,more,index,previousText,where) {
   return 'Gmail'+where+': '+rows.length+(more?' o más':'')+' '+(rows.length===1?'correo':'correos')+'. '+rows.slice(0,3).map((m,i)=>(i+1)+'. «'+subject(m.subject)+'»').join(' ')+'.';
 }
 function salesSummary(snapshot,period,days,at) {
-  const from=period?period.since*1000:at-days*86_400_000, until=period?period.before*1000:Infinity;
+  const floor=at-90*86_400_000;
+  const from=Math.max(floor,period?period.since*1000:at-days*86_400_000), until=Math.min(at+1,period?period.before*1000:Infinity);
   const inRange=r=>Date.parse(r.date)>=from&&Date.parse(r.date)<until;
   const confirmed=snapshot.confirmed.filter(inRange),review=snapshot.review.filter(inRange);
   const window=period?period.label:'últimos '+days+' días';
@@ -194,18 +196,23 @@ export function createLiveRecordReader({config,gmailStore,programSheets,personal
   gmail=gmailClient(config),sheets=createCoachSheetsConnections({config}).service,sheetsGoogle=createSheetsGoogle(),fetcher=fetch,now=Date.now}) {
   async function mailbox(auth,intent,signal) {
     const user=auth.user,q=intent.filters;
-    if(!config.ready || !permitted(config.pilot,fold(user.email)))return 'Gmail no está disponible para esta cuenta en Mis conexiones.';
+    if(!config.ready || !permitted(config.pilot,fold(user.email)))return unavailable('Gmail no está disponible para esta cuenta en Mis conexiones.');
     const doc=await gmailStore.findById(user._id,'mailbox encryptedToken grant').lean();
-    if(!doc?.encryptedToken || !doc.grant || !doc.mailbox || String(doc._id)!==String(user._id))return 'Conecta tu Gmail en Mis conexiones para que pueda revisarlo.';
+    if(!doc?.encryptedToken || !doc.grant || !doc.mailbox || String(doc._id)!==String(user._id))return unavailable('Conecta tu Gmail en Mis conexiones para que pueda revisarlo.');
     const asSales=sales.test(q);
+    if(asSales && /\b(?:20\d\d|hace (?:un|dos|tres|\d+) anos?|ultimo ano|pasado ano)\b/.test(q)) {
+      return unavailable('Los avisos de ventas de Hy Cite cubren los últimos 90 días. Dime un período dentro de esa ventana.');
+    }
     const opts=mailReadOptions(q);
     const period=mailPeriod(intent.q,now()) || mailPeriod(q,now());
     const isHy=hycite.test(q);
-    const clarification=mailReadClarification(q,asSales?'sales':'inbox');
-    if(clarification && !(isHy && /remitente|direccion/i.test(fold(clarification))))return clarification;
-    if(asSales && (opts.from || opts.unread))return '¿Quieres contar ventas confirmadas de Hy Cite o revisar correos por remitente o sin leer?';
+    const clarificationInput=mailPeriod(intent.q,now()) && intent.q!==q ? intent.q : q;
+    const topicText=clarificationInput.replace(/\b(?:sobre el tema|acerca de|con asunto|asunto)\b/g,'sobre');
+    const clarification=mailReadClarification(topicText,asSales?'sales':'inbox');
+    if(clarification && !(isHy && /remitente|direccion/i.test(fold(clarification))))return unavailable(clarification);
+    if(asSales && (opts.from || opts.unread))return unavailable('¿Quieres contar ventas confirmadas de Hy Cite o revisar correos por remitente o sin leer?');
     const tokens=await gmail.refresh(openToken(doc.encryptedToken,config.key,user._id));
-    if(!tokens?.access_token || (tokens.scope && !String(tokens.scope).split(/\s+/).includes(gmailScope)))return 'Vuelve a autorizar la lectura de Gmail en Mis conexiones.';
+    if(!tokens?.access_token || (tokens.scope && !String(tokens.scope).split(/\s+/).includes(gmailScope)))return unavailable('Vuelve a autorizar la lectura de Gmail en Mis conexiones.');
     signal?.throwIfAborted();
     let summary;
     if(asSales) {
@@ -214,8 +221,8 @@ export function createLiveRecordReader({config,gmailStore,programSheets,personal
     } else {
       const topic=/\b(?:sobre|acerca de|mencion\w*)\b/.test(q);
       const otherTopic=!isHy && /(?:sobre|asunto|acerca de)\s+([\p{L}\p{N}][\p{L}\p{N} ]{0,58})/u.exec(q)?.[1]?.split(/\s+(?:y|hoy|ayer)\b/)[0]?.trim();
-      if(isHy && !config.domains?.length)return 'Falta configurar los dominios de Hy Cite para buscar esos correos.';
-      const domains=isHy?config.domains.filter(d=>/^(?:[a-z\d-]+\.)+[a-z]{2,}$/.test(d)):undefined;
+      const domains=isHy?(config.domains||[]).filter(d=>/^(?:[a-z\d-]+\.)+[a-z]{2,}$/.test(d)):undefined;
+      if(isHy && !domains.length)return unavailable('Falta configurar los dominios de Hy Cite para buscar esos correos.');
       const query={...opts,period,domains,topic,phrase:otherTopic};
       // Reuse the regular inbox tool for general reads. Its result is always capped at five.
       const result=isHy || otherTopic ? await searchInbox(tokens.access_token,query,{fetcher,signal}):
@@ -226,7 +233,7 @@ export function createLiveRecordReader({config,gmailStore,programSheets,personal
       summary=inboxSummary(result.rows,result.more,intent.index,intent.previousText,where);
     }
     signal?.throwIfAborted();
-    if(!await gmailStore.exists({_id:user._id,grant:doc.grant,mailbox:doc.mailbox}))return 'La conexión de Gmail cambió. Vuelve a pedir la consulta.';
+    if(!await gmailStore.exists({_id:user._id,grant:doc.grant,mailbox:doc.mailbox}))return unavailable('La conexión de Gmail cambió. Vuelve a pedir la consulta.');
     return summary;
   }
   async function sheetData(user,signal) {
@@ -245,7 +252,6 @@ export function createLiveRecordReader({config,gmailStore,programSheets,personal
     if(!inDemoClosePilot(auth,false) || !await sessionCurrent(auth))return sessionChanged();
     if(intent.clarification)return {text:intent.clarification,sources:[]};
     signal?.throwIfAborted();
-    const sheetSources=intent.sources.filter(s=>s.startsWith('sheets'));
     let sheetRead;
     const parts=await Promise.all(intent.sources.map(async source=>{
       try {
@@ -255,16 +261,17 @@ export function createLiveRecordReader({config,gmailStore,programSheets,personal
         return sheetSummary(source,await sheetRead,auth.user,intent,now());
       } catch(e) {
         signal?.throwIfAborted();
-        if(source==='gmail')return e.reauthorize?'Vuelve a autorizar Gmail en Mis conexiones.':'No pude completar la lectura de Gmail. Intenta de nuevo.';
-        if(source==='tec414')return 'No pude consultar tus hojas 4 en 14 guardadas en TEC.';
-        if(e.cause==='changed')return 'Cambió la hoja de Google Sheets. Repite la consulta.';
-        if(e.status===409 || e.cause==='missing')return 'Conecta Google Sheets y elige tus pestañas en Mis conexiones.';
-        if(e.status===403|| e.reauthorize)return 'Vuelve a autorizar Google Sheets en Mis conexiones.';
-        return 'No pude leer las pestañas seleccionadas en Google Sheets. Revisa la conexión y sus encabezados.';
+        if(source==='gmail')return unavailable(e.reauthorize?'Vuelve a autorizar Gmail en Mis conexiones.':'No pude completar la lectura de Gmail. Intenta de nuevo.');
+        if(source==='tec414')return unavailable('No pude consultar tus hojas 4 en 14 guardadas en TEC.');
+        if(e.cause==='changed')return unavailable('Cambió la hoja de Google Sheets. Repite la consulta.');
+        if(e.status===409 || e.cause==='missing')return unavailable('Conecta Google Sheets y elige tus pestañas en Mis conexiones.');
+        if(e.status===403|| e.reauthorize)return unavailable('Vuelve a autorizar Google Sheets en Mis conexiones.');
+        return unavailable('No pude leer las pestañas seleccionadas en Google Sheets. Revisa la conexión y sus encabezados.');
       }
     }));
     signal?.throwIfAborted();
     if(!await sessionCurrent(auth))return sessionChanged();
-    return {text:stayBrief([...new Set(parts)]),sources:intent.sources};
+    return {text:stayBrief([...new Set(parts.map(part=>typeof part==='string'?part:part.text))]),
+      sources:intent.sources.filter((_,i)=>typeof parts[i]==='string')};
   };
 }
