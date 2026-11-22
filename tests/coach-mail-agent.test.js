@@ -45,6 +45,13 @@ test('el chat consulta datos en vivo en el buzón propio y distingue el conteo p
   const other=await call('revisa mis correos',{id:'b'});assert.match(other.respuesta,/token-b/);
   assert.equal(await call('¿Cómo presento una sartén?'),null);
 });
+test('explica cómo recuperar un vínculo ilegible sin devolver mensajes de otro buzón',async()=>{
+  const {call,docs} = fixture();
+  docs.a.encryptedToken = docs.b.encryptedToken;
+  const result = await call('Revisa mis correos');
+  assert.match(result.respuesta,/vuelvas a vincular Gmail/);
+  assert.equal(result.coachHelpActions[0].type,'connections');
+});
 test('la conversación retoma el texto faltante, genera un borrador y solo envía tras el permiso y la confirmación exacta',async()=>{
   const {call,docs,events,code}=fixture();
   const q=await call('Prepara un correo. Asunto: Visita. Mensaje: ¿Nos vemos mañana?');

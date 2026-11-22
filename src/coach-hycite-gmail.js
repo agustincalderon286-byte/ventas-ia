@@ -32,7 +32,10 @@ async function requestJson(url, options) {
     error.status = response.status;
     error.providerRejected = response.status >= 400 && response.status < 500 && response.status !== 408;
     const body = await response.json().catch(() => ({}));
-    if (body.error === 'invalid_grant' || response.status === 401) error.reauthorize = true;
+    const reasons = [...(body.error?.errors || []), ...(body.error?.details || [])].map(item => item.reason);
+    if (body.error === 'invalid_client') error.clientConfiguration = true;
+    else if (body.error === 'invalid_grant' || response.status === 401 ||
+        reasons.some(reason => ['insufficientPermissions','ACCESS_TOKEN_SCOPE_INSUFFICIENT'].includes(reason))) error.reauthorize = true;
     throw error;
   }
   return response.json();

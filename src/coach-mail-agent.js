@@ -24,7 +24,12 @@ const statuses = {
 // offerHooks (optional): {beforeSend, afterSend} from coach-offer-agent.js for replies that carry two time options.
 export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody, offerHooks = null }) {
   const load = id => store.findById(id, 'mailbox encryptedToken grant sendEnabled').lean();
-  const access = async doc => (await gmail.refresh(openToken(doc.encryptedToken, config.key, doc._id))).access_token;
+  const access = async doc => {
+    let credential;
+    try { credential = openToken(doc.encryptedToken, config.key, doc._id); }
+    catch { throw Object.assign(new Error('Vinculación de Gmail ilegible.'), { reconnect:true }); }
+    return (await gmail.refresh(credential)).access_token;
+  };
   return async ({ req, auth, sessionId, text, literalDraftInput = false, readTool }) => {
     const pending = req.body?.coachMailPending;
     let intent;
@@ -45,6 +50,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       return answer('Tu cuenta aún no participa en el piloto de Gmail.');
     }
     if (intent?.kind === 'help') return answer('Puedo revisar tus correos y ventas de Hy Cite, preparar un mensaje o responder en su hilo. Después de «Revisa mis correos», prueba «Responde al segundo». Puedes corregir el borrador antes de confirmar el envío.', [connections]);
+    let readStage = 'connection';
     try {
       if (!config.ready) return answer('La conexión de Gmail está temporalmente fuera de servicio.');
       const doc = await load(actor._id);
@@ -195,7 +201,11 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       const options = {...mailReadOptions(filter.request), ...filter.options};
       const period = mailPeriod(filter.request);
       if (intent.kind === 'inbox') {
-        const messages = await gmail.inbox(await access(doc), period ? { ...options, since: period.since, before: period.before } : options);
+        readStage = 'refresh';
+        const accessToken = await access(doc);
+        readStage = 'inbox';
+        const messages = await gmail.inbox(accessToken, period ? { ...options, since: period.since, before: period.before } : options);
+        readStage = 'result';
         if ((await load(actor._id))?.grant !== doc.grant) return answer('La conexión cambió. Vuelve a pedir la consulta.');
         const filters = [options.unread && 'sin leer', options.from && 'de ' + options.from, options.hyCite && 'de Hy Cite', options.subject && 'con asunto «' + options.subject + '»', period?.label, options.days && 'de los últimos ' + options.days + ' días'].filter(Boolean).join(' ');
         const where = 'en la bandeja de entrada de ' + doc.mailbox + (filters ? ' (' + filters + ')' : '');
@@ -224,7 +234,17 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       }
       return answer('Puedo revisar Gmail o preparar un borrador. ¿Qué quieres hacer?');
     } catch (error) {
+      if (readTool === 'inbox') {
+        const kind = error.reconnect ? 'credential' : error.reauthorize ? 'authorization' : error.clientConfiguration ? 'client' :
+          ['Error','TypeError','RangeError','TimeoutError','CastError','MongoServerError'].includes(error.name) ? error.name : 'other';
+        console.warn('TEC Gmail read', { stage:readStage, kind, status:Number(error.status) || undefined });
+      }
+      if (error.reconnect) return answer('Tu buzón figura como conectado, pero TEC necesita que vuelvas a vincular Gmail en Mis conexiones.', [connections]);
+      if (error.clientConfiguration) return answer('Google rechazó la configuración de Gmail de TEC. El equipo de TEC debe revisarla.', [connections]);
       if (error.reauthorize) return answer('Google solicita que vuelvas a autorizar tu cuenta. Abre Mis conexiones para revisarla.', [connections]);
+      if (error.status === 429) return answer('Google alcanzó temporalmente el límite de consultas. Vuelve a pedírmelo en un momento.');
+      if (error.status === 403) return answer('Google denegó esta consulta a Gmail. Revisa el acceso de TEC en Mis conexiones.', [connections]);
+      if (error.status >= 500 || error.name === 'TimeoutError') return answer('Gmail tardó en responder o está temporalmente fuera de servicio. Puedes repetir la consulta.');
       return answer('No pude completar la acción con Gmail. Puedes volver a consultar la bandeja o revisar la conexión.', [connections]);
     }
   };
