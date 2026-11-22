@@ -2,7 +2,8 @@
 // Sube CONSENT_VERSION cuando cambie qué datos se comparten: los permisos anteriores dejan de valer.
 import mongoose from 'mongoose';
 
-export const CONSENT_VERSION = 1;
+// 2 (22-nov-2026): el modelo recibe también la ciudad o el código postal de las fichas, para ordenar por cercanía.
+export const CONSENT_VERSION = 2;
 const schema = new mongoose.Schema({_id:String,version:Number,acceptedAt:Date},{versionKey:false,writeConcern:{w:'majority'}});
 const Store = mongoose.models.CoachAgentConsent || mongoose.model('CoachAgentConsent',schema);
 
@@ -12,6 +13,12 @@ export function createAgentConsent({store=Store,now=Date.now}={}) {
     async accepted(owner) {
       const doc=await store.findById(String(owner),'version acceptedAt').lean();
       return doc?.version===CONSENT_VERSION && doc.acceptedAt ? new Date(doc.acceptedAt) : null;
+    },
+    // Para Mis conexiones: `outdated` indica un permiso dado antes de que cambiara lo que se comparte.
+    async state(owner) {
+      const doc=await store.findById(String(owner),'version acceptedAt').lean();
+      const current=doc?.version===CONSENT_VERSION && doc.acceptedAt;
+      return {acceptedAt:current ? new Date(doc.acceptedAt) : null,outdated:Boolean(doc && !current)};
     },
     async accept(owner) {
       await store.updateOne({_id:String(owner)},{$set:{version:CONSENT_VERSION,acceptedAt:new Date(now())}},{upsert:true});

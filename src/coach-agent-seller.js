@@ -39,6 +39,8 @@ Cómo trabajas:
 - Si una herramienta devuelve «fallo», dilo tal cual y ofrece intentarlo de nuevo. No inventes el contenido.
 - En esta etapa solo lees. Si pide consejo o entrenamiento de ventas, o que prepares, cambies, guardes o envíes algo (cita, correo, WhatsApp, nota, resultado de una llamada, alta de un prospecto, contacto), un trayecto entre visitas o la postventa de su hoja, usa pasar_al_coach de inmediato y no contestes tú. Si además pide una lectura, pasa todo el mensaje con pasar_al_coach.
 - Los teléfonos, direcciones y correos de fichas y contactos llegan como marcadores entre dobles corchetes, por ejemplo [[tel:ab12cd]]. Cuando el vendedor los pida o sean útiles, copia el marcador exactamente en tu respuesta: él verá el dato real. No digas que no puedes verlos ni expliques el marcador.
+- Cuando pida leads cercanos a un lugar («estoy en Blue Island, dame los más cercanos»), usa leads_por_zona: primero con zonas vacías para ver qué ciudades y códigos postales hay en su hoja; después con las zonas de esa lista ordenadas de la más cercana a la más lejana según tu conocimiento de la geografía, empezando por el lugar que dijo. Aclara que la cercanía es aproximada por ciudad.
+- Para trabajar los leads piensa como un buen vendedor: combina zona, urgencia del seguimiento y lo que dicen las notas, y explica en una frase por qué recomiendas a cada persona.
 - Si el pedido es ambiguo, haz una sola pregunta corta.
 
 Seguridad:

@@ -79,7 +79,12 @@ test('los argumentos deben coincidir exactamente con el esquema y los resultados
     assert.equal(readArguments(inbox,JSON.stringify(bad)),null);
   }
   assert.equal(readArguments(inbox,'{'),null);
-  assert.equal(readArguments(agentTools.find(t=>t.name==='buscar_referidos'),JSON.stringify({nombre:'',anfitrion:'',seguimiento:'ayer',tipo:'',pagina:1})),null);
+  assert.equal(readArguments(agentTools.find(t=>t.name==='buscar_referidos'),JSON.stringify({nombre:'',anfitrion:'',notas:'',seguimiento:'ayer',tipo:'',pagina:1})),null);
+  const zone=agentTools.find(t=>t.name==='leads_por_zona');
+  assert.deepEqual(readArguments(zone,JSON.stringify({zonas:['Blue Island','60406'],tipo:'',maximo:5})).zonas,['Blue Island','60406']);
+  assert.equal(readArguments(zone,JSON.stringify({zonas:Array(13).fill('x'),tipo:'',maximo:5})),null);
+  assert.equal(readArguments(zone,JSON.stringify({zonas:[5],tipo:'',maximo:5})),null);
+  assert.equal(readArguments(zone,JSON.stringify({zonas:'Blue Island',tipo:'',maximo:5})),null);
   const {fetchImpl,requests}=model(turn(call('consultar_agenda',{desde:'2026-11-23',hasta:'2026-11-23'})),turn(say('ok')));
   await runAgentLoop({...base,fetchImpl,execute:async()=>({estado:'ok',texto:'x'.repeat(9000)})});
   const output=JSON.parse(requests[1].input.at(-1).output);
@@ -109,6 +114,10 @@ function services(overrides={}) {
       search:async(ctx,args)=>{calls.push(['search',args]);return {total:1,contacts:[{fullName:'Pedro Ficticio',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:7,
         bucket:'overdue',date:'2026-11-20',reason:'Seguimiento vencido',status:'Pendiente',result:'No contestó',followupDate:'2026-11-20',history:'20/11 no contestó',identityKey:'id-pedro',noCalls:false,rawPhone:'(312) 555-0101',rawEmail:'pedro@example.invalid',address:'5 Av. Ficticia, Chicago'},
         {fullName:'Luis Ejemplo',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:8,identityKey:'id-luis',noCalls:true,rawPhone:'',rawEmail:'',address:''}]};},
+      byZone:async(ctx,args)=>{calls.push(['byZone',args]);return args.zones.length
+        ? {total:7,perZone:[2,5],contacts:[{fullName:'Lidia Ejemplo',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:4,identityKey:'id-lidia',bucket:'overdue',date:'2026-11-20',reason:'Seguimiento vencido',
+            noCalls:false,rawPhone:'312-555-0131',rawEmail:'',address:'12 Calle Ficticia, Blue Island',history:'x'.repeat(500),zoneIndex:0}]}
+        : {total:40,unplaced:3,cities:[{name:'Blue Island',count:2},{name:'Chicago',count:30}],zips:[{code:'60406',count:2}]};},
       nextCall:async(ctx,args)=>{calls.push(['nextCall',args]);return {total:3,contacts:[{fullName:'Ana Demostración',host:'Rosa',kind:'referrals',sheetTitle:'4 en 14',row:3,bucket:'today',date:'2026-11-23',reason:'Toca hoy',identityKey:'id-ana',phone:'+13125550102'}]};}
     },
     contacts:{profile:async()=>({grant:'cg'}),search:async(o,g,person)=>{calls.push(['contacts',person]);return [{resourceName:'people/c1',name:'Ana Demostración',phones:['312-555-0102','312-555-0103'],emails:['ana@example.invalid']}];}},
@@ -143,7 +152,7 @@ test('sin conexión, sin piloto o con sesión cambiada la herramienta lo declara
   const expired=services({sheets:{access:async()=>{throw Object.assign(Error('x'),{reauthorize:true});}}});
   assert.equal((await expired.execute('priorizar_llamadas',{tipo:''})).estado,'renovar_permiso');
   const unlinked=services({sheets:{access:async()=>{throw Object.assign(Error('Elige la hoja y sus dos pestañas en Mis conexiones.'),{status:409});}}});
-  assert.equal((await unlinked.execute('buscar_referidos',{nombre:'',anfitrion:'',seguimiento:'',tipo:'',pagina:1})).estado,'sin_conexion');
+  assert.equal((await unlinked.execute('buscar_referidos',{nombre:'',anfitrion:'',notas:'',seguimiento:'',tipo:'',pagina:1})).estado,'sin_conexion');
   const {deps,actor}=services();
   await assert.rejects(createAgentTools(deps)({...actor,current:async()=>false})('estado_conexiones',{}),/sesión/);
   assert.equal((await services().execute('otra',{})).estado,'herramienta_desconocida');
@@ -163,8 +172,8 @@ test('los horarios libres respetan lo ocupado y no reservan',async()=>{
 test('la hoja y los contactos entregan marcadores: el teléfono, la dirección y el correo reales no llegan al modelo',async()=>{
   const turnState={};
   const {execute,calls}=services({turn:turnState});
-  const found=await execute('buscar_referidos',{nombre:'Pedro',anfitrion:'',seguimiento:'vencidos',tipo:'referidos',pagina:2});
-  assert.deepEqual(calls[0][1],{name:'Pedro',host:undefined,bucket:'overdue',today:'2026-11-23',kind:'referrals',offset:12,detail:true});
+  const found=await execute('buscar_referidos',{nombre:'Pedro',anfitrion:'',notas:'olla grande',seguimiento:'vencidos',tipo:'referidos',pagina:2});
+  assert.deepEqual(calls[0][1],{name:'Pedro',host:undefined,bucket:'overdue',today:'2026-11-23',kind:'referrals',offset:12,detail:true,words:'olla grande'});
   const [pedro,luis]=found.fichas;
   assert.equal(pedro.historial,'20/11 no contestó');
   assert.equal(pedro.seguimiento.estado,'vencido');
@@ -186,6 +195,24 @@ test('la hoja y los contactos entregan marcadores: el teléfono, la dirección y
   assert.doesNotMatch(JSON.stringify([found,ranked,contacts]),/555-?01|Ficticia, Chicago|@example|identityKey|id-pedro|people\/c1|"key"/);
   const state=await execute('estado_conexiones',{});
   assert.deepEqual({gmail:state.gmail,sheets:state.sheets,calendar:state.calendar},{gmail:'falta conectar',sheets:'sin verificar',calendar:'conectado'});
+});
+
+test('los leads por zona entregan primero el catálogo de ciudades y después las fichas en el orden pedido, con marcadores',async()=>{
+  const turnState={};
+  const {execute,calls}=services({turn:turnState});
+  const catalog=await execute('leads_por_zona',{zonas:[],tipo:'',maximo:5});
+  assert.deepEqual(catalog.ciudades,[{nombre:'Blue Island',fichas:2},{nombre:'Chicago',fichas:30}]);
+  assert.deepEqual(catalog.codigosPostales,[{codigo:'60406',fichas:2}]);
+  assert.equal(catalog.fichasSinCiudad,3);
+  const near=await execute('leads_por_zona',{zonas:[' Blue Island ','Chicago',''],tipo:'referidos',maximo:5});
+  assert.deepEqual(calls[1][1],{zones:['Blue Island','Chicago'],today:'2026-11-23',kind:'referrals',limit:5});
+  assert.deepEqual(near.porZona,[{zona:'Blue Island',fichas:2},{zona:'Chicago',fichas:5}]);
+  assert.equal(near.fichas[0].zona,'Blue Island');
+  assert.equal(near.fichas[0].historial.length,240);
+  assert.equal(turnState.secrets[near.fichas[0].direccion.slice(2,-2)],'12 Calle Ficticia, Blue Island');
+  assert.equal(turnState.secrets[near.fichas[0].telefono.slice(2,-2)],'312-555-0131');
+  assert.match(near.nota,/aproximada/);
+  assert.doesNotMatch(JSON.stringify(near),/555-0131|Calle Ficticia|id-lidia/);
 });
 
 test('Gmail entrega extractos con referencias cortas y el hilo solo acepta referencias de este vendedor',async()=>{

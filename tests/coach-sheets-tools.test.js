@@ -153,3 +153,43 @@ test('la búsqueda con detalle pide la dirección y entrega los datos de contact
   assert.equal('address' in plain.contacts[0],false);
   assert.equal('rawPhone' in plain.contacts[0],false);
 });
+
+test('la lectura con detalle tolera nombres incompletos o mal escritos, busca en las notas y ordena por zona',async()=>{
+  const base={kind:'referrals',sheetId:9,sheetTitle:'4 en 14',host:'Rosa Silva',seller:'',sellerColumn:false,result:'',status:'',followupDate:'',editable:{},email:''};
+  const sheet=[
+    {...base,row:4,fullName:'Lidia Ejemplo',phone:'312-555-0131',address:'12 Calle Ficticia',city:'Blue Island, IL 60406',history:'2026-11-17: quiere la olla grande, llamar el 2026-11-20.'},
+    {...base,row:5,fullName:'Pedro Ficticio',phone:'312-555-0132',address:'9 Av. Prueba',city:'Chicago Heights',history:''},
+    {...base,row:6,fullName:'Ana Demostración',phone:'312-555-0133',address:'3 Calle Ejemplo, Chicago, IL 60617',city:'',history:''},
+    {...base,row:7,fullName:'Luis Ejemplo',phone:'312-555-0134',address:'',city:'Blue Island',history:'Pidió que no la llamen.'},
+    {...base,row:8,fullName:'Marta Prueba',phone:'312-555-0135',address:'',city:'',history:''},
+    {...base,kind:'tickets',sheetId:0,sheetTitle:'Rifa',row:3,fullName:'Jorge Prueba',phone:'312-555-0136',address:'',city:'Blue Island',history:''}];
+  const tools=createCoachSheetTools({google:{async readFollowups() { return {locale:'en_US',rows:structuredClone(sheet)}; }}});
+  const names=async(args,id='agustin')=>{const r=await tools.search(ctx(id),{today,detail:true,...args});return [r.contacts.map(c=>c.fullName),Boolean(r.approximate)];};
+
+  assert.deepEqual(await names({name:'Lidia'}),[['Lidia Ejemplo'],false]);
+  assert.deepEqual(await names({name:'Lidya'},'b'),[['Lidia Ejemplo'],true]);
+  assert.deepEqual(await names({name:'Lid'},'c'),[['Lidia Ejemplo'],true]);
+  assert.deepEqual(await names({name:'Lidia Ejemlo'},'d'),[['Lidia Ejemplo'],true]);
+  assert.deepEqual(await names({name:'Zoila'},'e'),[[],false]);
+  assert.deepEqual(await names({words:'OLLA grande'},'f'),[['Lidia Ejemplo'],false]);
+  assert.deepEqual(await names({words:'sartén'},'g'),[[],false]);
+  // Fuera del modo detalle el nombre sigue exigiendo palabras exactas.
+  assert.equal((await tools.search(ctx('h'),{name:'Lidya',today})).total,0);
+
+  const catalog=await tools.byZone(ctx('i'),{today});
+  assert.deepEqual(catalog.cities.map(c=>[c.name,c.count]),[['Blue Island',3],['Chicago Heights',1]]);
+  assert.deepEqual(catalog.zips,[{code:'60406',count:1},{code:'60617',count:1}]);
+  assert.equal(catalog.unplaced,1);
+  assert.equal(catalog.total,6);
+
+  const near=await tools.byZone(ctx('j'),{zones:['Blue Island','Chicago','Chicago Heights'],today,limit:10});
+  assert.deepEqual(near.contacts.map(c=>[c.fullName,c.zoneIndex]),[['Lidia Ejemplo',0],['Jorge Prueba',0],['Luis Ejemplo',0],['Ana Demostración',1],['Pedro Ficticio',2]]);
+  assert.deepEqual(near.perZone,[3,1,1]);
+  assert.equal(near.contacts[0].bucket,'overdue');
+  assert.equal(near.contacts[0].address,'12 Calle Ficticia, Blue Island, IL 60406');
+  assert.equal(near.contacts[2].noCalls,true);
+  assert.equal(near.contacts[2].rawPhone,'');
+  const byZip=await tools.byZone(ctx('k'),{zones:['60617','60406'],today,kind:'referrals',limit:1});
+  assert.deepEqual([byZip.contacts.map(c=>c.fullName),byZip.total,byZip.perZone],[['Ana Demostración'],2,[1,1]]);
+  assert.equal((await tools.byZone(ctx('l'),{zones:['Harvey'],today})).total,0);
+});

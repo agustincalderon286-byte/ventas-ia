@@ -42,6 +42,37 @@ function matchWords(label,query) {
   return query.split(' ').every(word=>words.has(word));
 }
 
+// Coincidencia tolerante para lecturas: prefijos («Lidi») y una letra de diferencia («Lidya»).
+// Nunca se usa para elegir la ficha de un cambio; ahí el nombre debe coincidir exacto.
+function near(a,b) {
+  if (a===b) return true;
+  if (Math.min(a.length,b.length)<4 || Math.abs(a.length-b.length)>1) return false;
+  let i=0, j=0, edits=0;
+  while (i<a.length && j<b.length) {
+    if (a[i]===b[j]) { i++; j++; continue; }
+    if (++edits>1) return false;
+    if (a.length>b.length) i++; else if (b.length>a.length) j++; else { i++; j++; }
+  }
+  return edits+(a.length-i)+(b.length-j)<=1;
+}
+function matchLoose(label,query) {
+  if (!query) return true;
+  const words=fold(label).split(' ');
+  return query.split(' ').every(q=>words.some(word=>(q.length>=3 && word.startsWith(q)) || near(word,q)));
+}
+
+// Ciudad o zona de una ficha sin código postal ni estado, para comparar nombres de lugar.
+const zipOf = value => /\b(\d{5})(?:\s\d{4})?\b/.exec(fold(value))?.[1] || '';
+const cityCore = value => fold(value).replace(/\b\d{5}(?: \d{4})?\b/g,' ').replace(/\b(?:il|illinois|in|indiana|wi|wisconsin|usa|eeuu)\b/g,' ').replace(/\s+/g,' ').trim();
+
+function detailOf(hit,followup) {
+  const {row}=hit;
+  const noCalls=excludesPhoneContact(row);
+  return {...contactOf(hit,followup),status:text(row.status),result:text(row.result),followupDate:text(row.followupDate),
+    history:text(row.history).slice(-600),noCalls,rawPhone:noCalls ? '' : text(row.phone).slice(0,40),
+    rawEmail:text(row.email).slice(0,254),address:[text(row.address),text(row.city)].filter(Boolean).join(', ').slice(0,240)};
+}
+
 function noteValue(before,entry) {
   const value=before ? before+' / '+entry : entry;
   if (value.length>50000) throw fail(422,'La nota excede el espacio disponible en la celda del historial.');
@@ -74,7 +105,9 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
   return {
     // detail añade el estado, el final del historial y los datos de contacto tal como están en la hoja,
     // para lecturas del asistente. El teléfono se omite si la ficha pide no ser contactada.
-    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind,detail=false}={}) {
+    // Con detail, el nombre y el anfitrión admiten prefijos y una letra de diferencia cuando no hay coincidencia exacta,
+    // y `words` busca dentro del historial, el resultado y el estado.
+    async search(ctx,{name,host,bucket,today,offset=0,withPhone=false,kind,detail=false,words=''}={}) {
       const binding=scope(ctx);
       await check(ctx);
       let cached=searchReads.get(ctx);
@@ -90,20 +123,77 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       if (name && !nameKey || host && !hostKey || (bucket && !['today','overdue','undated','future'].includes(bucket)) ||
           (bucket && !validDate(today))) throw fail(422,'Revisa el nombre, el anfitrión o el día de los seguimientos.');
       if (!Number.isSafeInteger(offset) || offset<0) throw fail(422,'Revisa la página solicitada.');
-      const matches=[];
-      for (const {row,key,id} of rows) {
-        if (kind && row.kind!==kind) continue;
-        if (!matchWords(row.fullName,nameKey) || !matchWords(row.host,hostKey)) continue;
-        const followup=classifySheetsFollowup(row,{today,locale});
-        if (bucket && followup?.bucket!==bucket) continue;
-        const contact=contactOf({row,key,id},followup,withPhone);
-        if (!detail) { matches.push(contact); continue; }
-        const noCalls=excludesPhoneContact(row);
-        matches.push({...contact,status:text(row.status),result:text(row.result),followupDate:text(row.followupDate),
-          history:text(row.history).slice(-600),noCalls,rawPhone:noCalls ? '' : text(row.phone).slice(0,40),
-          rawEmail:text(row.email).slice(0,254),address:[text(row.address),text(row.city)].filter(Boolean).join(', ').slice(0,240)});
+      const wanted=detail ? fold(words).split(' ').filter(Boolean) : [];
+      const collect=match=>{
+        const found=[];
+        for (const hit of rows) {
+          const {row}=hit;
+          if (kind && row.kind!==kind) continue;
+          if (!match(row.fullName,nameKey) || !match(row.host,hostKey)) continue;
+          if (wanted.length) {
+            const notes=fold([row.history,row.result,row.status].join(' '));
+            if (!wanted.every(word=>notes.includes(word))) continue;
+          }
+          const followup=classifySheetsFollowup(row,{today,locale});
+          if (bucket && followup?.bucket!==bucket) continue;
+          found.push(detail ? detailOf(hit,followup) : contactOf(hit,followup,withPhone));
+        }
+        return found;
+      };
+      let matches=collect(matchWords), approximate=false;
+      if (detail && !matches.length && (nameKey || hostKey)) { matches=collect(matchLoose); approximate=matches.length>0; }
+      return {contacts:matches.slice(offset,offset+12),total:matches.length,...(approximate && {approximate})};
+    },
+
+    // Fichas por cercanía aproximada. `zones` son ciudades o códigos postales en el orden deseado, de la más
+    // cercana a la más lejana. Sin zonas devuelve el catálogo de ciudades y códigos postales de la hoja.
+    async byZone(ctx,{zones=[],today,kind,limit=5}={}) {
+      const {rows,locale}=await load(ctx,false,true);
+      const pool=rows.filter(({row})=>!kind || row.kind===kind);
+      const place=row=>({core:cityCore(row.city),all:fold(text(row.city)+' '+text(row.address)),zip:zipOf(text(row.address)+' '+text(row.city))});
+      if (!zones.length) {
+        const cities=new Map(), zips=new Map();
+        let unplaced=0;
+        for (const {row} of pool) {
+          const where=place(row);
+          if (!where.core && !where.zip) { unplaced++; continue; }
+          if (where.core) {
+            // Se muestra la forma más corta escrita en la hoja: «Blue Island» antes que «Blue Island, IL 60406».
+            const written=text(row.city).replace(/\s+/g,' ').slice(0,60);
+            const entry=cities.get(where.core) || {name:written,count:0};
+            if (written.length<entry.name.length) entry.name=written;
+            entry.count++; cities.set(where.core,entry);
+          }
+          if (where.zip) zips.set(where.zip,(zips.get(where.zip) || 0)+1);
+        }
+        const top=list=>list.sort((a,b)=>b.count-a.count).slice(0,60);
+        return {cities:top([...cities.values()]),zips:top([...zips].map(([code,count])=>({code,count}))),unplaced,total:pool.length};
       }
-      return {contacts:matches.slice(offset,offset+12),total:matches.length};
+      const keys=zones.map(zone=>fold(zone)).map(key=>({key,zip:/^\d{5}$/.test(key),core:cityCore(key)}));
+      const zoneOf=where=>{
+        let best=-1;
+        keys.forEach((zone,index)=>{
+          const hit=zone.zip ? where.zip===zone.key || new RegExp('(?:^| )'+zone.key+'(?: |$)').test(where.all)
+            : zone.core && (where.core ? where.core===zone.core : new RegExp('(?:^| )'+zone.core+'(?: |$)').test(where.all));
+          // Entre varias zonas que coinciden, gana el nombre más largo: «Chicago Heights» antes que «Chicago».
+          if (hit && (best<0 || zone.key.length>keys[best].key.length)) best=index;
+        });
+        return best;
+      };
+      const priority=['overdue','today','undated','new','future','other'];
+      const found=[], perZone=zones.map(()=>0);
+      for (const hit of pool) {
+        const index=zoneOf(place(hit.row));
+        if (index<0) continue;
+        let followup=classifySheetsFollowup(hit.row,{today,locale});
+        if (!followup && ['history','result','followupDate','status'].every(field=>!text(hit.row[field]))) {
+          followup={bucket:'new',date:'',reason:'La ficha todavía no tiene una gestión registrada.'};
+        }
+        perZone[index]++;
+        found.push({...detailOf(hit,followup),zoneIndex:index,rank:priority.indexOf(followup?.bucket || 'other')});
+      }
+      found.sort((a,b)=>a.zoneIndex-b.zoneIndex || a.rank-b.rank || (a.date || '').localeCompare(b.date || '') || a.row-b.row);
+      return {contacts:found.slice(0,limit),total:found.length,perZone};
     },
 
     async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind,shortlist=false}={}) {

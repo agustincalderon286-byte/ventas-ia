@@ -168,7 +168,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       businessSeller ? (personalWhatsAppReady ? waCloud.verify().catch(() => ({ ok:false, reason:'unreachable' }))
         : { ok:false, reason:'notConfigured' }) : null,
       contactsPilot && config.contactsReady ? contacts.panel(id) : null,
-      assistantPilot ? agentConsent.accepted(id) : null
+      assistantPilot ? agentConsent.state(id) : null
     ]);
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
@@ -177,7 +177,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
     res.send(connectionsPage({ doc, cal, pilot, contacts:contactsProfile, contactsPilot, contactsReady:config.contactsReady, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
       personalWhatsAppReady, senderPhone, businessLine, businessPending,
-      businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), assistant: assistantPilot ? {acceptedAt:assistantAccepted} : null, coachEmail:email, csrf:session, message }));
+      businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), assistant: assistantPilot ? assistantAccepted : null, coachEmail:email, csrf:session, message }));
   }));
 
   const startAuthorization = requestSend => own(async (_req, res, { id, session }) => {

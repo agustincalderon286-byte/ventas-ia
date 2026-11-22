@@ -20,8 +20,11 @@ test('el permiso se guarda por vendedor, con fecha, y una versión anterior deja
   await consent.accept('a');
   assert.equal((await consent.accepted('a')).toISOString(),'2026-11-22T18:00:00.000Z');
   assert.equal(await consent.accepted('b'),null);
+  assert.deepEqual(await consent.state('b'),{acceptedAt:null,outdated:false});
+  assert.equal((await consent.state('a')).outdated,false);
   store.rows.get('a').version=CONSENT_VERSION-1;
   assert.equal(await consent.accepted('a'),null);
+  assert.deepEqual(await consent.state('a'),{acceptedAt:null,outdated:true});
   await consent.accept('a');
   await consent.revoke('a');
   assert.equal(await consent.accepted('a'),null);
@@ -71,6 +74,14 @@ test('Mis conexiones muestra el permiso solo al piloto del asistente y lo activa
   assert.match(after.body,/action="\/api\/coach\/conexiones\/asistente\/revoke"/);
   assert.doesNotMatch(after.body,/asistente\/accept/);
 
+  // Un permiso de una versión anterior no vale y la página pide revisarlo.
+  store.rows.get('a').version=CONSENT_VERSION-1;
+  const outdated=await open('a');
+  assert.match(outdated.body,/Cambió lo que el asistente puede consultar/);
+  assert.match(outdated.body,/asistente\/accept/);
+  assert.match(outdated.body,/su ciudad o código postal/);
+  store.rows.get('a').version=CONSENT_VERSION;
+
   const revoked=await open('a',{action:'revoke',body:{csrf}});
   assert.equal(revoked.to,'/mis-conexiones/?estado=assistantOff');
   assert.equal(store.rows.size,0);
@@ -92,5 +103,6 @@ test('la política de privacidad describe el asistente y lleva la fecha del camb
   assert.match(html,/Actualizada el 22 de noviembre de 2026/);
   assert.match(html,/asistente que consulta tus cuentas/);
   assert.match(html,/un extracto corto de cada mensaje/);
+  assert.match(html,/la ciudad o el código postal de tus fichas/);
   assert.match(html,/retirar el permiso/);
 });

@@ -148,14 +148,14 @@ function assistantSection({form,assistant}) {
   const api='/api/coach/conexiones/asistente/';
   const on=Boolean(assistant.acceptedAt);
   return `<section id="asistente"><h2>Asistente que consulta tus cuentas</h2>
-    <p><strong>${on ? 'Permiso activo desde el '+date(assistant.acceptedAt)+'.' : 'Permiso sin activar.'}</strong></p>
+    <p><strong>${on ? 'Permiso activo desde el '+date(assistant.acceptedAt)+'.' : assistant.outdated ? 'Cambió lo que el asistente puede consultar. Revisa la lista y vuelve a dar tu permiso.' : 'Permiso sin activar.'}</strong></p>
     <p>Con tu permiso, el Coach entiende lo que le pides con tus propias palabras y revisa tu agenda, tu correo, tus ventas de Hy Cite, tu hoja de referidos y tus contactos antes de responderte.</p>
     <p>Para hacerlo, TEC envía a OpenAI, su proveedor de inteligencia artificial, tu mensaje y lo que el Coach lea para contestarlo:</p>
     <ul><li><div>De tu calendario: los títulos y horarios de tus citas y tus bloques ocupados.</div></li>
     <li><div>De tu correo: el remitente, el asunto, la fecha y un extracto corto de cada mensaje. Nunca el texto completo.</div></li>
-    <li><div>De tu hoja: el nombre, el anfitrión, el estado y el historial de cada ficha.</div></li>
+    <li><div>De tu hoja: el nombre, el anfitrión, el estado y el historial de cada ficha, y su ciudad o código postal para ordenarlas por cercanía.</div></li>
     <li><div>De tus contactos: el nombre.</div></li></ul>
-    <p>No se envían los teléfonos, las direcciones ni los correos de tus fichas y contactos: el Coach los añade a la respuesta que ves en tu pantalla. TEC guarda cifrados los tres últimos intercambios de la conversación durante 20 minutos para entender tus preguntas de seguimiento.</p>
+    <p>No se envían los teléfonos, la calle y el número de las direcciones ni los correos de tus fichas y contactos: el Coach los añade a la respuesta que ves en tu pantalla. TEC guarda cifrados los tres últimos intercambios de la conversación durante 20 minutos para entender tus preguntas de seguimiento.</p>
     <p>El asistente solo lee. Nada se envía, se reserva ni se guarda sin que pulses el botón de confirmar.</p>
     <p>Puedes retirar el permiso cuando quieras y el Coach seguirá funcionando como antes. Más detalles en la <a href="/coach/privacidad/">política de privacidad</a>.</p>
     ${on ? form('revoke','Retirar el permiso',true,api) : form('accept','Permitir que el asistente consulte mis cuentas',false,api)}</section>`;

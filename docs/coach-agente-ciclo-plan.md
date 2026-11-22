@@ -153,7 +153,14 @@ Cambios respecto al diseño:
 
 **Consentimiento (hecho el 22 de noviembre de 2026).** `src/coach-agent-consent.js` guarda el permiso por vendedor con versión y fecha. Mis conexiones muestra la sección «Asistente que consulta tus cuentas» solo a los correos de `COACH_AGENT_LOOP_EMAILS`, con los botones «Permitir…» y «Retirar el permiso» (`/api/coach/conexiones/asistente/`). Sin permiso vigente el ciclo no se ejecuta y el Coach responde como hoy. La política de privacidad (`public/coach/privacidad/index.html`) describe qué se envía a OpenAI y lleva la fecha del cambio. Si cambia lo que las herramientas entregan al modelo, hay que actualizar ese texto y subir `CONSENT_VERSION`.
 
-Antes de encenderlo con datos reales faltan: la medición con el modelo real y una prueba con clics en el Coach local.
+**Publicado y encendido el 22 de noviembre de 2026** para las dos cuentas del piloto, por orden de Agustín y sin medición previa con el modelo real. En uso real respondió con datos de la hoja.
+
+**Trabajo con leads (22 de noviembre de 2026).** A partir del uso real se añadió:
+- `leads_por_zona`: sin zonas devuelve las ciudades y códigos postales de la hoja con su número de fichas; con zonas devuelve las fichas en ese orden y, dentro de cada zona, por urgencia. El modelo ordena las zonas por cercanía con su conocimiento de geografía. Es una aproximación por ciudad, no una distancia medida; la distancia real exigiría geocodificar direcciones con Google Maps.
+- `buscar_referidos` busca también en las notas (`notas`) y tolera nombres incompletos o con una letra distinta cuando no hay coincidencia exacta. La tolerancia solo existe en lecturas: los cambios siguen exigiendo el nombre exacto.
+- El modelo recibe ahora la ciudad o el código postal de las fichas, por lo que `CONSENT_VERSION` subió a 2 y cada vendedor debe volver a dar su permiso.
+
+Pendiente: la medición con el modelo real.
 
 ```bash
 NODE_ENV=test node scripts/coach-agent-bench.mjs --system loop --run

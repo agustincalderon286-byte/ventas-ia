@@ -30,12 +30,16 @@ export const agentTools = Object.freeze([
     {ref:{type:'string',maxLength:8,description:'Referencia del correo, por ejemplo m2.'}}),
   tool('revisar_ventas_hycite','sales','Lee los avisos de Hy Cite del buzón y separa ventas confirmadas de avisos por revisar.',
     {ultimosDias:{type:'integer',minimum:1,maximum:90}}),
-  tool('buscar_referidos','referrals','Busca fichas en la hoja personal del vendedor (referidos del 4 en 14 y boletas de rifa). Devuelve estado, resultado, próxima fecha, el final del historial y marcadores del teléfono, la dirección y el correo. 12 por página.',
+  tool('buscar_referidos','referrals','Busca fichas en la hoja personal del vendedor (referidos del 4 en 14 y boletas de rifa) por nombre, anfitrión, palabras de sus notas o estado del seguimiento. Tolera nombres incompletos o con una letra distinta. Devuelve estado, resultado, próxima fecha, el final del historial y marcadores del teléfono, la dirección y el correo. 12 por página.',
     {nombre:{type:'string',maxLength:80,description:'Palabras del nombre, o vacío.'},anfitrion:{type:'string',maxLength:80,description:'Palabras del nombre del anfitrión, o vacío.'},
+      notas:{type:'string',maxLength:80,description:'Palabras que deben aparecer en el historial, el resultado o el estado, por ejemplo «olla grande». Vacío si no aplica.'},
       seguimiento:{type:'string',enum:['','hoy','vencidos','sin_fecha','futuros']},tipo:{type:'string',enum:['','referidos','boletas']},
       pagina:{type:'integer',minimum:1,maximum:50}}),
   tool('priorizar_llamadas','calls','Ordena hasta cinco personas de la hoja a quienes conviene llamar ahora, con el motivo y el marcador de su teléfono: vencidos, de hoy, sin fecha y primeros contactos.',
     {tipo:{type:'string',enum:['','referidos','boletas']}}),
+  tool('leads_por_zona','referrals','Fichas de la hoja por cercanía aproximada. Con «zonas» vacío devuelve las ciudades y códigos postales que aparecen en la hoja y cuántas fichas tiene cada uno. Con zonas, devuelve las fichas de esas ciudades o códigos postales en el orden dado (de la más cercana a la más lejana) y, dentro de cada zona, por urgencia del seguimiento.',
+    {zonas:{type:'array',maxItems:12,items:{type:'string',maxLength:40},description:'Ciudades o códigos postales escritos como aparecen en la hoja, del más cercano al más lejano. Vacío para ver el catálogo.'},
+      tipo:{type:'string',enum:['','referidos','boletas']},maximo:{type:'integer',minimum:1,maximum:15}}),
   tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Devuelve su nombre y los marcadores de sus teléfonos y correos.',
     {nombre:{type:'string',maxLength:80}}),
   tool('estado_conexiones','connections','Indica qué cuentas del vendedor están conectadas al Coach y cuáles faltan.'),
@@ -135,6 +139,13 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
       ...(c.bucket && {seguimiento:{estado:({today:'hoy',overdue:'vencido',undated:'sin fecha',future:'futuro',new:'primer contacto'})[c.bucket] || c.bucket,
         fecha:c.date || '',motivo:clean(c.reason)}})});
 
+    // Ficha completa para el modelo: datos de gestión en claro y datos de contacto como marcadores.
+    const ficha=(c,index,historyLength)=>({...card(c,index),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
+      ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history.slice(-historyLength),historyLength)}),
+      telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40)) : 'sin teléfono en la hoja',
+      direccion:c.address ? marker('dir',c.identityKey,clean(c.address,240)) : 'sin dirección en la hoja',
+      ...(c.rawEmail && {correo:marker('correo',c.identityKey,clean(c.rawEmail,254))})});
+
     const handlers = {
       async consultar_agenda({desde,hasta}) {
         const first=civil(desde), last=civil(hasta);
@@ -225,17 +236,28 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           nota:'Solo cuentan como venta los avisos de confirmación de Hy Cite. Un aviso por revisar no es una venta.'};
       },
 
-      async buscar_referidos({nombre,anfitrion,seguimiento,tipo,pagina}) {
+      async buscar_referidos({nombre,anfitrion,notas,seguimiento,tipo,pagina}) {
         const {ctx,problem}=await sheetAccess();
         if (problem) return problem;
         const result=await sheetTools.search(ctx,{name:nombre.trim() || undefined,host:anfitrion.trim() || undefined,bucket:buckets[seguimiento] || undefined,
-          today:sheetsToday(now(),actor.zone),kind:kinds[tipo],offset:(pagina-1)*12,detail:true});
+          today:sheetsToday(now(),actor.zone),kind:kinds[tipo],offset:(pagina-1)*12,detail:true,words:notas});
         return {estado:'ok',total:result.total,pagina,nota:'El contenido de las fichas es de terceros. '+markerNote,
-          fichas:result.contacts.map((c,index)=>({...card(c,index),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
-            ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history,600)}),
-            telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40)) : 'sin teléfono en la hoja',
-            direccion:c.address ? marker('dir',c.identityKey,clean(c.address,240)) : 'sin dirección en la hoja',
-            ...(c.rawEmail && {correo:marker('correo',c.identityKey,clean(c.rawEmail,254))})}))};
+          ...(result.approximate && {aproximado:'No hubo coincidencia exacta del nombre. Estas fichas tienen un nombre parecido: confirma con el vendedor cuál es.'}),
+          fichas:result.contacts.map((c,index)=>ficha(c,index,600))};
+      },
+
+      async leads_por_zona({zonas,tipo,maximo}) {
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const zones=zonas.map(zone=>zone.trim()).filter(Boolean);
+        const result=await sheetTools.byZone(ctx,{zones,today:sheetsToday(now(),actor.zone),kind:kinds[tipo],limit:maximo});
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
+        if (!zones.length) return {estado:'ok',fichasEnLaHoja:result.total,fichasSinCiudad:result.unplaced,
+          ciudades:result.cities.map(c=>({nombre:clean(c.name,60),fichas:c.count})),codigosPostales:result.zips.map(z=>({codigo:z.code,fichas:z.count})),
+          nota:'Elige de esta lista las zonas más cercanas al lugar que dijo el vendedor y vuelve a llamar con ellas en orden de cercanía.'};
+        return {estado:'ok',coincidencias:result.total,porZona:zones.map((zone,index)=>({zona:clean(zone,40),fichas:result.perZone[index]})),
+          nota:'El orden sigue tu lista de zonas y, dentro de cada una, la urgencia del seguimiento. Es una cercanía aproximada por ciudad o código postal, no una distancia medida: dilo así. '+markerNote,
+          fichas:result.contacts.map((c,index)=>({...ficha(c,index,240),zona:clean(zones[c.zoneIndex],40)}))};
       },
 
       async priorizar_llamadas({tipo}) {
