@@ -1,9 +1,41 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gmailClient } from '../src/coach-hycite-gmail.js';
+import { pilotInboxFilters, mailReadClarification } from '../src/coach-mail-intent.js';
 import { connectionsPage } from '../src/coach-connections-page.js';
 
 const gmail = gmailClient({ origin:'https://coach.example' });
+
+test('el asunto dictado o entre comillas se conserva aparte de remitente y fechas', () => {
+  const filter = pilotInboxFilters('Revisa en Gmail los correos de Hay Cite con el asunto «Demo de hoy» de los últimos siete días.');
+  assert.deepEqual(filter.options, {subject:'Demo de hoy',hyCite:true});
+  assert.doesNotMatch(filter.request,/Demo de hoy/);
+  assert.equal(mailReadClarification(filter.request,'inbox'),'');
+  assert.deepEqual(pilotInboxFilters('¿Hay un correo con asunto Reunión semanal?').options,{subject:'Reunión semanal'});
+  assert.deepEqual(pilotInboxFilters('Busca el asunto «Noticias de Hy Cite».').options,{subject:'Noticias de Hy Cite'});
+  assert.ok(pilotInboxFilters('Busca por asunto').question);
+  assert.ok(pilotInboxFilters('Busca por asunto "hola" con asunto "otro"').request.includes('con asunto'));
+});
+
+test('busca por asunto y por los dominios de Hy Cite sin traer mensajes de remitentes parecidos', async t => {
+  const client = gmailClient({domains:['hycite.com']});
+  const fetch = t.mock.method(globalThis,'fetch',async address=>{
+    const url = new URL(address);
+    if (url.pathname.endsWith('/messages')) {
+      assert.equal(url.searchParams.get('q'),'subject:"Demo de hoy" {from:(@hycite.com)}');
+      assert.equal(url.searchParams.get('labelIds'),'INBOX');
+      return Response.json({messages:[{id:'a'},{id:'b'}]});
+    }
+    const id = url.pathname.split('/').pop();
+    return Response.json({id, internalDate:'1000',snippet:'',payload:{headers:[
+      {name:'From',value:id === 'a' ? 'Empresa <avisos@hycite.com>' : 'avisos@hycite.com.example'},
+      {name:'Subject',value:'Demo de hoy'}
+    ]}});
+  });
+  await assert.rejects(client.inbox('token',{subject:'abc" z'}),TypeError);
+  assert.equal(fetch.mock.callCount(),0);
+  assert.deepEqual((await client.inbox('token',{hyCite:true,subject:'Demo de hoy'})).map(m=>m.id),['a']);
+});
 
 test('lista únicamente cinco mensajes, selecciona encabezados y entrega extractos acotados en orden reciente', async t => {
   const seen = [];

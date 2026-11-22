@@ -69,6 +69,30 @@ function rollingWindow(text) {
   return hours && hours % 24 === 0 ? hours / 24 : 0;
 }
 
+// Keep the words of a subject out of the date and sender interpreters.
+export function pilotInboxFilters(text) {
+  const marker = /\basunto(?:\s+(?:sea|es|dice|diga|que dice|que diga))?\s*:?\s*/i.exec(text);
+  const options = {};
+  let request = text;
+  if (marker) {
+    const rest = text.slice(marker.index + marker[0].length).trim();
+    const quoted = /^(?:«([^»]+)»|“([^”]+)”|"([^"]+)")/.exec(rest);
+    const subject = (quoted ? quoted[1] ?? quoted[2] ?? quoted[3] : rest.replace(/[.?!]+$/, '')).trim();
+    if (!subject || subject.length > 160 || /["«»“”\\\p{Cc}]/u.test(subject) ||
+        (!quoted && /(?:,|\b(?:y (?:de|sin|con|que)|desde|durante|de los últimos)\b)/iu.test(subject))) {
+      return { question:'¿Qué asunto quieres buscar? Puedes escribirlo entre comillas.' };
+    }
+    options.subject = subject;
+    request = text.slice(0,marker.index) + ' ' + (quoted ? rest.slice(quoted[0].length) : '');
+  }
+  const sender = /\b(de|desde|por)\s+(?:hy|hay|jai)[ -]?cite\b/i;
+  if (sender.test(request)) {
+    options.hyCite = true;
+    request = request.replace(sender, '$1 Hy Cite');
+  }
+  return { request, options };
+}
+
 export function mailReadOptions(text) {
   const input = normalizedRequest(String(text || ''));
   const explicitSender = input.match(/(?:\b(?:de|desde|por|remitente)\s*:?\s+|\bfrom:\s*)<?([^<>\s,;!?]+@[^<>\s,;!?]+)/)?.[1];

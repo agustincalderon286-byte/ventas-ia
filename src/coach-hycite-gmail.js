@@ -68,11 +68,19 @@ function rawMessage({ from, to, subject, body, thread }) {
   return Buffer.from(mime).toString('base64url');
 }
 
-function inboxQuery({ unread, from, days, since, before }) {
+function inboxQuery({ unread, from, days, since, before, subject, hyCite }, domains) {
   const params = new URLSearchParams({ labelIds: 'INBOX', maxResults: '5', fields: 'messages(id)' });
   if (unread !== undefined && typeof unread !== 'boolean') throw new TypeError('Filtro de lectura no válido.');
   if (unread) params.append('labelIds', 'UNREAD');
   const filters = [];
+  if (subject !== undefined) {
+    if (typeof subject !== 'string' || !subject.trim() || subject.length > 160 || /["\\\p{Cc}]/u.test(subject)) throw new TypeError('Asunto de búsqueda no válido.');
+    filters.push('subject:"' + subject + '"');
+  }
+  if (hyCite) {
+    if (hyCite !== true || !domains?.length) throw new TypeError('Faltan los dominios de Hy Cite.');
+    filters.push('{' + domains.map(domain => 'from:(@' + domain + ')').join(' ') + '}');
+  }
   if (from !== undefined) {
     if (!isGmailAddress(from)) throw new TypeError('Dirección de remitente no válida.');
     filters.push('from:"' + from + '"');
@@ -121,7 +129,7 @@ export function gmailClient(config) {
     refresh: refresh_token => token({ grant_type: 'refresh_token', refresh_token }),
     profile: access => read(api + '/profile', access),
     async inbox(access, options = {}) {
-      const list = await read(api + '/messages?' + inboxQuery(options), access);
+      const list = await read(api + '/messages?' + inboxQuery(options, config.domains), access);
       const params = new URLSearchParams({ format: 'metadata', fields: 'id,internalDate,snippet,payload/headers' });
       for (const name of ['From', 'Subject']) params.append('metadataHeaders', name);
       const rows = await Promise.all((list.messages || []).slice(0, 5).map(async ({ id }) => {
@@ -139,7 +147,8 @@ export function gmailClient(config) {
           throw error;
         }
       }));
-      return rows.filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+      return rows.filter(row => row && (!options.hyCite || config.domains.includes(senderAddress(row.from)?.split('@')[1]?.toLowerCase())))
+        .sort((a,b) => b.date.localeCompare(a.date));
     },
     async replyTarget(access, id) {
       if (typeof id !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(id)) return null;

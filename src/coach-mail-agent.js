@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { classifyMailIntent, resolveMailIntent, composeMailDraft, rewriteSellerBody, mailReadOptions, mailReadClarification } from './coach-mail-intent.js';
+import { classifyMailIntent, resolveMailIntent, composeMailDraft, rewriteSellerBody, mailReadOptions, mailReadClarification, pilotInboxFilters } from './coach-mail-intent.js';
 import { openToken, sealToken } from './coach-hycite-gmail.js';
 
 import { classifySalesMailReport, draftSalesReport } from './coach-mail-sales-report.js';
@@ -188,14 +188,16 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
         }
         return answer(statuses[result.status] || statuses.unavailable, links);
       }
-      const clarify = mailReadClarification(text, intent.kind);
+      const filter = readTool === 'inbox' ? pilotInboxFilters(text) : {request:text};
+      if (filter.question) return answer(filter.question);
+      const clarify = mailReadClarification(filter.request, intent.kind);
       if (clarify) return answer(clarify);
-      const options = mailReadOptions(text);
-      const period = mailPeriod(text);
+      const options = {...mailReadOptions(filter.request), ...filter.options};
+      const period = mailPeriod(filter.request);
       if (intent.kind === 'inbox') {
         const messages = await gmail.inbox(await access(doc), period ? { ...options, since: period.since, before: period.before } : options);
         if ((await load(actor._id))?.grant !== doc.grant) return answer('La conexión cambió. Vuelve a pedir la consulta.');
-        const filters = [options.unread && 'sin leer', options.from && 'de ' + options.from, period?.label, options.days && 'de los últimos ' + options.days + ' días'].filter(Boolean).join(' ');
+        const filters = [options.unread && 'sin leer', options.from && 'de ' + options.from, options.hyCite && 'de Hy Cite', options.subject && 'con asunto «' + options.subject + '»', period?.label, options.days && 'de los últimos ' + options.days + ' días'].filter(Boolean).join(' ');
         const where = 'en la bandeja de entrada de ' + doc.mailbox + (filters ? ' (' + filters + ')' : '');
         if (!messages.length) return answer('No encontré mensajes ' + where + '.');
         const lines = messages.map((m,i) => `${i+1}. ${m.subject || '(Sin asunto)'} — ${m.from || 'Sin remitente'} · ${stamp(m.date)}${m.snippet ? '\n' + m.snippet : ''}`);
