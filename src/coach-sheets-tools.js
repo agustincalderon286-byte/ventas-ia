@@ -4,6 +4,7 @@ import { dialNumber, reviewConfirmedSales } from './coach-postsale.js';
 import { classifySheetsFollowup, excludesPhoneContact } from './coach-sheets-followup-input.js';
 import { createSheetsGoogle } from './coach-sheets-google.js';
 import { createSheetsTransfer } from './coach-sheets-transfer.js';
+import { AGENDA_HEADERS, RESULTS } from './coach-sheets-template.js';
 
 const hash = parts => createHash('sha256').update(JSON.stringify(parts)).digest('base64url');
 const fail = (status,message) => Object.assign(new Error(message),{status});
@@ -86,6 +87,23 @@ function contactOf({row,key,id},followup,withPhone=false) {
     ...(phone && {phone}),
     ...(email.length<=254 && /^[^\s@,;:<>]+@[^\s@,;:<>]+\.[^\s@,;:<>]+$/.test(email) && {email}),
     ...(followup && {date:followup.date || '',reason:followup.reason,bucket:followup.bucket})};
+}
+
+// Fecha y hora de la Agenda: Sheets entrega días desde el 30/12/1899 y horas como fracción del día.
+function agendaDate(value) {
+  if (typeof value==='number' && value>=1 && value<2958466) return new Date(Date.UTC(1899,11,30)+Math.floor(value)*86400000).toISOString().slice(0,10);
+  const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text(value));
+  return m ? m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : '';
+}
+function agendaTime(value) {
+  if (typeof value==='number' && value>=0) {
+    const minutes=Math.round((value%1)*1440)%1440;
+    return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+  }
+  const m=/^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i.exec(text(value));
+  if (!m) return text(value).slice(0,20);
+  let h=Number(m[1])%12+(/^p/i.test(m[3] || '') ? 12 : 0); if (!m[3]) h=Number(m[1]);
+  return String(h).padStart(2,'0')+':'+(m[2] || '00');
 }
 
 export function createCoachSheetTools({google=createSheetsGoogle(),transfer=createSheetsTransfer({google})}={}) {
@@ -325,6 +343,74 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
         (hostName?' con anfitrión '+hostName:'')+'.'+(city?' Ciudad: '+city+'.':'')+(address?' Dirección: '+address+'.':'')+
         (relationship?' Relación: '+relationship+'.':'')+(hostPhone?' Teléfono del anfitrión: '+hostPhone+'.':'')+
         (row.status==='possible'?' Posible duplicado de nombre o teléfono.'+duplicates+' Revisa la hoja antes de confirmar.':'')};
+    },
+
+    // Agenda de la Hoja TEC. Devuelve null si el archivo conectado no tiene la pestaña Agenda con sus encabezados.
+    async agenda(ctx,{from,to}={}) {
+      scope(ctx);
+      await check(ctx);
+      const tabs=await google.tecTabs(ctx.access,ctx.workbook);
+      if (!tabs.agenda) return null;
+      const values=await google.rangeValues(ctx.access,ctx.workbook,"'Agenda'!A1:M"+Math.min(tabs.agenda.gridProperties?.rowCount || 2000,5000),true);
+      await check(ctx);
+      if (AGENDA_HEADERS.some((h,i)=>fold(values[0]?.[i])!==fold(h))) return null;
+      const rows=[];
+      for (const [i,raw] of values.slice(1).entries()) {
+        const cells=Array.from({length:13},(_,c)=>raw?.[c] ?? '');
+        if (!text(cells[4])) continue;
+        const date=agendaDate(cells[0]), time=agendaTime(cells[1]);
+        if ((from && (!date || date<from)) || (to && (!date || date>to))) continue;
+        const row={row:i+2,date,time,seller:text(cells[2]),telemarketer:text(cells[3]),client:text(cells[4]),phone:text(cells[5]),
+          address:text(cells[6]),origin:text(cells[7]),notes:text(cells[8]).slice(0,400),result:text(cells[9]),
+          sale:typeof cells[10]==='number' ? cells[10] : text(cells[10]),referrals:typeof cells[11]==='number' ? cells[11] : text(cells[11]),sellerNotes:text(cells[12]).slice(0,400)};
+        row.key=hash([scope(ctx),row.row,row.client,row.date,row.time,row.result,row.sale,row.referrals,row.sellerNotes]);
+        rows.push(row);
+      }
+      return {sheetId:tabs.agenda.sheetId,rows};
+    },
+
+    // Prepara, sin escribir, el resultado de una cita de la Agenda: resultado, venta, referidos y una nota del vendedor.
+    async prepareResult(ctx,{row,key,result,sale=null,referrals=null,note=''}) {
+      if (!RESULTS.some(([r])=>r===result)) throw fail(422,'Elige un resultado de la lista: '+RESULTS.map(([r])=>r).join(', ')+'.');
+      if (sale!=null && (!Number.isFinite(sale) || sale<0 || sale>100000)) throw fail(422,'Revisa el monto de la venta.');
+      if (referrals!=null && (!Number.isInteger(referrals) || referrals<0 || referrals>200)) throw fail(422,'Revisa el número de referidos.');
+      if (typeof note!=='string' || note.length>600 || /[\p{Cc}\p{Cf}]/u.test(note)) throw fail(422,'Revisa la nota.');
+      const data=await this.agenda(ctx);
+      const hit=data?.rows.find(r=>r.row===row);
+      if (!hit || hit.key!==key) throw conflict();
+      const after={result,sale:result==='Venta' ? sale : null,referrals,sellerNotes:note.trim() ? (hit.sellerNotes ? hit.sellerNotes+' / ' : '')+note.trim() : hit.sellerNotes};
+      const money=v=>v==null || v==='' ? 'sin venta' : '$'+Number(v).toLocaleString('en-US');
+      const preview='Agenda, fila '+hit.row+' · '+hit.client+(hit.date ? ' · '+hit.date+(hit.time ? ' '+hit.time : '') : '')+'. Resultado: '+(hit.result || 'sin resultado')+' → '+result+
+        '. Venta: '+money(after.sale)+'. Referidos: '+(referrals==null ? 'sin anotar' : referrals)+'.'+(note.trim() ? ' Nota: «'+note.trim()+'».' : '');
+      return {preview,proposal:{binding:scope(ctx),sheetId:data.sheetId,row:hit.row,key:hit.key,client:hit.client,after}};
+    },
+
+    async confirmResult(ctx,proposal) {
+      if (proposal?.binding!==scope(ctx)) throw conflict();
+      await check(ctx);
+      const data=await this.agenda(ctx);
+      const hit=data?.rows.find(r=>r.row===proposal.row);
+      if (!hit || hit.key!==proposal.key || data.sheetId!==proposal.sheetId) throw conflict();
+      const {after}=proposal;
+      await google.writeCells(ctx.access,ctx.workbook,{sheetId:data.sheetId,row:hit.row,column:9,cells:[after.result,after.sale,after.referrals,after.sellerNotes]});
+      await check(ctx);
+      return {status:'saved',message:'Google Sheets guardó el resultado de '+hit.client+' en la Agenda, fila '+hit.row+'.'};
+    },
+
+    // Números del Resumen de la Hoja TEC tal como los calcula la hoja. null si el archivo no tiene esa pestaña.
+    async summary(ctx) {
+      scope(ctx);
+      await check(ctx);
+      const tabs=await google.tecTabs(ctx.access,ctx.workbook);
+      if (!tabs.summary) return null;
+      const values=await google.rangeValues(ctx.access,ctx.workbook,"'Resumen'!A1:I38");
+      await check(ctx);
+      if (fold(values[0]?.[0])!==fold('Resumen de resultados')) return null;
+      const periods=(values[3] || []).slice(1,4).map(text);
+      const metrics=values.slice(8,29).filter(r=>text(r?.[0]) && r.length>1).map(r=>({nombre:text(r[0]),valores:r.slice(1,4).map(text)}));
+      const head=(values[31] || []).map(text);
+      const telemarketers=values.slice(32,38).filter(r=>text(r?.[0])).map(r=>Object.fromEntries(head.map((h,i)=>[h,text(r[i])])));
+      return {periods,metrics,telemarketers,range:{desde:(values[4] || []).slice(1,4).map(text),hasta:(values[5] || []).slice(1,4).map(text)}};
     },
 
     async confirmAdd(ctx,proposal) {

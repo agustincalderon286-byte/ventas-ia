@@ -15,11 +15,11 @@ const TICKET_HEADERS = ['NOMBRE DEL PROSPECTO','Email','TELEFONOS','Toma agua','
   'CIUDAD O ZONA DE RESIDENCIA / ZIP CODE','OBSERVACIONES DEL PROSPECTADOR (PAÍS DE ORIGEN, CONOCE RP, ETC)','¿Qué se ganó?','Casado',
   'Número de ganador','PROSPECTADOR','BOLETAS / RASPADITO','COMENTARIOS DEL TELEMARKETING','RESULTADO DE LA CITA',
   'FECHA DE ENTRADA','TELEMARKETER','ESTADO','ÚLTIMO CONTACTO','PRÓXIMA LLAMADA','HUBO CONTACTO (automático)'];
-const AGENDA_HEADERS = ['Fecha','Hora','Vendedor','Telemarketer','Cliente','Teléfono','Dirección','Origen','Notas del telemarketer',
+export const AGENDA_HEADERS = ['Fecha','Hora','Vendedor','Telemarketer','Cliente','Teléfono','Dirección','Origen','Notas del telemarketer',
   'Resultado','Venta ($)','Referidos obtenidos','Notas del vendedor'];
 export const LEAD_STATES = Object.freeze([['Nuevo','No'],['No contesta','No'],['Número equivocado','No'],['Colgó','Sí'],['No califica','Sí'],
   ['No interesado','Sí'],['Cita','Sí'],['Pendiente','Sí'],['Llamar en las tardes','Sí'],['Solo mañanas','Sí'],['Solo fines de semana','Sí']]);
-const RESULTS = [['Pendiente','No'],['Venta','Sí'],['Demo sin venta','Sí'],['No estaba','No'],['Canceló','No'],['Reagendar','No']];
+export const RESULTS = [['Pendiente','No'],['Venta','Sí'],['Demo sin venta','Sí'],['No estaba','No'],['Canceló','No'],['Reagendar','No']];
 // Los mismos colores de la leyenda que ya usan los telemarketers.
 const COLORS = [
   [['No interesado','Colgó','No califica','Número equivocado'],'FF0000','000000','NO INTERESADO, COLGÓ, NO CALIFICA, NÚMEROS EQUIVOCADOS O DESCONECTADOS'],

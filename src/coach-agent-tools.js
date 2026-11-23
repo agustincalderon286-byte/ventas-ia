@@ -69,6 +69,15 @@ export const agentTools = Object.freeze([
     {nombre:{type:'string',maxLength:80,description:'Palabras del nombre de la persona o del título de la cita. Vacío si se identifica solo por día y hora.'},
       diaActual:{type:'string',maxLength:10,description:'Día AAAA-MM-DD de la cita, o vacío si el nombre basta.'},
       horaActual:{type:'string',maxLength:5,description:'HH:MM en 24 horas de la cita, o vacío.'}}),
+  tool('leer_agenda_hoja','tecagenda','Lee la pestaña Agenda de la Hoja TEC del vendedor, donde el telemarketer anota las citas que agenda: fecha, hora, cliente, origen, notas del telemarketer y resultado. Indica si cada cita ya está en su calendario «Seguimientos TEC». Las fechas son AAAA-MM-DD.',
+    {desde:day,hasta:day}),
+  tool('preparar_resultado_cita','result','Prepara, sin guardar, el resultado de una cita de la Agenda de la Hoja TEC: resultado, monto de la venta, referidos obtenidos y una nota del vendedor. El vendedor lo guarda con un botón.',
+    {ref:{type:'string',maxLength:8,description:'Referencia «ref» de la cita, tal como llegó de leer_agenda_hoja.'},
+      resultado:{type:'string',enum:['Venta','Demo sin venta','No estaba','Canceló','Reagendar','Pendiente']},
+      venta:{type:'number',minimum:0,maximum:100000,description:'Monto vendido en dólares, o 0 si no hubo venta.'},
+      referidos:{type:'integer',minimum:-1,maximum:200,description:'Referidos que sacó en la visita, o -1 si no lo dijo.'},
+      nota:{type:'string',maxLength:600,description:'Nota corta del vendedor sobre la visita, o vacío.'}}),
+  tool('leer_resumen','summary','Lee el Resumen de la Hoja TEC: leads nuevos, citas, demos, ventas, porcentaje de cierre, total vendido, referidos por demo, de esta semana, este mes y el mes pasado, y la tabla de cada telemarketer de este mes. Úsala para «¿cómo voy?» o «¿cómo va mi telemarketer?».'),
   tool('preparar_alta','add','Prepara, sin guardar, el alta de una persona nueva en la hoja: un referido del 4 en 14 con su anfitrión o una boleta de rifa. Una persona por propuesta. El vendedor la confirma con un botón.',
     {nombre:{type:'string',maxLength:80},telefono:{type:'string',maxLength:30,description:'Teléfono tal como lo dijo el vendedor.'},
       tipo:{type:'string',enum:['referido','boleta']},anfitrion:{type:'string',maxLength:80,description:'Nombre del anfitrión para un referido. Vacío para una boleta.'}}),
@@ -228,6 +237,9 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     };
 
     // La cita que el vendedor quiere mover o borrar, entre las que el Coach creó. Debe quedar una sola.
+    const tecMissing={estado:'no_disponible',nota:'La hoja conectada no es la Hoja TEC, así que no tiene Agenda ni Resumen. El vendedor puede crearla en Mis conexiones con «Crear mi Hoja TEC». Explícaselo así.'};
+    const agendaRef=r=>{const ref='c'+createHash('sha256').update('agenda\n'+r.row+'\n'+r.client+'\n'+r.date).digest('hex').slice(0,5);delete refs[ref];refs[ref]='agenda:'+r.row+':'+r.key;return ref;};
+
     async function ownAppointment(op,nombre,diaActual,horaActual) {
       if ((diaActual && civil(diaActual)==null) || (horaActual && !clock(horaActual))) return {problem:invalid('Usa el día AAAA-MM-DD y la hora HH:MM de la cita actual, o déjalos vacíos.')};
       if (!nombre.trim() && !diaActual) return {problem:invalid('Indica el nombre de la persona o el día de la cita.')};
@@ -479,6 +491,58 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         return {estado:'preparado',cita:clean(target.summary,130),cuando:target.local.day+' '+target.local.time,nota:pendingNote};
       },
 
+      async leer_agenda_hoja({desde,hasta}) {
+        if (civil(desde)==null || civil(hasta)==null || civil(hasta)<civil(desde)) return invalid('Usa fechas AAAA-MM-DD, con «hasta» igual o posterior a «desde».');
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const data=await sheetTools.agenda(ctx,{from:desde,to:hasta});
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
+        if (!data) return tecMissing;
+        const today=sheetsToday(now(),actor.zone);
+        const citas=[];
+        for (const r of data.rows.slice(0,25)) {
+          let enCalendario='sin revisar';
+          if (channels?.findAppointments && r.date && r.date>=today) {
+            try { enCalendario=(await channels.findAppointments(actor,{name:r.client,day:r.date})).matches.length ? 'sí' : 'no'; } catch { enCalendario='sin revisar'; }
+          }
+          citas.push({ref:agendaRef(r),cliente:clean(r.client,130),dia:r.date || 'sin fecha',hora:r.time || 'sin hora',telemarketer:clean(r.telemarketer,80),
+            origen:clean(r.origin,40),notasTelemarketer:clean(r.notes,300),resultado:clean(r.result,40) || 'sin resultado',
+            ...(r.sale!=='' && {venta:r.sale}),...(r.referrals!=='' && {referidos:r.referrals}),enCalendario,
+            telefono:r.phone ? marker('tel','agenda:'+r.row,clean(r.phone,40),r.client) : 'sin teléfono',
+            direccion:r.address ? marker('dir','agenda:'+r.row,clean(r.address,240)) : 'sin dirección'});
+        }
+        return {estado:'ok',zona:actor.zone,total:data.rows.length,...(data.rows.length>25 && {omitidas:data.rows.length-25}),
+          nota:'Una cita «nueva» es la que no tiene resultado y todavía no está en el calendario. Para pasarla al calendario usa preparar_cita con el nombre del cliente, su día y su hora (60 minutos, tipo demo). Para anotar cómo le fue usa preparar_resultado_cita con su ref. '+markerNote,citas};
+      },
+
+      async preparar_resultado_cita({ref,resultado,venta,referidos,nota}) {
+        const saved=/^c[a-f0-9]{5}$/.test(ref) && Object.hasOwn(refs,ref) ? /^agenda:(\d+):(.+)$/.exec(refs[ref]) : null;
+        if (!saved) return invalid('Esa referencia no existe. Lee primero la agenda con leer_agenda_hoja y usa la «ref» de la cita.');
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const blocked=enter('result',null);
+        if (blocked) return invalid(blocked);
+        if (plan().changed && plan().draft.steps.result) return invalid('Un resultado por propuesta. Cuando el vendedor lo confirme, prepara el siguiente.');
+        let made;
+        try { made=await sheetTools.prepareResult(ctx,{row:Number(saved[1]),key:saved[2],result:resultado,sale:resultado==='Venta' && venta>0 ? venta : null,
+          referrals:referidos>=0 ? referidos : null,note:clean(nota,600)}); }
+        catch (error) { if (error?.status===409) return {estado:'no_preparado',nota:'La cita cambió en la hoja. Vuelve a leer la agenda.'}; throw error; }
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la preparación.'};
+        put('result',{preview:made.preview,proposal:made.proposal},'Resultado de '+made.proposal.client+': '+resultado);
+        plan().draft.sheetGrant=ctx.grant;
+        return {estado:'preparado',cliente:clean(made.proposal.client,130),nota:pendingNote};
+      },
+
+      async leer_resumen() {
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const data=await sheetTools.summary(ctx);
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
+        if (!data) return tecMissing;
+        return {estado:'ok',periodos:data.periods,desde:data.range.desde,hasta:data.range.hasta,numeros:data.metrics,telemarketersEsteMes:data.telemarketers,
+          nota:'Son los números que calcula la hoja con lo que anotaron el vendedor y los telemarketers. Contesta con los más útiles y compáralos con el mes pasado; no inventes otros.'};
+      },
+
       async preparar_alta({nombre,telefono,tipo,anfitrion}) {
         const kind=tipo==='boleta' ? 'tickets' : 'referrals';
         const fullName=nombre.trim(), host=anfitrion.trim(), phone=telefono.trim();
@@ -520,7 +584,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
       if (!Object.hasOwn(handlers,name)) return {estado:'herramienta_desconocida'};
       const source=agentTools.find(t=>t.name===name).source;
       const connection=({agenda:'calendar',slots:'calendar',appointment:'calendar',move:'calendar',cancel:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',
-        referrals:'sheets',distance:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',contacts:'contacts'})[source];
+        referrals:'sheets',distance:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',tecagenda:'sheets',result:'sheets',summary:'sheets',contacts:'contacts'})[source];
       try {
         await guard();
         const result=await handlers[name](args);

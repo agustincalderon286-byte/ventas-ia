@@ -17,6 +17,9 @@ export const notices = {
   sheetsConnected: 'Google Sheets autorizado. Elige el archivo y sus dos pestañas.',
   sheetsWrongAccount: 'Elige en Google la cuenta con el mismo correo que usas en tu Coach.',
   sheetsMapped: 'Los destinos de rifas y referidos están guardados en tu Coach.',
+  sheetsImported: 'Tus leads ya están en tu Hoja TEC. Tu hoja anterior quedó igual.',
+  sheetsImportNotEmpty: 'Tu Hoja TEC ya tiene leads, así que no pasé los de la hoja anterior para no duplicarlos.',
+  sheetsImportNone: 'No encontré leads tuyos para pasar de la hoja anterior.',
   sheetsCreated: 'Tu Hoja TEC está lista en tu Google Drive y ya está conectada al Coach. Compártela con tus telemarketers como editores.',
   sheetsBadTabs: 'Elige una pestaña distinta para cada tipo de lead.',
   sheetsFileUnavailable: 'Comprueba que tienes permiso de edición y que el archivo tiene dos pestañas visibles. Vuelve a elegirlo en Google.',
@@ -182,9 +185,18 @@ function sheetsSection({form,profile,ready,email}) {
   const controls=profile?.grant ? `<p>Cuenta conectada · <strong>${esc(profile.mailbox)}</strong></p>
     ${profile.spreadsheetId?`<p><strong>${esc(profile.spreadsheetTitle)}</strong><br>Rifas → ${esc(profile.ticketsTitle)}<br>Referidos con anfitrión → ${esc(profile.referralsTitle)}</p><p>Pregunta «¿A quién le marco ahorita?» para ver el siguiente pendiente.</p>`:hint}
     <div class="actions">${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>
+    ${profile.tecSheet && profile.previousSpreadsheetId ? `<p>Puedes pasar a tu Hoja TEC los leads de <strong>${esc(profile.previousSpreadsheetTitle || 'tu hoja anterior')}</strong>. Primero verás cuántos son.</p>${form('import','Pasar mis leads a la Hoja TEC',false,sheetsActions,sheetField('grant',profile.grant))}` : ''}
     ${createTecSheetForm({form,profile})}` :
     `<p>Elige una hoja de tu cuenta de Google para registrar rifas y referencias. El Coach te mostrará los posibles duplicados antes de que confirmes cada guardado.</p>${hint}${form('start','Conectar mi Google Sheets',false,sheetsActions)}`;
   return `<section id="google-sheets"><h2>Google Sheets</h2>${controls}</section>`;
+}
+
+export function importPage({csrf,grant,title,referrals,tickets,skipped}) {
+  const none=!referrals && !tickets;
+  return sheetPage('Pasar mis leads a la Hoja TEC',`<p>De <strong>${esc(title || 'tu hoja anterior')}</strong> se pasarán <strong>${referrals}</strong> referidos del 4 en 14 y <strong>${tickets}</strong> boletas.</p>
+    ${skipped ? `<p>Se quedan fuera ${skipped} leads asignados a otros vendedores.</p>` : ''}
+    <p>Se copian el nombre, el teléfono, la ciudad o dirección, el anfitrión, el vendedor, los comentarios del telemarketing, el resultado y la próxima llamada. Tu hoja anterior no cambia.</p>
+    ${none ? '<p>No hay leads para pasar.</p>' : `<form method="post" action="${sheetsActions}import-confirm">${sheetField('csrf',csrf)}${sheetField('grant',grant)}<button type="submit">Pasar ${referrals+tickets} leads</button></form>`}`);
 }
 
 export function pickerPage({csrf,grant,email}) {

@@ -287,6 +287,33 @@ export function createSheetsGoogle(fetcher = fetch) {
       }}]});
       return result.replies?.[0]?.findReplace?.occurrencesChanged === 1;
     },
+    // Pestañas de la Hoja TEC (Agenda y Resumen), por título. null si el archivo no es una Hoja TEC.
+    async tecTabs(access, book) {
+      const meta = await request(access, book, '?fields=sheets(properties(sheetId,title,sheetType,gridProperties(rowCount,columnCount)))');
+      const find = title => meta.sheets?.map(s => s.properties).find(p => p?.title === title && p.sheetType === 'GRID') || null;
+      return {agenda:find('Agenda'), summary:find('Resumen')};
+    },
+    // Valores de un rango en una pestaña. 'raw' entrega fechas como número de serie y horas como fracción del día.
+    async rangeValues(access, book, range, raw = false) {
+      const data = await request(access, book, '/values/'+encodeURIComponent(range)+'?majorDimension=ROWS&valueRenderOption='+
+        (raw ? 'UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER' : 'FORMATTED_VALUE'));
+      return Array.isArray(data?.values) ? data.values : [];
+    },
+    // Escribe celdas con su tipo explícito: un texto que empieza con «=» nunca se vuelve fórmula.
+    async writeCells(access, book, {sheetId, row, column, cells}) {
+      if (!Number.isSafeInteger(sheetId) || !Number.isSafeInteger(row) || row < 1 || !Number.isSafeInteger(column) || column < 0) throw fail(422,'Revisa la celda.');
+      const value = v => v == null || v === '' ? {userEnteredValue:{stringValue:''}} : typeof v === 'number' ? {userEnteredValue:{numberValue:v}} : {userEnteredValue:{stringValue:String(v)}};
+      await request(access, book, ':batchUpdate', {requests:[{updateCells:{start:{sheetId,rowIndex:row-1,columnIndex:column},
+        fields:'userEnteredValue',rows:[{values:cells.map(value)}]}}]});
+    },
+    // Copia filas completas a partir de una fila; agrega filas a la pestaña si hace falta.
+    async writeRows(access, book, {sheetId, startRow, rows, rowCount}) {
+      const value = v => v == null || v === '' ? {} : typeof v === 'number' ? {userEnteredValue:{numberValue:v}} : {userEnteredValue:{stringValue:String(v)}};
+      const needed = startRow - 1 + rows.length + 10 - rowCount;
+      await request(access, book, ':batchUpdate', {requests:[
+        ...(needed > 0 ? [{appendDimension:{sheetId,dimension:'ROWS',length:needed}}] : []),
+        {updateCells:{start:{sheetId,rowIndex:startRow-1,columnIndex:0},fields:'userEnteredValue',rows:rows.map(r=>({values:r.map(value)}))}}]});
+    },
     async append(access, book, dest, input, selected, marker) {
       const rows = selected.map((index, order) => {
         const person = input.referrals[index], cols = dest.cols, cells = [];

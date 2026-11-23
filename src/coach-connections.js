@@ -77,7 +77,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     rememberEvent:(b,receipt) => followupStore.rememberEvent(b,receipt)}) : null;
   const contacts = createCoachContactsConnections({config,store:contactsStore,google:contactsGoogle});
   const sheetTools = createCoachSheetTools({google:sheetsReader});
-  const sheets = createCoachSheetsConnections({config,store:sheetsStore,google:sheetsGoogle});
+  const sheets = createCoachSheetsConnections({config,store:sheetsStore,google:sheetsGoogle,reader:sheetsReader});
   const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle,
     ...(offerStore && { purge: async (args,key) => {
       await purgeCalendarProposals(args,key);

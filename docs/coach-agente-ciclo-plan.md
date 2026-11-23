@@ -230,6 +230,14 @@ Pendiente de la Fase 2: correos dentro del ciclo, varias altas a la vez y la hoj
 - Usa el permiso `drive.file` que ya tenía la conexión: el Coach solo puede abrir los archivos que crea o que el vendedor elige.
 - Modelo con datos inventados para enseñarlo: «Hoja TEC · modelo de prueba» en el Drive de Agustín.
 
+### Circuito de la Hoja TEC (22 de noviembre de 2026)
+
+- **Pasar leads:** al crear la Hoja TEC se recuerda la hoja anterior. En Mis conexiones, «Pasar mis leads a la Hoja TEC» muestra cuántos referidos y boletas del vendedor se copiarán y los copia al confirmar (`src/coach-sheets-import.js`). Solo escribe en una Hoja TEC vacía; los referidos van en bloques por anfitrión; un estado que no está en la lista queda en los comentarios. La hoja anterior no cambia.
+- **Agenda:** `leer_agenda_hoja` lee la pestaña Agenda y dice si cada cita próxima ya está en «Seguimientos TEC». Para pasarla al calendario el asistente usa `preparar_cita`.
+- **Resultado:** `preparar_resultado_cita` deja la propuesta y el botón «Guardar resultado» escribe Resultado, Venta, Referidos y Notas del vendedor en esa fila, solo si la fila no cambió desde la vista previa.
+- **Resumen:** `leer_resumen` lee los números que calcula la hoja para contestar «¿cómo voy?».
+- Falta: avisar de citas nuevas sin que el vendedor pregunte (necesita un aviso en segundo plano) y escribir el resultado también en la ficha del 4 en 14 o de Boletas.
+
 ## Archivos
 
 | Archivo | Cambio |

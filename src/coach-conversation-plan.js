@@ -6,8 +6,8 @@ import {validTimeZone,readFollowup} from './coach-followup-input.js';
 import {salePeriod} from './coach-postsale.js';
 import {sheetsToday} from './coach-sheets-followup-input.js';
 
-const labels={note:'Guardar nota',add:'Agregar prospecto',appointment:'Confirmar cita',move:'Mover cita',cancel:'Borrar cita',email:'Enviar correo'};
-const titles={note:'Nota en Sheets',add:'Alta en Sheets',appointment:'Cita personal',move:'Cambio de cita',cancel:'Borrar cita',email:'Correo'};
+const labels={note:'Guardar nota',add:'Agregar prospecto',appointment:'Confirmar cita',move:'Mover cita',cancel:'Borrar cita',result:'Guardar resultado',email:'Enviar correo'};
+const titles={note:'Nota en Sheets',add:'Alta en Sheets',appointment:'Cita personal',move:'Cambio de cita',cancel:'Borrar cita',result:'Resultado en la Agenda',email:'Correo'};
 const direct=auth=>!!(auth?.user && auth.session?.tokenHash) && (auth.session.accessMode==='direct' || (!auth.session.accessMode && auth.user.accountType!=='seat'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const reply=(respuesta,revision='',actions=[])=>({mode:'coach',coachMailAgent:true,coachPlanAgent:true,coachPlanPending:revision,coachHelpActions:actions,respuesta});
@@ -141,7 +141,8 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
             if (s.chosen?.identityKey && ['appointment','email'].includes(k)) await sheetTools.revalidate(await ctx(),s.chosen.identityKey);
             const actions={note:async()=>sheetTools.confirmNote(await ctx(),step.proposal),add:async()=>sheetTools.confirmAdd(await ctx(),step.proposal),
               appointment:()=>channels.confirmAppointment(actor,step.proposal),
-              move:()=>channels.confirmAppointment(actor,step.proposal),cancel:()=>channels.confirmAppointment(actor,step.proposal),email:()=>channels.confirmEmail(actor,step.proposal)};
+              move:()=>channels.confirmAppointment(actor,step.proposal),cancel:()=>channels.confirmAppointment(actor,step.proposal),
+              result:async()=>sheetTools.confirmResult(await ctx(),step.proposal),email:()=>channels.confirmEmail(actor,step.proposal)};
             const result=await actions[k]();
             step.status=result.status==='saved'?'saved':result.status==='retry'?'retry':'blocked';step.message=result.message;
           } catch(e) {step.status=[400,403,409,422].includes(e.status)||e.publicMessage?'blocked':'retry';step.message=userError(e);}

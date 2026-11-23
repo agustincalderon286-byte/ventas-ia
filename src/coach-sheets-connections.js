@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { openToken, sealToken } from './coach-hycite-gmail.js';
-import { pickerPage, sheetMappingPage } from './coach-connections-page.js';
+import { importPage, pickerPage, sheetMappingPage } from './coach-connections-page.js';
+import { planImport, runImport } from './coach-sheets-import.js';
 import { TEC_SHEET_IDS, tecSheetCreateBody, tecSheetRequests } from './coach-sheets-template.js';
 
 export const sheetsApi = '/api/coach/conexiones/sheets/';
@@ -10,7 +11,8 @@ const mime = 'application/vnd.google-apps.spreadsheet';
 const schema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId, accountSub: {type:String,unique:true,sparse:true}, mailbox:String,
   encryptedToken:String, grant:String, stateHash:String, sessionId:String, deadline:Date, verifier:String, exchangeId:String,
-  spreadsheetId:String, spreadsheetTitle:String, ticketsSheetId:Number, referralsSheetId:Number, ticketsTitle:String, referralsTitle:String
+  spreadsheetId:String, spreadsheetTitle:String, ticketsSheetId:Number, referralsSheetId:Number, ticketsTitle:String, referralsTitle:String,
+  tecSheet:Boolean, previousSpreadsheetId:String, previousSpreadsheetTitle:String, previousTicketsSheetId:Number, previousReferralsSheetId:Number
 }, {versionKey:false, writeConcern:{w:'majority'}});
 const Store = mongoose.models.CoachPersonalSheets || mongoose.model('CoachPersonalSheets', schema);
 const random = () => randomBytes(32).toString('base64url');
@@ -22,7 +24,7 @@ const allowedScopes = text => {
   const values = String(text || '').trim().split(/\s+/);
   return values.includes(sheetsScope) && values.every(value => knownScopes.has(value));
 };
-const panelFields = 'grant mailbox spreadsheetId spreadsheetTitle ticketsSheetId referralsSheetId ticketsTitle referralsTitle';
+const panelFields = 'grant mailbox spreadsheetId spreadsheetTitle ticketsSheetId referralsSheetId ticketsTitle referralsTitle tecSheet previousSpreadsheetId previousSpreadsheetTitle';
 const sheetIdValid = id => typeof id === 'string' && /^[\w-]{10,160}$/.test(id);
 
 export function sheetsOAuthClient(config, fetcher = fetch) {
@@ -88,7 +90,7 @@ export function sheetsOAuthClient(config, fetcher = fetch) {
   };
 }
 
-export function createCoachSheetsConnections({config,store=Store,google=sheetsOAuthClient(config)}) {
+export function createCoachSheetsConnections({config,store=Store,google=sheetsOAuthClient(config),reader=null}) {
   const connected = async (owner,grant) => {
     if (!config.sheetsReady) throw fail('La conexión de Google Sheets está pendiente de configuración.',503);
     const doc=await store.findOne({_id:owner,...(grant && {grant})}).lean();
@@ -179,10 +181,37 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
         const book=await google.createTecSheet(await accessToken(doc),{title:'Hoja TEC',timeZone:'America/Chicago'});
         if (!await isSessionCurrent()) return back(res,'expired');
         // Rifas van a Boletas y referidos a 4 en 14. Se cambia el permiso de la propuesta para que nada pendiente use la hoja anterior.
-        const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,
-          ticketsSheetId:TEC_SHEET_IDS.tickets,ticketsTitle:'Boletas',referralsSheetId:TEC_SHEET_IDS.referrals,referralsTitle:'4 en 14'}});
+        // Se recuerda la hoja anterior (si no era otra Hoja TEC) para ofrecer pasar sus leads.
+        const previous=doc.spreadsheetId && !doc.tecSheet && destination(doc) ? {previousSpreadsheetId:doc.spreadsheetId,previousSpreadsheetTitle:doc.spreadsheetTitle,
+          previousTicketsSheetId:doc.ticketsSheetId,previousReferralsSheetId:doc.referralsSheetId} : {};
+        const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,tecSheet:true,
+          ticketsSheetId:TEC_SHEET_IDS.tickets,ticketsTitle:'Boletas',referralsSheetId:TEC_SHEET_IDS.referrals,referralsTitle:'4 en 14',...previous}});
         return back(res,updated.matchedCount?'sheetsCreated':'busy');
       }));
+      // Pasar los leads de la hoja anterior a la Hoja TEC: primero se muestra cuántos son y luego se confirma.
+      for (const action of ['import','import-confirm']) {
+        app.post(sheetsApi+action,own(async (req,res,{id,session,sellerName,isSessionCurrent})=>{
+          const doc=await selectedDoc(id,req.body.grant);
+          if (!reader || !doc.tecSheet || !sheetIdValid(doc.previousSpreadsheetId) || !destination(doc)) return back(res,'sheetsImportNone');
+          const access=await accessToken(doc);
+          const newBook=destination(doc);
+          const oldBook={spreadsheetId:doc.previousSpreadsheetId,ticketsSheetId:doc.previousTicketsSheetId,referralsSheetId:doc.previousReferralsSheetId};
+          let planned;
+          try { planned=await planImport(reader,access,{oldBook,newBook,sellerName}); }
+          catch (error) { if (error.status===409) return back(res,'sheetsImportNotEmpty'); throw error; }
+          if (!await isSessionCurrent()) return back(res,'expired');
+          if (action==='import') {
+            res.set('Referrer-Policy','same-origin');
+            res.set('Content-Security-Policy',"default-src 'none'; style-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+            return res.send(importPage({csrf:session,grant:doc.grant,title:doc.previousSpreadsheetTitle,referrals:planned.referrals.length,tickets:planned.tickets.length,skipped:planned.skipped}));
+          }
+          if (!planned.referrals.length && !planned.tickets.length) return back(res,'sheetsImportNone');
+          if (!await current(id,doc.grant)) return back(res,'busy');
+          await runImport(reader,access,newBook,planned);
+          await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random()},$unset:{previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1}});
+          return back(res,'sheetsImported');
+        }));
+      }
       for (const action of ['choose','map']) {
         app.post(sheetsApi+action,own(async (req,res,{id,session,isSessionCurrent})=>{
           const doc=await selectedDoc(id,req.body.grant);
@@ -197,7 +226,8 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
           const tickets=find('ticketsSheetId'), referrals=find('referralsSheetId');
           if (!tickets || !referrals || tickets.sheetId===referrals.sheetId) return back(res,'sheetsBadTabs');
           const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,
-            ticketsSheetId:tickets.sheetId,ticketsTitle:tickets.title,referralsSheetId:referrals.sheetId,referralsTitle:referrals.title}});
+            ticketsSheetId:tickets.sheetId,ticketsTitle:tickets.title,referralsSheetId:referrals.sheetId,referralsTitle:referrals.title},
+            $unset:{tecSheet:1,previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1}});
           return back(res,updated.matchedCount?'sheetsMapped':'busy');
         }));
       }
