@@ -194,9 +194,10 @@ function sheetsSection({form,profile,ready,email}) {
 export function importPage({csrf,grant,title,referrals,tickets,skipped}) {
   const none=!referrals && !tickets;
   return sheetPage('Pasar mis leads a la Hoja TEC',`<p>De <strong>${esc(title || 'tu hoja anterior')}</strong> se pasarán <strong>${referrals}</strong> referidos del 4 en 14 y <strong>${tickets}</strong> boletas.</p>
+    ${none ? '' : '<p><strong>Todavía no se ha pasado nada.</strong> Toca el botón de abajo y espera el aviso «Tus leads ya están en tu Hoja TEC».</p>'}
     ${skipped ? `<p>Se quedan fuera ${skipped} leads asignados a otros vendedores.</p>` : ''}
     <p>Se copian el nombre, el teléfono, la ciudad o dirección, el anfitrión, el vendedor, los comentarios del telemarketing, el resultado y la próxima llamada. Tu hoja anterior no cambia.</p>
-    ${none ? '<p>No hay leads para pasar.</p>' : `<form method="post" action="${sheetsActions}import-confirm">${sheetField('csrf',csrf)}${sheetField('grant',grant)}<button type="submit">Pasar ${referrals+tickets} leads</button></form>`}`);
+    ${none ? '<p>No hay leads para pasar.</p>' : `<form method="post" action="${sheetsActions}import-confirm">${sheetField('csrf',csrf)}${sheetField('grant',grant)}<button type="submit">Sí, pasar los ${referrals+tickets} leads ahora</button></form>`}`);
 }
 
 export function pickerPage({csrf,grant,email}) {

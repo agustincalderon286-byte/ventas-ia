@@ -127,6 +127,9 @@ export function createSheetsGoogle(fetcher = fetch) {
       });
     } catch { throw fail(503, 'Google Sheets no confirmó la operación. Reintenta esta misma revisión.'); }
     if (res.ok) return readJson(res);
+    // Motivo de Google para el registro del servidor, sin los valores entre comillas (pueden ser datos de un lead).
+    const reason = await res.json().then(body => String(body?.error?.message || '').replace(/(["'“«]).*?(["'”»])/g, '…').slice(0, 300)).catch(() => '');
+    if (reason) console.error('[sheets] Google respondió', res.status, reason);
     if (res.status === 401 || res.status === 403) throw fail(403,
       'Google no permitió la operación. Revisa la cuenta, el permiso de edición del archivo y las pestañas protegidas.', { definite:true });
     if (res.status === 404) throw fail(409, 'El archivo ya no está disponible. Elige el archivo en Mis conexiones.', { definite:true });

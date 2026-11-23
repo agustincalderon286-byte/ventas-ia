@@ -124,6 +124,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       if (req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && req.query?.state?.startsWith?.('people.'))) return back(res,error.reauthorize?'contactsReconnect':'contactsFailed');
       if (req.path === sheetsApi+'picker-token') return res.status(error.status || 503).json({error:'Vuelve a abrir Google Sheets en Mis conexiones.'});
       if (req.path.startsWith(sheetsApi) || (req.path===api+'callback' && typeof req.query.state==='string' && req.query.state.startsWith('sheets.'))) {
+        console.error('[sheets] falló', req.path, error.status || 500, String(error.message || '').replace(/(["'“«]).*?(["'”»])/g, '…').slice(0, 200));
         return back(res,error.reauthorize ? 'sheetsReconnect' : error.status===422 ? 'sheetsFileUnavailable' : 'sheetsFailed');
       }
       if (req.path.startsWith(waProfileApi)) return back(res, 'waProfileFailed');

@@ -189,8 +189,11 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
         return back(res,updated.matchedCount?'sheetsCreated':'busy');
       }));
       // Pasar los leads de la hoja anterior a la Hoja TEC: primero se muestra cuántos son y luego se confirma.
+      const backTo=back;
       for (const action of ['import','import-confirm']) {
         app.post(sheetsApi+action,own(async (req,res,{id,session,sellerName,isSessionCurrent})=>{
+          // Solo el resultado y las cantidades quedan en el registro del servidor; nunca nombres ni teléfonos.
+          const back=(res,result,counts='')=>{ console.log('[sheets]',action,result,counts); return backTo(res,result); };
           const doc=await selectedDoc(id,req.body.grant);
           if (!reader || !doc.tecSheet || !sheetIdValid(doc.previousSpreadsheetId) || !destination(doc)) return back(res,'sheetsImportNone');
           const access=await accessToken(doc);
@@ -207,9 +210,9 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
           }
           if (!planned.referrals.length && !planned.tickets.length) return back(res,'sheetsImportNone');
           if (!await current(id,doc.grant)) return back(res,'busy');
-          await runImport(reader,access,newBook,planned);
+          const written=await runImport(reader,access,newBook,planned);
           await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random()},$unset:{previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1}});
-          return back(res,'sheetsImported');
+          return back(res,'sheetsImported',written.referrals+' referidos, '+written.tickets+' boletas');
         }));
       }
       for (const action of ['choose','map']) {

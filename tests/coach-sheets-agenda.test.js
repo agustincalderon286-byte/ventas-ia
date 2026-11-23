@@ -127,7 +127,8 @@ test('Mis conexiones ofrece pasar los leads solo con una Hoja TEC recién creada
   const without = connectionsPage({ ...base, sheets: { grant: 'g'.repeat(43), mailbox: 'a@example.invalid', spreadsheetId: 'hoja-tec-123456', spreadsheetTitle: 'Hoja TEC', tecSheet: true } });
   assert.doesNotMatch(without, /sheets\/import"/);
   const page = importPage({ csrf: 'c', grant: 'g', title: 'Hoja vieja', referrals: 2, tickets: 1, skipped: 1 });
-  assert.match(page, /Pasar 3 leads/);
+  assert.match(page, /Sí, pasar los 3 leads ahora/);
+  assert.match(page, /Todavía no se ha pasado nada/);
   assert.match(page, /sheets\/import-confirm/);
   assert.doesNotMatch(page, /<script/);
 });
