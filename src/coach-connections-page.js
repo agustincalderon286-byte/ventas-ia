@@ -143,7 +143,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contact
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}${contactsPilot && coachEmail==='agustincalderon286@gmail.com' ? '<p><a href="/mis-conexiones/contexto-para-gemini.pdf" download>Descargar el contexto de TEC para Gemini (PDF)</a></p>' : ''}</main></body></html>`;
+    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}</main></body></html>`;
 }
 
 // Permiso para el asistente con ciclo de herramientas. El texto debe describir exactamente lo que
