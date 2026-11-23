@@ -1,6 +1,9 @@
 /* «Mi día»: tarjeta corta arriba de las pestañas, pensada para el teléfono. */
 .tec-my-day { margin: 10px 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); }
 .tec-my-day[hidden] { display: none; }
+/* Dentro de la pestaña Mi actividad la tarjeta ya pone el borde y el fondo. */
+.tec-my-day-card .tec-my-day { margin: 0; padding: 0; border: 0; background: none; }
+.tec-my-day-card.is-off { display: none !important; }
 .tec-my-day h3 { margin: 6px 0 8px; font-size: 1rem; }
 .tec-my-day p { margin: 6px 0; }
 .tec-my-day__head { display: grid; gap: 6px; }

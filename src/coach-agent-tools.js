@@ -591,7 +591,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           exhibidoresProximos:s.exhibitors.slice(0,5).map(e=>({dia:e.day,desde:e.start,hasta:e.end,lugar:e.place})),
           ...(s.askExhibitor && {sinExhibidorEstaSemana:'No tiene exhibidor registrado esta semana: pregúntale por qué y sugiérele agregarlo en Mi día.'}),
           recomendacion:s.recommendation.reason,
-          nota:'Mi día está arriba de las pestañas de la app: ahí elige atender citas, llamar (bloques de 5), prospectar o terminar. Termina tu respuesta preguntando si va a atender otra cita, llamar, prospectar o si ya terminó por hoy.'};
+          nota:'Mi día está en la pestaña «Mi actividad» de la app: ahí elige atender citas, llamar (bloques de 5), prospectar o terminar. Termina tu respuesta preguntando si va a atender otra cita, llamar, prospectar o si ya terminó por hoy.'};
       },
 
       async pasar_al_coach({motivo}) { return {estado:'derivado',detener:motivo}; }

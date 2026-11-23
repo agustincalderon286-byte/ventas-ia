@@ -27,6 +27,7 @@
   function init({ userId, request, openWorkspace, askCoach, remember, openTicketPhoto, openLeadForm, openFourteen }) {
     const root = document.querySelector('[data-my-day-root]');
     if (!root || !userId || typeof request !== 'function') return null;
+    const card = root.closest('.tec-my-day-card');
     const id = String(userId);
     let s = null, view = 'ask', block = null, results = {}, busy = false, notice = '', routeStep = 'where', routeResult = null, afterDemo = false;
     let collapsed = sessionStorage.getItem('tec-my-day-collapsed') === '1';
@@ -40,10 +41,11 @@
         s = await call('?accountId=' + encodeURIComponent(id) + '&zone=' + encodeURIComponent(zone));
         root.hidden = false;
       } catch (error) {
-        if (error?.status === 403) { root.hidden = true; return; }
+        if (error?.status === 403) { root.hidden = true; card?.classList.add('is-off'); return; }
         notice = error?.message || 'No pude cargar Mi día.';
         root.hidden = !s;
       }
+      card?.classList.toggle('is-off', root.hidden);
       render();
     }
 
@@ -300,15 +302,17 @@
       root.append(body);
     }
 
+    // Mi día vive en la pestaña «Mi actividad»: después de una demo o al tocar un aviso, la app lleva ahí.
+    const show = () => { if (root.hidden) return; openWorkspace?.('actividad'); requestAnimationFrame(() => root.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
     window.addEventListener('coach:demo-outcome-saved', async () => {
       afterDemo = true; view = 'ask'; collapsed = false;
       await load();
-      root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      show();
     });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && s && view === 'ask') load(); });
     const fromNotice = new URLSearchParams(location.search).get('miDia') === '1';
     if (fromNotice) collapsed = false;
-    load().then(() => { if (fromNotice) root.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (!root.hidden) preparePush(); });
+    load().then(() => { if (fromNotice) show(); if (!root.hidden) preparePush(); });
     return { reload: load };
   }
   window.TecMyDay = { init };

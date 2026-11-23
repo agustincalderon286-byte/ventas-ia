@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261123-midia1",
+  "cache": "tec-coach-shell-20261123-midia2",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -190,15 +190,15 @@
     },
     "/coach/my-day.css": {
       "versions": [
-        "v=20261123-midia1"
+        "v=20261123-midia2"
       ],
-      "sha": "c74c768cb33a13c2"
+      "sha": "40ceea5292f83eb2"
     },
     "/coach/my-day.js": {
       "versions": [
-        "v=20261123-midia1"
+        "v=20261123-midia2"
       ],
-      "sha": "0e36efe36d43eac8"
+      "sha": "39f0a106950f9350"
     },
     "/coach/offline-forms.js": {
       "versions": [
