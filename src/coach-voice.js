@@ -30,11 +30,21 @@ const orderMoney = new RegExp(
   'giu'
 );
 
-function jorgeSpeechMarkup(text) {
+export const JORGE_VOICE = 'es-MX-JorgeNeural';
+// Voz bilingüe a prueba: solo la oyen las cuentas de COACH_VOICE_TRIAL_EMAILS mientras el dueño decide si la aprueba.
+// Las demás cuentas siguen con la voz de Jorge de siempre.
+export function trialVoice(env, email) {
+  const name = String(env.COACH_VOICE_TRIAL_NAME || 'es-MX-JorgeMultilingualNeural').trim();
+  const listed = String(env.COACH_VOICE_TRIAL_EMAILS || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
+  return email && listed.includes(String(email).toLowerCase()) && /^[a-z]{2}-[A-Z]{2}-[A-Za-z0-9:-]{3,60}$/.test(name) ? name : '';
+}
+const bilingual = voice => /Multilingual|DragonHD/.test(voice);
+
+function jorgeSpeechMarkup(text, voice = JORGE_VOICE) {
   // Escape the reply before adding markup controlled by the app.
   const escaped = text.toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, ' ')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-  return markCatalogPronunciations(escaped)
+  return markCatalogPronunciations(escaped, { englishPlaces: bilingual(voice) })
     .replace(orderMoney, (match, ...args) => {
       const { prefix, amount, unit, usdAmount } = args.at(-1);
       if (prefix && !/^(?:US(?:D)?\s*\$|USD|\$)$/i.test(prefix)) return match;
@@ -46,11 +56,14 @@ function jorgeSpeechMarkup(text) {
     });
 }
 
-export function jorgeSpeechDocument(text) {
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${jorgeSpeechMarkup(text)}</mstts:express-as></voice></speak>`;
+export function jorgeSpeechDocument(text, voice = JORGE_VOICE) {
+  const head = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX">';
+  // Una voz bilingüe no tiene el estilo de conversación de Jorge y dice en inglés los lugares marcados.
+  if (bilingual(voice)) return `${head}<voice name="${voice}">${jorgeSpeechMarkup(text, voice)}</voice></speak>`;
+  return `${head}<voice name="${voice}"><mstts:express-as style="chat">${jorgeSpeechMarkup(text, voice)}</mstts:express-as></voice></speak>`;
 }
 
-async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }) {
+async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal, voice = JORGE_VOICE }) {
   const key = env.AZURE_SPEECH_KEY;
   const region = env.AZURE_SPEECH_REGION?.trim().toLowerCase();
   if (!key || !/^[a-z][a-z0-9]{1,30}$/.test(region || '')) {
@@ -64,19 +77,26 @@ async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }
   // Azure caps individual responses at ten minutes. Split longer replies at
   // word boundaries, preserving their order and using Jorge for every part.
   const parts = text.match(/[\s\S]{1,3000}(?:\s+|$)|[\s\S]{1,3000}/gu) || [];
+  const synthesize = (part, name) => fetcher(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+    method: 'POST',
+    redirect: 'error',
+    signal: requestSignal,
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'raw-24khz-16bit-mono-pcm',
+      'User-Agent': 'TEC-Coach'
+    },
+    body: jorgeSpeechDocument(part, name)
+  });
   for (const part of parts) {
-    const response = await fetcher(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
-      method: 'POST',
-      redirect: 'error',
-      signal: requestSignal,
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'raw-24khz-16bit-mono-pcm',
-        'User-Agent': 'TEC-Coach'
-      },
-      body: jorgeSpeechDocument(part)
-    });
+    let response = await synthesize(part, voice);
+    // Si Azure no acepta la voz de prueba, la respuesta se lee con Jorge en lugar de quedarse sin audio.
+    if (!response.ok && voice !== JORGE_VOICE && !bytes && [400, 404].includes(response.status)) {
+      await response.body?.cancel();
+      voice = JORGE_VOICE;
+      response = await synthesize(part, voice);
+    }
     if (!response.ok || !response.body) {
       await response.body?.cancel();
       throw Object.assign(new Error('Azure Speech unavailable'), { code: response.status });
@@ -109,9 +129,9 @@ export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, S
       if (!response.ok) throw Object.assign(new Error('Transcription failed'),{code:response.status});
       const data = await response.json(); return typeof data.text === 'string' ? data.text.trim() : '';
     },
-    async speak(text, userId, { onChunk, signal } = {}) {
+    async speak(text, userId, { onChunk, signal, voice } = {}) {
       if (jorgeOnly || env.AZURE_SPEECH_KEY || env.AZURE_SPEECH_REGION) {
-        return speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal });
+        return speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal, voice: voice || JORGE_VOICE });
       }
       const apiKey = key(), model = env.COACH_VOICE_SPEECH_MODEL || 'gpt-realtime-2.1-mini';
       return new Promise((resolve,reject) => {
@@ -150,7 +170,7 @@ export function sendVoiceError(res, message) {
   if(!res.headersSent)res.status(503).json({error:message});
   else if(!res.destroyed){res.write(JSON.stringify({type:'error',error:message})+'\n');res.end();}
 }
-export async function streamVoiceResponse(req,res,provider,text,userId) {
+export async function streamVoiceResponse(req,res,provider,text,userId,voice) {
   const streaming = req.body.stream === true, controller = new AbortController(); let chunks = 0;
   res.on('close',()=>{if(!res.writableEnded)controller.abort();});
   const emit = chunk => {
@@ -158,18 +178,18 @@ export async function streamVoiceResponse(req,res,provider,text,userId) {
     if(!res.headersSent)res.set({'Cache-Control':'private, no-store, no-transform','X-Accel-Buffering':'no'}).type('application/x-ndjson');
     chunks++;res.write(JSON.stringify({type:'audio',data:chunk.toString('base64')})+'\n');
   };
-  const audio = await provider.speak(text,userId,{signal:controller.signal,onChunk:streaming ? emit : undefined});
+  const audio = await provider.speak(text,userId,{signal:controller.signal,onChunk:streaming ? emit : undefined,...(voice && {voice})});
   if(streaming){if(!chunks)emit(audio.subarray(44));if(!res.destroyed)res.end(JSON.stringify({type:'done'})+'\n');}
   else res.set('Cache-Control','private, no-store').type('audio/wav').send(audio);
 }
 
-export function registerCoachVoice(app, { requireActive, provider = createCoachVoiceProvider({ jorgeOnly: true }), now = Date.now, maxRequests = 40 } = {}) {
+export function registerCoachVoice(app, { requireActive, provider = createCoachVoiceProvider({ jorgeOnly: true }), now = Date.now, maxRequests = 40, env = process.env } = {}) {
   const usage = new Map(), active = new Set();
   const authorize = async (req,res,next) => {
     const auth = await requireActive(req,res); if(!auth)return;
     const id = String(auth.user._id), requested = req.get('X-TEC-Account-ID') || req.body?.accountId;
     if(requested !== id) return res.status(403).json({error:'La cuenta cambió. Vuelve a abrir el Coach antes de enviar el audio.'});
-    req.coachVoiceUserId = id; next();
+    req.coachVoiceUserId = id; req.coachVoiceName = trialVoice(env, auth.user.email); next();
   };
   const run = async (req,res,phase,fn) => {
     const id = req.coachVoiceUserId, at = now();
@@ -200,7 +220,7 @@ export function registerCoachVoice(app, { requireActive, provider = createCoachV
     const text = req.body?.verbatim === true ? raw.trim() : speechText(raw);
     if(!text || text.length > 12000)return res.status(400).json({error:'La respuesta no tiene un tamaño válido para convertirla en audio.'});
     await run(req,res,'speech',async()=>{
-      await streamVoiceResponse(req,res,provider,text,req.coachVoiceUserId);
+      await streamVoiceResponse(req,res,provider,text,req.coachVoiceUserId,req.coachVoiceName);
     });
   });
 }

@@ -262,6 +262,7 @@ const aliases = {
   'Jell-O': 'Yélo'
 };
 const key = name => name.toLowerCase().replaceAll('’', "'").replace(/[\s‐‑‒–—−-]+/g, ' ').replaceAll('&amp;', '&');
+const places = new Set(Object.keys(placeAliases).map(name => key(name)));
 const lookup = new Map(Object.entries(aliases).map(([name, alias]) => [key(name), alias]));
 // These names need specific consonants and stress in Jorge's conversational style.
 const phonetic = new Map([
@@ -276,11 +277,14 @@ const alternatives = [...lookup.keys(), ...phonetic.keys()].sort((a, b) => b.len
 );
 const names = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives.join('|')})(?![\\p{L}\\p{N}])`, 'giu');
 
-export function markCatalogPronunciations(escapedText) {
+// englishPlaces: con una voz bilingüe, las ciudades y calles se marcan para decirse en inglés en lugar de
+// escribirse «como suenan». Los nombres del catálogo conservan su pronunciación ya probada.
+export function markCatalogPronunciations(escapedText, { englishPlaces = false } = {}) {
   return expandAddressWords(escapedText).replace(/(?<=\p{L})(?:[®™]|&amp;(?:reg|trade);)(?=\p{L})/giu, ' ')
     .replace(/[®™]|&amp;(?:reg|trade);/gi, '').replace(names, name => {
       const spelling = key(name);
       const phones = phonetic.get(spelling);
+      if (englishPlaces && places.has(spelling)) return `<lang xml:lang="en-US">${name}</lang>`;
       return phones
         ? `<phoneme alphabet="ipa" ph="${phones}">${name}</phoneme>`
         : `<sub alias="${lookup.get(spelling)}">${name}</sub>`;

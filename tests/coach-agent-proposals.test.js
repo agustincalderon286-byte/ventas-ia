@@ -53,7 +53,7 @@ test('el catálogo declara las propuestas con esquema estricto y las instruccion
     assert.deepEqual(tool.parameters.required,Object.keys(tool.parameters.properties));
   }
   const text=sellerInstructions({name:'Agustín',zone:ZONE,now:NOW});
-  assert.match(text,/Tú nunca guardas, reservas ni envías/);
+  assert.match(text,/Tú nunca guardas, reservas, mueves, borras ni envías/);
   assert.match(text,/preparar_nota/);
   assert.doesNotMatch(text,/solo lees/);
   // Los correos siguen en el flujo existente: su redactor recibe la dirección del destinatario.

@@ -84,6 +84,63 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
       return {state:next,proposal:{id:draft.id,grant:cal.grant,calendarId:cal.calendarId},whenText,
         preview:summary+' · '+whenText+', '+(Date.parse(when.end)-Date.parse(when.start))/60000+' min. Seguimientos TEC · '+cal.mailbox+'. Sin invitados. '+(reminder==null?'Sin recordatorio.':'Aviso '+reminder+' min antes.')};
     },
+    // Citas que el Coach creó en «Seguimientos TEC» y que siguen registradas. Son las únicas que puede mover o
+    // borrar: el permiso de Google no alcanza el calendario principal ni las citas hechas a mano.
+    async findAppointments(actor,{name='',day='',time=''}={}) {
+      personalPilot(actor);
+      const cal=await calendar.getConnection(actor.owner);
+      if (!cal?.grant) throw problem('Conecta Google Calendar en Mis conexiones.');
+      const binding={owner:actor.owner,session:actor.session,grant:cal.grant,calendarId:cal.calendarId};
+      const words=fold(name).split(/\s+/).filter(Boolean);
+      const local=(value,zone)=>{
+        const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value));
+        const part=key=>parts.find(p=>p.type===key).value;
+        return {day:part('year')+'-'+part('month')+'-'+part('day'),time:part('hour')+':'+part('minute')};
+      };
+      // Incluye las que empezaron hace poco: «borra la cita de hoy a las 3» puede llegar a las 3:10.
+      const rows=await followups.search(binding,{since:now()-12*3600000,limit:60});
+      const matches=rows.filter(row=>{
+        if (!row.summary || !Number.isFinite(Date.parse(row.start))) return false;
+        const text=fold(row.name+' '+row.summary), at=local(row.start,actor.zone || row.timeZone);
+        return words.every(word=>text.includes(word)) && (!day || at.day===day) && (!time || at.time===time);
+      });
+      return {binding,mailbox:cal.mailbox,availabilityEnabled:cal.availabilityEnabled,matches:matches.map(row=>({...row,local:local(row.start,actor.zone || row.timeZone)}))};
+    },
+    async moveAppointment(actor,found,target,schedule) {
+      const parsed=readFollowup(schedule,{kind:'create'},{timeZone:actor.zone,now:now()});
+      const next=parsed.state;
+      if (parsed.question) return {question:parsed.question};
+      next.durationMinutes ??= Math.round((Date.parse(target.end)-Date.parse(target.start))/60000) || 30;
+      const when=followupTime(next,now());
+      if (when.question) return {question:when.question};
+      if (Date.parse(when.start)<=now()) return {question:'Ese horario ya pasó. ¿A qué otro horario la movemos?'};
+      if (Date.parse(when.start)===Date.parse(target.start) && Date.parse(when.end)===Date.parse(target.end)) return {question:'La cita ya está en ese horario.'};
+      if (found.availabilityEnabled) {
+        // La propia cita ocupa su horario actual: ese bloque no cuenta como choque.
+        const busy=(await calendar.availability({owner:actor.owner,grant:found.binding.grant,...when}))
+          .filter(b=>!(Date.parse(b.start)>=Date.parse(target.start) && Date.parse(b.end)<=Date.parse(target.end)));
+        if (busy.length) return {question:'Ese horario ya está ocupado. ¿Qué otro horario te sirve?'};
+      }
+      const reminder=Object.hasOwn(next,'reminderMinutes')?next.reminderMinutes:target.reminderMinutes ?? 15;
+      const draft=await followups.prepare(found.binding,{...when,timeZone:next.timeZone,summary:target.summary,name:target.name,action:target.action,
+        reminderMinutes:reminder,mode:'move',previousOperationId:target.operationId || '',previousEtag:target.etag || '',
+        leadId:target.leadId || '',expectedStart:target.start},target);
+      if (!draft) throw problem('La cita cambió. Pide una vista previa nueva.');
+      const whenText=fmt(when.start,next.timeZone)+' ('+next.timeZone+')';
+      return {proposal:{id:draft.id,grant:found.binding.grant,calendarId:found.binding.calendarId},whenText,
+        preview:'Mover «'+target.summary+'» del '+fmt(target.start,next.timeZone)+' al '+whenText+', '+(Date.parse(when.end)-Date.parse(when.start))/60000+
+          ' min. Seguimientos TEC · '+found.mailbox+'. '+(reminder==null?'Sin recordatorio.':'Aviso '+reminder+' min antes.')};
+    },
+    async cancelAppointment(actor,found,target) {
+      const end=Number.isFinite(Date.parse(target.end)) ? target.end : new Date(Date.parse(target.start)+30*60000).toISOString();
+      const draft=await followups.prepare(found.binding,{start:target.start,end,timeZone:target.timeZone,summary:target.summary,name:target.name,
+        action:target.action,reminderMinutes:target.reminderMinutes ?? null,mode:'cancel',previousOperationId:target.operationId || '',
+        previousEtag:target.etag || '',leadId:''},target);
+      if (!draft) throw problem('La cita cambió. Pide una vista previa nueva.');
+      const whenText=fmt(target.start,actor.zone || target.timeZone);
+      return {proposal:{id:draft.id,grant:found.binding.grant,calendarId:found.binding.calendarId},whenText,
+        preview:'Borrar «'+target.summary+'» del '+whenText+' en Seguimientos TEC · '+found.mailbox+'. Al confirmar se elimina de tu calendario.'};
+    },
     async email(actor,{to,instruction,whenText='',optionLabels,priorDraft,editInstruction=''}) {
       personalPilot(actor);
       if (!isGmailAddress(to)) return {question:'¿A qué dirección de correo quieres escribirle?'};
@@ -130,7 +187,9 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
           return calendar.saveEvent(event);
         },syncLead:async()=>{}});
       if (result.status==='saved') return {status:'saved',message:'Google Calendar confirmó '+result.summary+' · '+fmt(result.start,result.timeZone)+'.'};
-      return {status:['slotBusy','expired','unavailable','changed'].includes(result.status)?'blocked':'retry',message:result.status==='slotBusy'?'El horario se ocupó.':'Calendar todavía no confirmó esa cita.'};
+      if (result.status==='cancelled') return {status:'saved',message:'Google Calendar ya no tiene '+result.summary+' · '+fmt(result.start,result.timeZone)+'.'};
+      if (result.status==='changed') return {status:'blocked',message:'La cita cambió en Google Calendar después de esta propuesta. Pídeme una propuesta nueva.'};
+      return {status:['slotBusy','expired','unavailable'].includes(result.status)?'blocked':'retry',message:result.status==='slotBusy'?'El horario se ocupó.':'Calendar todavía no confirmó esa cita.'};
     },
     async confirmEmail(actor,p) {
       personalPilot(actor);

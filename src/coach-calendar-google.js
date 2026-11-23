@@ -26,7 +26,8 @@ export function calendarGoogleClient(config, fetcher = fetch) {
   const redirect = config.origin + '/api/coach/conexiones/gmail/callback';
   async function request(url, init = {}) {
     const res = await fetcher(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(12000) });
-    if (res.ok) return res.json();
+    // Borrar una cita responde sin contenido.
+    if (res.ok) return res.status === 204 ? {} : res.json();
     const error = fail('Google Calendar no pudo completar la operación.', res.status);
     const body = await res.json().catch(() => ({}));
     if (res.status === 401 || body.error === 'invalid_grant' ||
@@ -171,6 +172,21 @@ export function calendarGoogleClient(config, fetcher = fetch) {
         return row;
       };
       let row;
+      if (mode === 'cancel') {
+        // Borra solo la cita que el Coach creó y que sigue igual que cuando el vendedor vio la propuesta.
+        // Si ya no existe, el borrado se da por hecho: repetir la confirmación no puede borrar otra cosa.
+        const gone = { id:eventId, htmlLink:'', etag:'', operationId, removed:true };
+        try { row = await api(access, target + '?fields=' + fields); }
+        catch (error) { if ([404,410].includes(error.status)) return gone; throw error; }
+        if (row.status === 'cancelled') return gone;
+        if (row.id !== eventId || row.extendedProperties?.private?.tecEvent !== payload.extendedProperties.private.tecEvent ||
+            !previousEtag || row.etag !== previousEtag || row.extendedProperties.private.tecOperation !== previousOperationId) {
+          throw fail('La cita cambió en Calendar. Revisa la actualización.', 409);
+        }
+        try { await api(access, target + '?sendUpdates=none', { method:'DELETE', etag:row.etag }); }
+        catch (error) { if (![404,410].includes(error.status)) throw error; }
+        return gone;
+      }
       if (mode === 'create') {
         const confirmedEvent = async () => {
           const existing = await exact();
@@ -229,7 +245,7 @@ function matchesConfirmedFields(row, payload) {
 
 function eventBody({ owner, calendarId, eventId, operationId, mode, summary, start, end, timeZone, reminderMinutes }) {
   if (!owner || !/^[a-f0-9]{16,64}$/.test(eventId) || typeof operationId !== 'string' ||
-      !/^[a-z0-9_-]{1,128}$/i.test(operationId) || !['create','move'].includes(mode)) {
+      !/^[a-z0-9_-]{1,128}$/i.test(operationId) || !['create','move','cancel'].includes(mode)) {
     throw fail('La referencia de la cita no es válida.', 400);
   }
   if (typeof summary !== 'string' || !summary.trim() || summary.length > 250 || /[\p{Cc}]/u.test(summary)) throw fail('Revisa el título de la cita.', 400);

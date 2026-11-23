@@ -51,14 +51,24 @@ export const agentTools = Object.freeze([
   tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Devuelve su nombre y los marcadores de sus teléfonos y correos.',
     {nombre:{type:'string',maxLength:80}}),
   tool('estado_conexiones','connections','Indica qué cuentas del vendedor están conectadas al Coach y cuáles faltan.'),
-  tool('preparar_nota','note','Prepara, sin guardar, una nota en el historial de una ficha de la hoja y, si aplica, su próxima fecha de seguimiento. Sirve para registrar el resultado de una llamada o una visita. El vendedor la guarda con un botón.',
-    {ref:fichaRef,nota:{type:'string',maxLength:600,description:'Lo que pasó, con las palabras del vendedor. Vacío si solo cambia la fecha.'},
+  tool('preparar_nota','note','Prepara, sin guardar, una nota en el historial de una ficha de la hoja y, si aplica, su próxima fecha de seguimiento. Sirve para registrar el resultado de una llamada o una visita, o lo que un correo dice sobre esa persona. El vendedor la guarda con un botón.',
+    {ref:fichaRef,nota:{type:'string',maxLength:600,description:'Lo que pasó, con las palabras del vendedor, o el resumen de lo que dice un correo que acabas de leer, indicando que viene de un correo y su fecha. Sin direcciones de correo. Vacío si solo cambia la fecha.'},
       proximoSeguimiento:{type:'string',maxLength:10,description:'Fecha AAAA-MM-DD del próximo seguimiento, o vacío.'}}),
   tool('preparar_cita','appointment','Prepara, sin reservar, una cita, demostración o llamada en el calendario «Seguimientos TEC» del vendedor. Comprueba que el horario esté libre. El vendedor la confirma con un botón.',
     {ref:{type:'string',maxLength:8,description:'Referencia de la ficha si la persona está en la hoja, o vacío.'},
       nombre:{type:'string',maxLength:80,description:'Nombre de la persona. Con «ref» se usa el de la ficha.'},dia:day,
       hora:{type:'string',maxLength:5,description:'HH:MM en 24 horas.'},minutos:{type:'integer',minimum:15,maximum:240},
       tipo:{type:'string',enum:['cita','demo','llamada','seguimiento']}}),
+  tool('preparar_cambio_cita','move','Prepara, sin cambiar nada, mover a otro día u hora una cita que el Coach creó en «Seguimientos TEC». Comprueba que el horario nuevo esté libre. El vendedor lo confirma con un botón. Una cita por propuesta.',
+    {nombre:{type:'string',maxLength:80,description:'Palabras del nombre de la persona o del título de la cita. Vacío si se identifica solo por día y hora.'},
+      diaActual:{type:'string',maxLength:10,description:'Día AAAA-MM-DD en que está hoy la cita, o vacío si el nombre basta.'},
+      horaActual:{type:'string',maxLength:5,description:'HH:MM en 24 horas de la cita actual, o vacío.'},dia:day,
+      hora:{type:'string',maxLength:5,description:'Hora nueva, HH:MM en 24 horas.'},
+      minutos:{type:'integer',minimum:0,maximum:240,description:'Duración nueva, o 0 para conservar la que tiene.'}}),
+  tool('preparar_borrado_cita','cancel','Prepara, sin borrar nada, la eliminación de una cita que el Coach creó en «Seguimientos TEC». El vendedor la confirma con un botón. Una cita por propuesta.',
+    {nombre:{type:'string',maxLength:80,description:'Palabras del nombre de la persona o del título de la cita. Vacío si se identifica solo por día y hora.'},
+      diaActual:{type:'string',maxLength:10,description:'Día AAAA-MM-DD de la cita, o vacío si el nombre basta.'},
+      horaActual:{type:'string',maxLength:5,description:'HH:MM en 24 horas de la cita, o vacío.'}}),
   tool('preparar_alta','add','Prepara, sin guardar, el alta de una persona nueva en la hoja: un referido del 4 en 14 con su anfitrión o una boleta de rifa. Una persona por propuesta. El vendedor la confirma con un botón.',
     {nombre:{type:'string',maxLength:80},telefono:{type:'string',maxLength:30,description:'Teléfono tal como lo dijo el vendedor.'},
       tipo:{type:'string',enum:['referido','boleta']},anfitrion:{type:'string',maxLength:80,description:'Nombre del anfitrión para un referido. Vacío para una boleta.'}}),
@@ -216,6 +226,23 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
       if (!error?.publicMessage) throw error;
       return /Mis conexiones|piloto/.test(error.publicMessage) ? missing(conexion,clean(error.publicMessage)) : {estado:'no_preparado',nota:clean(error.publicMessage)};
     };
+
+    // La cita que el vendedor quiere mover o borrar, entre las que el Coach creó. Debe quedar una sola.
+    async function ownAppointment(op,nombre,diaActual,horaActual) {
+      if ((diaActual && civil(diaActual)==null) || (horaActual && !clock(horaActual))) return {problem:invalid('Usa el día AAAA-MM-DD y la hora HH:MM de la cita actual, o déjalos vacíos.')};
+      if (!nombre.trim() && !diaActual) return {problem:invalid('Indica el nombre de la persona o el día de la cita.')};
+      const state=plan();
+      if (state.changed && state.draft.steps[op]) return {problem:invalid('Una cita por propuesta. Deja lista esta y, cuando el vendedor la confirme o la cierre, prepara la siguiente.')};
+      const blocked=enter(op,null);
+      if (blocked) return {problem:invalid(blocked)};
+      let found;
+      try { found=await channels.findAppointments(actor,{name:nombre,day:diaActual,time:horaActual}); }
+      catch (error) { return {problem:notPrepared(error,'calendar')}; }
+      const citas=found.matches.slice(0,8).map(row=>({titulo:clean(row.summary,130),dia:row.local.day,hora:row.local.time}));
+      if (!citas.length) return {problem:{estado:'sin_coincidencia',nota:'No hay una cita así entre las que el Coach creó en «Seguimientos TEC». El Coach solo puede mover o borrar las citas que él mismo creó: las del calendario principal y las que se hicieron a mano en Google Calendar las cambia el vendedor en su calendario. Explícaselo así, sin decir que falta una conexión.'}};
+      if (found.matches.length>1) return {problem:{estado:'varias_citas',citas,nota:'Pregunta al vendedor cuál de estas es y repite con el «diaActual» y la «horaActual» de esa cita.'}};
+      return {found,target:found.matches[0]};
+    }
 
     const handlers = {
       async consultar_agenda({desde,hasta}) {
@@ -430,6 +457,28 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         return {estado:'preparado',persona:name,cuando:clean(made.whenText,120),nota:pendingNote};
       },
 
+      async preparar_cambio_cita({nombre,diaActual,horaActual,dia,hora,minutos}) {
+        if (civil(dia)==null || !clock(hora)) return invalid('Usa el día nuevo AAAA-MM-DD y la hora nueva HH:MM en 24 horas.');
+        const {found,target,problem}=await ownAppointment('move',nombre,diaActual,horaActual);
+        if (problem) return problem;
+        let made;
+        try { made=await channels.moveAppointment(actor,found,target,dia+' a las '+hora+(minutos ? ' durante '+minutos+' minutos' : '')); }
+        catch (error) { return notPrepared(error,'calendar'); }
+        if (!made.proposal) return {estado:'no_preparado',motivo:clean(made.question),nota:'No se preparó el cambio. Si el horario está ocupado, busca horarios libres y propón otro.'};
+        put('move',{preview:made.preview,proposal:made.proposal,whenText:made.whenText},'Mover «'+target.summary+'» del '+target.local.day+' '+target.local.time+' al '+dia+' '+hora);
+        return {estado:'preparado',cita:clean(target.summary,130),antes:target.local.day+' '+target.local.time,cuando:clean(made.whenText,120),nota:pendingNote};
+      },
+
+      async preparar_borrado_cita({nombre,diaActual,horaActual}) {
+        const {found,target,problem}=await ownAppointment('cancel',nombre,diaActual,horaActual);
+        if (problem) return problem;
+        let made;
+        try { made=await channels.cancelAppointment(actor,found,target); }
+        catch (error) { return notPrepared(error,'calendar'); }
+        put('cancel',{preview:made.preview,proposal:made.proposal},'Borrar «'+target.summary+'» del '+target.local.day+' '+target.local.time);
+        return {estado:'preparado',cita:clean(target.summary,130),cuando:target.local.day+' '+target.local.time,nota:pendingNote};
+      },
+
       async preparar_alta({nombre,telefono,tipo,anfitrion}) {
         const kind=tipo==='boleta' ? 'tickets' : 'referrals';
         const fullName=nombre.trim(), host=anfitrion.trim(), phone=telefono.trim();
@@ -470,7 +519,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     return async (name,args) => {
       if (!Object.hasOwn(handlers,name)) return {estado:'herramienta_desconocida'};
       const source=agentTools.find(t=>t.name===name).source;
-      const connection=({agenda:'calendar',slots:'calendar',appointment:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',
+      const connection=({agenda:'calendar',slots:'calendar',appointment:'calendar',move:'calendar',cancel:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',
         referrals:'sheets',distance:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',contacts:'contacts'})[source];
       try {
         await guard();

@@ -213,6 +213,15 @@ Pendiente de la Fase 2: correos dentro del ciclo, varias altas a la vez y la hoj
 - Jorge en vivo usa el mismo ciclo, de modo que voz y texto responden igual.
 - Apertura gradual a más vendedores y, cuando Meta esté listo, WhatsApp Business como una herramienta más. Konverta sigue siendo manual.
 
+### Ajustes del 22 de noviembre de 2026, tras la primera prueba real
+
+- **Versión de los archivos de la app.** Dos publicaciones cambiaron `app.js`, `coach-voice.js` y `styles.css` sin cambiar su versión, así que los teléfonos siguieron con la copia anterior: por eso no se veían los enlaces de teléfono y dirección ni el arreglo del volumen. `scripts/coach-release-assets.mjs` ahora anota la huella de cada archivo en `scripts/coach-asset-stamps.json` y detiene la publicación si uno cambió con la versión anterior.
+- **Mover y borrar citas.** `preparar_cambio_cita` y `preparar_borrado_cita` dejan una propuesta con su botón («Mover cita», «Borrar cita»). Solo alcanzan las citas que el Coach creó en «Seguimientos TEC»: el permiso de Google (`calendar.app.created`) no permite tocar el calendario principal ni las citas hechas a mano. Va una cita por propuesta.
+- **Pantalla del vendedor.** El asistente recibe con cada mensaje el paso de la demostración marcado con «Estoy aquí», los últimos toques y el escenario de la calculadora (`screenNote`). Antes solo los recibía el Coach de siempre.
+- **Notas desde correos.** El asistente puede resumir en la ficha lo que dice un correo, con «según correo» y la fecha. Solo ve el extracto del correo, no el cuerpo completo.
+- **Mapa.** La ventanita de la casa se conserva al redibujar, los puntos son más grandes en el teléfono y los toques seguidos se atienden en orden.
+- **Voz bilingüe a prueba.** `COACH_VOICE_TRIAL_EMAILS` decide quién oye `es-MX-JorgeMultilingualNeural`; si Azure la rechaza, se lee con Jorge. No se activa para nadie más sin la aprobación de Agustín.
+
 ## Archivos
 
 | Archivo | Cambio |

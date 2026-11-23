@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 import {audiobookGuides} from '../src/knowledge/audiobook-guides.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
@@ -34,3 +35,23 @@ for(const url of found){
 }
 const rest=old.filter(u=>!/[.](js|css)(?:\?|$)/.test(u));
 write(worker,source.replace(pattern,()=> 'const TEC_CORE_ASSETS = '+JSON.stringify([...found].sort().concat(rest),null,2)+';'));
+// El teléfono guarda cada archivo de la app por su dirección y por la versión de la copia sin conexión.
+// Un archivo que cambia sin cambiar esas versiones no llega a quien ya tiene la app abierta o instalada,
+// así que aquí se anota la huella de cada uno y se detiene la publicación si cambió con la versión anterior.
+const stampFile='scripts/coach-asset-stamps.json';
+const before=fs.existsSync(path.join(root,stampFile))?JSON.parse(read(stampFile)):{files:{}};
+const cacheVersion=read(worker).match(/const TEC_CACHE_VERSION = "([^"]+)"/)[1];
+const files={};
+for(const url of [...found].sort()){
+  const [name,version='']=url.split('?');
+  if(name.includes('/vendor/'))continue;
+  const entry=files[name]||={versions:[],sha:createHash('sha256').update(fs.readFileSync(path.join(root,'public'+name))).digest('hex').slice(0,16)};
+  entry.versions.push(version);
+}
+for(const [name,entry] of Object.entries(files)){
+  const old=before.files[name];
+  if(!old||old.sha===entry.sha)continue;
+  if(before.cache===cacheVersion)throw Error('Cambió '+name+': cambia también TEC_CACHE_VERSION y TEC_RUNTIME_CACHE en '+worker);
+  if(entry.versions.some(Boolean)&&JSON.stringify(old.versions)===JSON.stringify(entry.versions))throw Error('Cambió '+name+' sin cambiar su versión (?v=…) en la página que lo carga');
+}
+write(stampFile,JSON.stringify({cache:cacheVersion,files},null,2)+'\n');

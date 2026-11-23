@@ -161,7 +161,8 @@ export function createFollowupStore({key,store=Model,now=Date.now,limits=followu
       try {
         if (!receipt) {
           // Past the write window only an existing event can be reconciled; inserting again needs a new preview.
-          const reconcileOnly=now()-startedAt>=limits.googleMs;
+          // Un borrado se puede repetir sin riesgo: solo quita la cita que sigue intacta, o comprueba que ya no está.
+          const reconcileOnly=proposal.mode!=='cancel' && now()-startedAt>=limits.googleMs;
           const response=await saveEvent({...proposal,owner:b.owner,grant:b.grant,eventId:saved._id,operationId,
             ...(reconcileOnly ? {reconcileOnly:true} : proposal.checkAvailability && {retryGoogle:phase==='google'})});
           if (reconcileOnly && !response) {
@@ -172,6 +173,13 @@ export function createFollowupStore({key,store=Model,now=Date.now,limits=followu
             return closed.matchedCount ? result : {status:'working'};
           }
           if (response?.id !== saved._id) throw new Error('Respuesta incompleta de Calendar');
+          if (proposal.mode==='cancel') {
+            // La cita ya no existe: deja de aparecer en las búsquedas y su registro se elimina después.
+            const result={status:'cancelled',summary:proposal.summary,start:proposal.start,timeZone:proposal.timeZone,reference:saved.ref};
+            const closed=await store.updateOne(guard,{$set:{last:{...authorization(b),id,result:seal(saved,id,result)},
+              removeAfter:new Date(nowMs+limits.retainMs)},$unset:{pending:1,current:1,names:1,startsAt:1},$inc:{version:1}});
+            return closed.matchedCount ? result : {status:'working'};
+          }
           receipt={...proposal,operationId,htmlLink:response.htmlLink || '',etag:response.etag || ''};
           const checkpoint=await store.updateOne(guard,{$set:{...record(saved,proposal,receipt),'pending.phase':'crm'},
             $inc:{version:1},$unset:{removeAfter:1}});

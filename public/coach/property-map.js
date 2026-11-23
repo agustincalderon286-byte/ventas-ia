@@ -466,10 +466,15 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       return names.length ? names.slice(0, 4).join(" · ") : "Propietario no disponible";
     }
 
+    // El mapa se vuelve a dibujar cada vez que cambia el recorrido o llegan nombres de propietarios. La ventanita
+    // de la casa que el vendedor tiene abierta se vuelve a abrir, para que no se le cierre antes de tocar «Agregar parada».
+    let openPin = "";
+    const touch = window.matchMedia?.("(pointer: coarse)").matches;
     function drawMarkers() {
       if (!map || !window.L) return;
       const L = window.L;
-      layers.clearLayers(); markers = new Map();
+      const reopen = openPin;
+      layers.clearLayers(); markers = new Map(); openPin = "";
       if (data) L.circle([data.anchor.lat, data.anchor.lon], { radius: data.radiusMeters, color: "#1c5a8f", weight: 1, fillOpacity: 0.035 }).addTo(layers);
       const anchor = data?.anchor || (selected.length ? routeState.anchor : null);
       if (anchor) L.circleMarker([anchor.lat, anchor.lon], { radius: 11, color: "#fff", weight: 3, fillColor: "#d51e36", fillOpacity: 1 })
@@ -477,18 +482,28 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       for (const property of mapProperties()) {
         const index = selected.findIndex(item => propertyVisitKey(item) === propertyVisitKey(property));
         const visit = visits.get(propertyVisitKey(property));
-        const marker = L.circleMarker([property.lat, property.lon], { radius: index >= 0 ? 9 : 6, color: "#fff", weight: 2, fillColor: index >= 0 ? (routeState.stops[index].completedAt ? "#16704b" : "#d51e36") : visitMeta(visit?.status)?.color || "#123d69", fillOpacity: 1 });
+        const marker = L.circleMarker([property.lat, property.lon], { radius: (index >= 0 ? 9 : 6) + (touch ? 3 : 0), color: "#fff", weight: 2, fillColor: index >= 0 ? (routeState.stops[index].completedAt ? "#16704b" : "#d51e36") : visitMeta(visit?.status)?.color || "#123d69", fillOpacity: 1 });
         const popup = node("div", "tec-property-popup");
         popup.append(node("strong", "", property.address), node("p", "", ownerText(property)));
         const toggle = node("button", "nav-button", index >= 0 ? "Quitar parada" : "Agregar parada");
         toggle.type = "button";
-        toggle.addEventListener("click", () => toggleStop(property));
+        // Al elegir, la ventanita se cierra y el punto cambia de color y toma su número: queda libre la siguiente casa.
+        toggle.addEventListener("click", () => { openPin = ""; marker.closePopup(); toggleStop(property); });
         const followup = node("button", "nav-button", "Seguimiento"); followup.type = "button"; followup.addEventListener("click", () => openVisit(property));
         if (visit) popup.append(node("p", "", visitLabel(visit)));
         popup.append(toggle, followup);
         marker.bindPopup(popup).addTo(layers);
+        marker.on("popupopen", () => { openPin = property.pin; });
+        marker.on("popupclose", () => { if (openPin === property.pin) openPin = ""; });
         if (index >= 0) marker.bindTooltip(String(index + 1), { permanent: true, direction: "center", className: "tec-property-number-label" });
         markers.set(property.pin, marker);
+      }
+      const again = reopen && markers.get(reopen);
+      if (again) {
+        const popup = again.getPopup(), pan = popup.options.autoPan;
+        popup.options.autoPan = false;
+        again.openPopup();
+        popup.options.autoPan = pan;
       }
     }
 
@@ -546,9 +561,16 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       }
       drawMarkers();
     }
+    // Los toques seguidos se atienden en orden: elegir una casa mientras se guarda la anterior ya no se pierde.
+    let toggleQueue = Promise.resolve();
     function toggleStop(property) {
       if (loading) return;
-      return changeRoute(value => toggleRouteStop(value, property, data?.anchor));
+      const run = async () => {
+        for (let tries = 0; routeBusy && tries < 40; tries++) await new Promise(resolve => setTimeout(resolve, 100));
+        return changeRoute(value => toggleRouteStop(value, property, data?.anchor));
+      };
+      toggleQueue = toggleQueue.then(run, run);
+      return toggleQueue;
     }
 
     function renderList(properties = data?.properties || []) {

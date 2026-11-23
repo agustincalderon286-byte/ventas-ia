@@ -1,0 +1,392 @@
+{
+  "cache": "tec-coach-shell-20261122-enlaces1",
+  "files": {
+    "/audiolibros/audio-delivery.js": {
+      "versions": [
+        "v=20261112-editorial1"
+      ],
+      "sha": "b7f9ed10a28b234c"
+    },
+    "/coach/address-suggestions.js": {
+      "versions": [
+        "v=20261117-mapas1"
+      ],
+      "sha": "e50350ef52ce3a28"
+    },
+    "/coach/analytics-events.js": {
+      "versions": [
+        "v=20261104-analytics1"
+      ],
+      "sha": "edd378ba16ac5402"
+    },
+    "/coach/analytics.css": {
+      "versions": [
+        "v=20261104-analytics1"
+      ],
+      "sha": "9bfc2f29818c2c8b"
+    },
+    "/coach/analytics.js": {
+      "versions": [
+        "v=20261104-analytics1"
+      ],
+      "sha": "4333555d0191104e"
+    },
+    "/coach/app.js": {
+      "versions": [
+        "v=20261117-audit1",
+        "v=20261122-enlaces1"
+      ],
+      "sha": "c8099dd88f520f28"
+    },
+    "/coach/audiobook-reader.js": {
+      "versions": [
+        "v=20261103-readalong1"
+      ],
+      "sha": "603b61a3aeae4cba"
+    },
+    "/coach/audiobooks.css": {
+      "versions": [
+        "v=20261103-readalong1"
+      ],
+      "sha": "8aaa1b354265e3c9"
+    },
+    "/coach/audiobooks.js": {
+      "versions": [
+        "v=20261112-editorial1"
+      ],
+      "sha": "68b0933f6006a62b"
+    },
+    "/coach/card-order.css": {
+      "versions": [
+        "v=20261117-order1"
+      ],
+      "sha": "278cebc80cf2d94b"
+    },
+    "/coach/card-order.js": {
+      "versions": [
+        "v=20261117-order1"
+      ],
+      "sha": "df769cb3dacaab7f"
+    },
+    "/coach/closing-supervisor.js": {
+      "versions": [
+        "v=20261118-cierre1"
+      ],
+      "sha": "5962fc8e5375a2c2"
+    },
+    "/coach/coach-install.css": {
+      "versions": [
+        "v=20261117-install2"
+      ],
+      "sha": "9dff7a4b96608431"
+    },
+    "/coach/coach-install.js": {
+      "versions": [
+        "v=20261117-install2"
+      ],
+      "sha": "34a416a59d50d58c"
+    },
+    "/coach/coach-onboarding.css": {
+      "versions": [
+        "v=20261117-welcome1"
+      ],
+      "sha": "2cb7a6cd8687495b"
+    },
+    "/coach/coach-onboarding.js": {
+      "versions": [
+        "v=20261117-welcome1"
+      ],
+      "sha": "313373c1d909e566"
+    },
+    "/coach/coach-public.css": {
+      "versions": [
+        "v=20261117-audit1"
+      ],
+      "sha": "231256bf8be6610a"
+    },
+    "/coach/coach-tutorial.css": {
+      "versions": [
+        "v=20261117-help-chapters2"
+      ],
+      "sha": "9d693043155072c1"
+    },
+    "/coach/coach-tutorial.js": {
+      "versions": [
+        "v=20261117-help-chapters2"
+      ],
+      "sha": "0b032f1e884dac81"
+    },
+    "/coach/coach-voice.css": {
+      "versions": [
+        "v=20261118-voz4"
+      ],
+      "sha": "fe312ddf5539cb79"
+    },
+    "/coach/coach-voice.js": {
+      "versions": [
+        "v=20261122-enlaces1"
+      ],
+      "sha": "a4b48fae69ebacac"
+    },
+    "/coach/compact-header.js": {
+      "versions": [
+        "v=20261102-audiobooks1"
+      ],
+      "sha": "b21e433f82ccf463"
+    },
+    "/coach/demo-close-chat.js": {
+      "versions": [
+        "v=20261121-cierredemo2"
+      ],
+      "sha": "1a66bd372cde781a"
+    },
+    "/coach/demo-close-review.js": {
+      "versions": [
+        "v=20261121-cierredemo2"
+      ],
+      "sha": "983f9ef9f82354b6"
+    },
+    "/coach/demo-close-tools.js": {
+      "versions": [
+        "v=20261121-cierredemo2"
+      ],
+      "sha": "62fda7556cbf1cd8"
+    },
+    "/coach/demo-recorder-panel.js": {
+      "versions": [
+        "v=20261028-floating-tools1"
+      ],
+      "sha": "ed5fc37901588319"
+    },
+    "/coach/document-viewer.css": {
+      "versions": [
+        "v=20261028-visit-tools2"
+      ],
+      "sha": "9ae8a5eb79cf985c"
+    },
+    "/coach/document-viewer.js": {
+      "versions": [
+        "v=20261028-visit-tools2"
+      ],
+      "sha": "b1e4e25935e27a22"
+    },
+    "/coach/external-tools.js": {
+      "versions": [
+        "v=20261029-konverta1"
+      ],
+      "sha": "11b86e00931f621a"
+    },
+    "/coach/message-center.css": {
+      "versions": [
+        "v=20261117-push1"
+      ],
+      "sha": "f524e3d03451b19d"
+    },
+    "/coach/offline-forms.js": {
+      "versions": [
+        "v=20261121-cierredemo2"
+      ],
+      "sha": "955edf5206b3747e"
+    },
+    "/coach/order-calculator.js": {
+      "versions": [
+        "v=20261025-native-offline2"
+      ],
+      "sha": "19bbe9fd9c09aae6"
+    },
+    "/coach/password-visibility.js": {
+      "versions": [
+        "v=20261117-signup1"
+      ],
+      "sha": "d0e1042580b5fc34"
+    },
+    "/coach/product-image-viewer.js": {
+      "versions": [
+        "v=20261117-visor1"
+      ],
+      "sha": "39a434290d380a57"
+    },
+    "/coach/product-models-catalog.js": {
+      "versions": [
+        "v=20261110-product3d1"
+      ],
+      "sha": "de1f978bda045eba"
+    },
+    "/coach/product-models.css": {
+      "versions": [
+        "v=20261110-product3d1"
+      ],
+      "sha": "9bd196137685500d"
+    },
+    "/coach/product-models.js": {
+      "versions": [
+        "v=20261110-product3d1"
+      ],
+      "sha": "e0ed77e867c1e3b8"
+    },
+    "/coach/product-search.js": {
+      "versions": [
+        "v=20261025-alias1"
+      ],
+      "sha": "80548f898fa2875c"
+    },
+    "/coach/product-videos-catalog.js": {
+      "versions": [
+        "v=20261028-recipes1"
+      ],
+      "sha": "147f2df151598550"
+    },
+    "/coach/product-videos.css": {
+      "versions": [
+        "v=20261028-recipes1"
+      ],
+      "sha": "e7aa4b8debbfc063"
+    },
+    "/coach/product-videos.js": {
+      "versions": [
+        "v=20261028-recipes1"
+      ],
+      "sha": "8b13f487b9795f91"
+    },
+    "/coach/property-lab-guidance.js": {
+      "versions": [
+        "v=20261029-lab1"
+      ],
+      "sha": "65de2bdd09c65cfc"
+    },
+    "/coach/property-lab.css": {
+      "versions": [
+        "v=20261101-recorrido1"
+      ],
+      "sha": "36d15b1af07e00de"
+    },
+    "/coach/property-lab.js": {
+      "versions": [
+        "v=20261117-mapas1"
+      ],
+      "sha": "bf8b4ccef782c164"
+    },
+    "/coach/property-map.css": {
+      "versions": [
+        "v=20261117-audit1"
+      ],
+      "sha": "418cb00c29f4a261"
+    },
+    "/coach/property-map.js": {
+      "versions": [
+        "v=20261122-enlaces1"
+      ],
+      "sha": "feb566233c3e60bf"
+    },
+    "/coach/property-route-state.js": {
+      "versions": [
+        "v=20261028-walk2"
+      ],
+      "sha": "f2e860a2ba15def7"
+    },
+    "/coach/property-visit-helpers.js": {
+      "versions": [
+        "",
+        "v=20261023-product-picker2"
+      ],
+      "sha": "34e278e1df8b7171"
+    },
+    "/coach/property-walk.js": {
+      "versions": [
+        "v=20261117-mapas1"
+      ],
+      "sha": "deca26635743ee0e"
+    },
+    "/coach/pwa-safety.js": {
+      "versions": [
+        "v=20261112-phone1"
+      ],
+      "sha": "3dc666cdf600dd8b"
+    },
+    "/coach/referral-sheet-photo.js": {
+      "versions": [
+        "v=20261121-sheets1"
+      ],
+      "sha": "25f76d500bc4d93b"
+    },
+    "/coach/referral-sheet.js": {
+      "versions": [
+        "v=20261121-lector3"
+      ],
+      "sha": "f90726a91cba73f9"
+    },
+    "/coach/route-guidance.js": {
+      "versions": [
+        "v=20261028-walk2"
+      ],
+      "sha": "9aba6b9c1794435f"
+    },
+    "/coach/session-lock.js": {
+      "versions": [
+        "v=20261121-lector5"
+      ],
+      "sha": "7756a7233acfbf9e"
+    },
+    "/coach/sheets-transfer.js": {
+      "versions": [
+        "v=20261121-sheets1"
+      ],
+      "sha": "e7aacb1f402395c1"
+    },
+    "/coach/signup-ux.css": {
+      "versions": [
+        "v=20261117-signup1"
+      ],
+      "sha": "045868f6d2975fad"
+    },
+    "/coach/signup-ux.js": {
+      "versions": [
+        "v=20261117-signup1"
+      ],
+      "sha": "bcc1b5044ac3f9c7"
+    },
+    "/coach/styles.css": {
+      "versions": [
+        "v=20261117-visor1",
+        "v=20261122-enlaces1"
+      ],
+      "sha": "3f0199dde4be7a2c"
+    },
+    "/coach/team-chat-media.js": {
+      "versions": [
+        "v=20261117-push1"
+      ],
+      "sha": "3d4e3649e4a409f0"
+    },
+    "/coach/team-chat-push-worker.js": {
+      "versions": [
+        "v=20261117-push1"
+      ],
+      "sha": "af66f0a7271fa539"
+    },
+    "/coach/team-chat-push.js": {
+      "versions": [
+        "v=20261117-push1"
+      ],
+      "sha": "d693f9470c4bf417"
+    },
+    "/coach/team-chat.css": {
+      "versions": [
+        "v=20261117-rigochat1"
+      ],
+      "sha": "572a80443ffe5a47"
+    },
+    "/coach/team-chat.js": {
+      "versions": [
+        "v=20261117-rigochat1"
+      ],
+      "sha": "27d3d3908cb404a5"
+    },
+    "/coach/ui-coherence.js": {
+      "versions": [
+        "v=20261025-native-offline2"
+      ],
+      "sha": "7f8ebc22eb7dd488"
+    }
+  }
+}
