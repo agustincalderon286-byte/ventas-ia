@@ -23,8 +23,7 @@ for(const file of entries){
     if(!match[1].startsWith('/coach/vendor/pdfjs/'))found.add(match[1]);
   }
 }
-const pushWorker=source.match(/importScripts\("(\/coach\/team-chat-push-worker[^"]+)"\)/);
-if(pushWorker)found.add(pushWorker[1]);
+for(const pushWorker of source.matchAll(/importScripts\("(\/coach\/[a-z-]+-push-worker\.js[^"]*)"\)/g))found.add(pushWorker[1]);
 for(const url of found){
   const file='public'+url.split('?')[0];
   if(!fs.existsSync(path.join(root,file)))throw Error('Falta '+file);

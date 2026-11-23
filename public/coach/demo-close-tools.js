@@ -178,6 +178,10 @@
       const route = kind === "health-survey" ? "health-surveys" : "demo-outcomes";
       await window.apiRequest("/api/coach/" + route, { method: "POST", requestId: id,
         body, offlineKind: kind, offlineQueue: true, queueFirst: true });
+      // «Mi día» pregunta qué sigue después de la demo.
+      if (kind === "demo-outcome" && typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {
+        window.dispatchEvent(new CustomEvent("coach:demo-outcome-saved", { detail: { resultType: payload.resultType } }));
+      }
     }
     if (visitId === currentVisit() && (crmId || "") === (activeClient()?.id || "") && before === stamp()) {
       if (kind === "health-survey" && receipt?.value?.survey) form.showClosedSurvey?.(receipt.value.survey);

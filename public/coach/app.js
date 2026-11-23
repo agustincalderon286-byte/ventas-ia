@@ -16294,6 +16294,8 @@ function initCoachDemoOutcomeWorkspace(user = null) {
       const data = await offlineForm.submit();
       if (!data.preserveDraft) { form.reset(); syncTypeUi(); }
       setMessage(feedbackNode, "Resultado guardado en este dispositivo. Revisa abajo cuándo queda confirmado por el servidor.", "success");
+      // «Mi día» pregunta qué sigue: otra cita, llamar, prospectar o terminar.
+      window.dispatchEvent(new CustomEvent("coach:demo-outcome-saved", { detail: { resultType: payload.resultType } }));
     } catch (error) {
       setMessage(feedbackNode, error.message, "error");
     } finally {
@@ -17920,6 +17922,24 @@ async function loadCoachAppPage() {
     window.TecClosingSupervisor?.init({ userId: me.user.id, request: apiRequest });
   }
   initCoachWorkspaceTabs();
+  if (!isTelemarketingPortal) {
+    const openPanel = (tab, toggleSelector, wrapSelector, stage) => {
+      setCoachWorkspaceTab(tab);
+      if (stage) setCoachDemoStageId(stage);
+      const wrap = document.querySelector(wrapSelector);
+      if (wrap?.hidden) document.querySelector(toggleSelector)?.click();
+      (wrap || document.querySelector(toggleSelector))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.TecMyDay?.init({
+      userId: me.user.id, request: apiRequest,
+      openWorkspace: tab => setCoachWorkspaceTab(tab),
+      askCoach: (text, options) => window.tecAskCoach?.(text, options),
+      remember: (label, detail) => registerCoachDemoEvent({ id: "mi_dia_" + Date.now(), label, detail }),
+      openTicketPhoto: () => document.querySelector("[data-jump-ticket-photo]")?.click(),
+      openLeadForm: () => openPanel("prospeccion", "[data-native-lead-toggle]", "[data-native-lead-wrap]"),
+      openFourteen: () => openPanel("cierre", "[data-fourteen-sheet-toggle]", "[data-fourteen-sheet-wrap]", "programa_4_14")
+    });
+  }
 
   if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
@@ -18614,7 +18634,17 @@ async function loadCoachAppPage() {
   };
 
   const coachAgentContexts = createCoachAgentContexts();
-  window.tecVisitClose = me.demoClosePilot && window.TecDemoCloseChat ? window.TecDemoCloseChat.init({
+  // «Mi día»: abre el Coach con un mensaje listo para que el vendedor lo complete y lo envíe.
+  window.tecAskCoach = (text, { send = false } = {}) => {
+    syncFloatingCoachDock("open");
+    if (send) return sendCoachMessage(String(text || ""));
+    if (floatingChatInput) {
+      floatingChatInput.value = String(text || "");
+      autoResizeTextarea(floatingChatInput);
+      floatingChatInput.focus();
+    }
+  };
+  window.tecVisitClose =me.demoClosePilot && window.TecDemoCloseChat ? window.TecDemoCloseChat.init({
     accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
     openChat:()=>syncFloatingCoachDock("open"), visitId:getTecVisitId, crmId:()=>getActiveCoachCrmContext()?.id || "",
     prepareReminder:t=>sendCoachMessage(t)

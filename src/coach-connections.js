@@ -14,6 +14,8 @@ import {readCoachAgenda} from './coach-agenda.js';
 import {createPlanStore} from './coach-plan-store.js';
 import {createPlanChannels} from './coach-plan-channels.js';
 import {createCoachSheetTools} from './coach-sheets-tools.js';
+import {createMyDay} from './coach-my-day.js';
+import {registerMyDayRoutes} from './coach-my-day-routes.js';
 import {coachPendingFields, directDraftInput, scopeCoachPending} from './coach-chat-pending.js';
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
 import { createCoachWaAgent } from './coach-wa-chat.js';
@@ -71,7 +73,9 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
   waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
   // Gmail time offers need the real Mongo stores unless a test injects its own.
-  offers }) {
+  offers,
+  // «Mi día»: null lo apaga (pruebas); por defecto usa los modelos de TEC.
+  myDayDependencies = {} }) {
   const followupStore = followups || createFollowupStore({key:config.key});
   const offerStore = offers !== undefined ? offers : store === Store ? createMailOffers({key:config.key,
     rememberEvent:(b,receipt) => followupStore.rememberEvent(b,receipt)}) : null;
@@ -142,6 +146,12 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   contacts.register(app, own, back);
   sheets.register(app, own, back);
   registerCoachSheetsRoutes(app,{own,sheets:sheets.service});
+  // Mi día: primero para las cuentas del piloto, desde su propia sesión.
+  const myDay = myDayDependencies ? createMyDay({config,calendar:calendar.service,sheets:sheets.service,sheetTools,...myDayDependencies}) : null;
+  if (myDay) registerMyDayRoutes(app,{requireActive,service:myDay,allowed:auth=>{
+    const direct=auth.session?.accessMode==='direct' || (!auth.session?.accessMode && auth.user.accountType!=='seat');
+    return direct && Boolean(config.planPilot?.some(email=>email==='*' || email===String(auth.user.email || '').toLowerCase()));
+  }});
   app.post(waProfileApi + 'save', own(async (req,res,{id}) => {
     if (config.key?.length !== 32) return back(res, 'waProfileFailed');
     const saved = await waProfile.save(id, req.body.phone);
@@ -291,7 +301,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   // Asistente con ciclo de herramientas. Solo actúa para COACH_AGENT_LOOP_EMAILS; para los demás devuelve null.
   const mailAad=(owner,session,grant)=>'draft-question:'+owner+':'+session+':'+grant;
   const runLoop=createSellerAgent({config,plans:createPlanStore({key:config.key}),memory:createPlanStore({key:config.key}),
-    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,channels:planChannels,routes:createTrafficRoutes(config),
+    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,channels:planChannels,routes:createTrafficRoutes(config),myDay,
       readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service})}),
     // Mismo formato y vínculo que la ficha de bandeja del agente de Gmail, para que «Responde al primero» continúe allí.
     inboxToken:({owner,session,grant,ids})=>sealToken(JSON.stringify({kind:'inbox',ids,until:Date.now()+30*60000}),config.key,mailAad(owner,session,grant)),
@@ -341,7 +351,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
     return (await runSheets(args)) || (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
   }
-  return async args => {
+  const agent = async args => {
     const result=await dispatch(args);
     if (!result?.coachMailAgent || args.req?.body?.responseMode !== 'audio') return result;
     const {user,session}=args.auth || {};
@@ -350,4 +360,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     if (!direct || !eligible || switched(args.req) || String(user._id)!==args.req.body.accountId) return result;
     return {...result,coachPrivateVoice:true};
   };
+  // El servidor principal usa myDay para el texto de los avisos al teléfono.
+  agent.myDay = myDay;
+  return agent;
 }

@@ -17,6 +17,7 @@ import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.j
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
 import { createCoachPushModels, createCoachTeamPush } from "./src/coach-team-chat-push.js";
+import { createCoachDayPush, createDayPushModel } from "./src/coach-my-day-push.js";
 import { resolveTeamChatGroup, listTeamChatGroups, getExplicitChatDelegations } from "./src/coach-team-chat-access.js";
 import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
@@ -2449,6 +2450,16 @@ const coachTeamPush = createCoachTeamPush({
     if(!user || !coachSessionCredentialsMatch(session,user) || !(await coachTieneAccesoOperativo(user)))return false;
     try { return await resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}) === target; } catch { return false; }
   }
+});
+// Avisos de «Mi día» (8 am, 1 pm y 9 pm): misma suscripción del teléfono que el chat del equipo.
+const coachDayPushDevices = createDayPushModel(mongoose);
+const coachDayPush = createCoachDayPush({
+  devices: coachDayPushDevices, configs: coachPushModels.configs, requireActive: requireCoachActivo,
+  allowed: auth => {
+    const direct = auth.session?.accessMode === "direct" || (!auth.session?.accessMode && auth.user.accountType !== "seat");
+    return direct && Boolean(personalConnectionsConfig.planPilot?.some(value => value === "*" || value === String(auth.user.email || "").toLowerCase()));
+  },
+  message: args => runCoachConnectedAgent.myDay.pushMessage(args)
 });
 const teamChatWorker = createTeamChatWorker({ ...coachTeamChatModels, outcomes: CoachDemoOutcome, transcribe: (buffer,mime) => createCoachVoiceProvider().transcribe(buffer,mime,{ prompt: "Transcribe fielmente este mensaje de voz del equipo TEC en español. Royal Prestige, ventas, productos, horarios y acuerdos. No inventes palabras cuando no haya voz." }) });
 const CoachCrmRecord =
@@ -29939,6 +29950,7 @@ app.get("/api/coach/messages/overview", async (req, res) => {
 });
 
 coachTeamPush.register(app);
+coachDayPush.register(app);
 registerCoachTeamChat(app, {
   requireActive: requireCoachActivo,
   getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}),
@@ -34940,8 +34952,9 @@ async function iniciarServidor() {
       recoveryTimer = setInterval(recoveryService.resume, 15000);
       recoveryTimer.unref();
     }
-    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),...Object.values(raffleLeadModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet].map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),...Object.values(raffleLeadModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet,coachDayPushDevices,...(runCoachConnectedAgent.myDay ? Object.values(runCoachConnectedAgent.myDay.models) : [])].map(model => model.init()));
     await coachTeamPush.initialize();
+    await coachDayPush.initialize();
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))
@@ -34949,12 +34962,13 @@ async function iniciarServidor() {
     iniciarCoachAsyncJobWorker();
     teamChatWorker.start();
     coachTeamPush.start();
+    coachDayPush.start();
 
     const server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { clearInterval(followupTimer); clearInterval(chatPurgeTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      stopWorker: () => { clearInterval(followupTimer); clearInterval(chatPurgeTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); coachDayPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
       workerBusy: () => expiringFollowups || purgingChats || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);

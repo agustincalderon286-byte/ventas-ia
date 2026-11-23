@@ -214,7 +214,8 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       return {contacts:found.slice(0,limit),total:found.length,perZone};
     },
 
-    async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind,shortlist=false}={}) {
+    // pool: la lista completa ordenada, con el estado de cada ficha, para los bloques de llamadas de «Mi día».
+    async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind,shortlist=false,pool=false}={}) {
       const {rows,locale}=await load(ctx,shortlist && kind==='referrals');
       const priority=['overdue','today','undated','new'];
       const ranked=[];
@@ -222,13 +223,14 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
         if (kind && hit.row.kind!==kind) continue;
         if (!matchWords(hit.row.fullName,fold(name)) || !matchWords(hit.row.host,fold(host))) continue;
         let followup=classifySheetsFollowup(hit.row,{today,locale});
-        if (shortlist && !followup && ['history','result','followupDate','status'].every(k=>!text(hit.row[k])))
+        if ((shortlist || pool) && !followup && ['history','result','followupDate','status'].every(k=>!text(hit.row[k])))
           followup={bucket:'new',date:'',reason:'La ficha todavía no tiene una gestión registrada.'};
         if (!followup || !priority.includes(followup.bucket) || bucket && bucket!==followup.bucket) continue;
         const contact=contactOf(hit,followup,true);
-        if (contact.phone) ranked.push(contact);
+        if (contact.phone) ranked.push(pool ? {...contact,status:text(hit.row.status).slice(0,80)} : contact);
       }
       ranked.sort((a,b)=>priority.indexOf(a.bucket)-priority.indexOf(b.bucket) || a.date.localeCompare(b.date) || a.row-b.row);
+      if (pool) return {contacts:ranked,total:ranked.length};
       if (name && ranked.length>1) throw fail(422,'Hay varias fichas pendientes con ese nombre. Dime el nombre completo y el anfitrión antes de llamar.');
       if (shortlist) return {contacts:ranked.slice(0,5),total:ranked.length};
       return {contact:ranked.find(c=>!seen.includes(c.identityKey)),total:ranked.length};

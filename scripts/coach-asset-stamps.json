@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261122-enlaces1",
+  "cache": "tec-coach-shell-20261123-midia1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261122-enlaces1"
+        "v=20261123-midia1"
       ],
-      "sha": "c8099dd88f520f28"
+      "sha": "2f59a2a13045c7ac"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -148,9 +148,9 @@
     },
     "/coach/demo-close-tools.js": {
       "versions": [
-        "v=20261121-cierredemo2"
+        "v=20261123-midia1"
       ],
-      "sha": "62fda7556cbf1cd8"
+      "sha": "fec3f2c0e2d1afe1"
     },
     "/coach/demo-recorder-panel.js": {
       "versions": [
@@ -181,6 +181,24 @@
         "v=20261117-push1"
       ],
       "sha": "f524e3d03451b19d"
+    },
+    "/coach/my-day-push-worker.js": {
+      "versions": [
+        "v=20261123-midia1"
+      ],
+      "sha": "d4da6a4835758c08"
+    },
+    "/coach/my-day.css": {
+      "versions": [
+        "v=20261123-midia1"
+      ],
+      "sha": "c74c768cb33a13c2"
+    },
+    "/coach/my-day.js": {
+      "versions": [
+        "v=20261123-midia1"
+      ],
+      "sha": "0e36efe36d43eac8"
     },
     "/coach/offline-forms.js": {
       "versions": [

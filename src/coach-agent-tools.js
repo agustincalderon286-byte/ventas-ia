@@ -78,6 +78,7 @@ export const agentTools = Object.freeze([
       referidos:{type:'integer',minimum:-1,maximum:200,description:'Referidos que sacó en la visita, o -1 si no lo dijo.'},
       nota:{type:'string',maxLength:600,description:'Nota corta del vendedor sobre la visita, o vacío.'}}),
   tool('leer_resumen','summary','Lee el Resumen de la Hoja TEC: leads nuevos, citas, demos, ventas, porcentaje de cierre, total vendido, referidos por demo, de esta semana, este mes y el mes pasado, y la tabla de cada telemarketer de este mes. Úsala para «¿cómo voy?» o «¿cómo va mi telemarketer?».'),
+  tool('leer_mi_dia','myday','Lee «Mi día» del vendedor: su meta de leads de la semana (la estándar de TEC es 100, entre leads y referencias, y la personal si la puso), lo que lleva hoy y esta semana (leads, llamadas, demos y ventas), sus citas de hoy, sus exhibidores próximos y qué le conviene hacer ahora. Úsala para «¿qué hago ahora?», «¿cómo voy con mi meta?» o después de que cuente el resultado de una demo.'),
   tool('preparar_alta','add','Prepara, sin guardar, el alta de una persona nueva en la hoja: un referido del 4 en 14 con su anfitrión o una boleta de rifa. Una persona por propuesta. El vendedor la confirma con un botón.',
     {nombre:{type:'string',maxLength:80},telefono:{type:'string',maxLength:30,description:'Teléfono tal como lo dijo el vendedor.'},
       tipo:{type:'string',enum:['referido','boleta']},anfitrion:{type:'string',maxLength:80,description:'Nombre del anfitrión para un referido. Vacío para una boleta.'}}),
@@ -124,7 +125,7 @@ const pendingNote = 'Quedó como propuesta: no se ha guardado, reservado ni envi
 // channels: el mismo preparador de citas que usa el plan de conversación. Los correos siguen en el flujo existente:
 // su redactor recibe la dirección del destinatario, y el asistente no entrega direcciones al modelo.
 // routes: minutos de manejo de Google Maps, dentro del cupo gratuito que administra coach-route-allowance.js.
-export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections,channels,routes}) {
+export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections,channels,routes,myDay=null}) {
   const inList = (list,email) => Boolean(list?.some(item=>item==='*' || item===email));
 
   // actor: {owner,session,email,name,zone,current,now}. refs conserva las referencias entre turnos.
@@ -575,6 +576,22 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         (turn.messages ||= []).push({to:person.phone,name:clean(person.fullName,80),text});
         return {estado:'preparado',persona:clean(person.fullName,130),
           nota:'El vendedor verá el texto y un botón que abre Mensajes en su teléfono con el número y el texto puestos. No se ha enviado nada: lo envía él. No repitas el texto del mensaje en tu respuesta.'};
+      },
+
+      async leer_mi_dia() {
+        if (!myDay) return {estado:'no_disponible',nota:'Mi día no está disponible en TEC en este momento.'};
+        const s=await myDay.state({owner:actor.owner,email,name:actor.name,zone:actor.zone,session:actor.session});
+        const meta=s.goal.personal || s.goal.standard;
+        return {estado:'ok',hoy:s.day,hora:s.time,
+          meta:{estandarSemanal:s.goal.standard,personalSemanal:s.goal.personal || 'no puso una',leadsEstaSemana:s.goal.weekLeads,faltan:s.goal.remaining,
+            metaDeHoy:s.goal.dailyTarget,diasDeTrabajoQueQuedan:s.goal.workDaysLeft,metaQueSeMide:meta},
+          numerosDeHoy:{leads:s.today.leads,llamadas:s.today.calls,demos:s.today.demos,ventas:s.today.sales,montoVendido:s.today.amount},
+          numerosDeLaSemana:{leads:s.week.leads,llamadas:s.week.calls,demos:s.week.demos,ventas:s.week.sales,montoVendido:s.week.amount},
+          citasDeHoy:[...s.citas.events.map(e=>({hora:e.time,titulo:e.title})),...s.citas.agenda.map(a=>({hora:a.time,cliente:a.client,origen:a.origin,deLaAgenda:true}))],
+          exhibidoresProximos:s.exhibitors.slice(0,5).map(e=>({dia:e.day,desde:e.start,hasta:e.end,lugar:e.place})),
+          ...(s.askExhibitor && {sinExhibidorEstaSemana:'No tiene exhibidor registrado esta semana: pregúntale por qué y sugiérele agregarlo en Mi día.'}),
+          recomendacion:s.recommendation.reason,
+          nota:'Mi día está arriba de las pestañas de la app: ahí elige atender citas, llamar (bloques de 5), prospectar o terminar. Termina tu respuesta preguntando si va a atender otra cita, llamar, prospectar o si ya terminó por hoy.'};
       },
 
       async pasar_al_coach({motivo}) { return {estado:'derivado',detener:motivo}; }

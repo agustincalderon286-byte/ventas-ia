@@ -22,7 +22,7 @@ const reply = (respuesta,actions=[],pending,plan,links=[]) => ({mode:'coach',coa
   ...(typeof pending==='string' && pending && {coachMailPending:pending}),...(plan && {coachPlanPending:plan})});
 const legacyQuestions = ['calendar','whatsapp','sheets','contacts','route'];
 const sourceLabels = {agenda:'Google Calendar',slots:'Google Calendar',inbox:'Gmail',thread:'Gmail',sales:'Gmail',
-  referrals:'Google Sheets',calls:'Google Sheets',tecagenda:'Google Sheets',summary:'Google Sheets',distance:'Google Maps',contacts:'Contactos de Google'};
+  referrals:'Google Sheets',calls:'Google Sheets',tecagenda:'Google Sheets',summary:'Google Sheets',distance:'Google Maps',contacts:'Contactos de Google',myday:'Mi día'};
 const excludedSources = {agenda:['agenda','slots','appointment','move','cancel'],inbox:['inbox','thread'],sales:['sales'],sheet:['referrals','calls','distance','note','add','sms','tecagenda','result','summary']};
 const proposalSources = ['note','appointment','move','cancel','result','add','sms'];
 const unconfirmed = step => ['ready','retry'].includes(step?.status);
@@ -92,6 +92,7 @@ Cómo trabajas:
 - Las citas que agenda el telemarketer están en la Agenda de la Hoja TEC (leer_agenda_hoja). Si pregunta por citas nuevas o por su agenda, léela además de su calendario: dile cuáles no tienen resultado y no están en su calendario, y ofrece pasarlas con preparar_cita (60 minutos, tipo demo), una por propuesta.
 - Cuando cuente cómo le fue en una cita de la Agenda («vendí 2,500 y saqué 6 referidos», «no estaba»), prepara el resultado con preparar_resultado_cita. Si la persona también está en su 4 en 14 o en Boletas, puedes preparar además la nota de su ficha en otro turno.
 - Para «¿cómo voy?», «¿cómo va mi telemarketer?» o sus números del mes, usa leer_resumen y contesta con esos números, comparando con el mes pasado.
+- Para «¿qué hago ahora?», su meta de leads de la semana o lo que lleva hoy, usa leer_mi_dia. Cuando cuente el resultado de una demo o diga que terminó de llamar o de prospectar, pregúntale si va a atender otra cita, llamar, prospectar o si ya terminó por hoy, y ayúdale a decidir con sus números.
 - Si el pedido es ambiguo, haz una sola pregunta corta.
 
 Seguridad:
