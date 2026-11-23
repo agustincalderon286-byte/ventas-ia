@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { openToken, sealToken } from './coach-hycite-gmail.js';
 import { pickerPage, sheetMappingPage } from './coach-connections-page.js';
+import { TEC_SHEET_IDS, tecSheetCreateBody, tecSheetRequests } from './coach-sheets-template.js';
 
 export const sheetsApi = '/api/coach/conexiones/sheets/';
 export const sheetsScope = 'https://www.googleapis.com/auth/drive.file';
@@ -73,6 +74,16 @@ export function sheetsOAuthClient(config, fetcher = fetch) {
         Number.isSafeInteger(tab.sheetId) && typeof tab.title==='string' && tab.title);
       if (tabs.length < 2 || typeof book.properties?.title!=='string') throw fail('La hoja debe tener dos pestañas distintas.',422);
       return {id,title:book.properties.title,tabs};
+    },
+    // Crea la Hoja TEC en el Drive del vendedor. Con el permiso drive.file el Coach solo puede abrir los archivos que él creó o
+    // que el vendedor eligió, así que esta hoja queda a su alcance sin pedir permisos nuevos.
+    async createTecSheet(access,{title,timeZone}) {
+      const book = await request('https://sheets.googleapis.com/v4/spreadsheets?fields=spreadsheetId,properties(title)',{method:'POST',
+        headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify(tecSheetCreateBody({title,timeZone}))});
+      if (!sheetIdValid(book?.spreadsheetId)) throw fail('Google no confirmó la hoja nueva.',503);
+      await request('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(book.spreadsheetId)+':batchUpdate?fields=spreadsheetId',{method:'POST',
+        headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({requests:tecSheetRequests()})});
+      return {id:book.spreadsheetId,title:book.properties?.title || title};
     }
   };
 }
@@ -161,6 +172,16 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
         const token=await accessToken(doc,true);
         if (!await isSessionCurrent()) throw fail('Tu sesión cambió. Vuelve a abrir el Coach.',403);
         return res.json({accessToken:token,appId:config.sheetsAppId,pickerKey:config.sheetsPickerKey});
+      }));
+      app.post(sheetsApi+'create',own(async (req,res,{id,isSessionCurrent})=>{
+        const doc=await selectedDoc(id,req.body.grant);
+        // Los vendedores del piloto trabajan en el área de Chicago; el vendedor puede cambiar la zona en su hoja.
+        const book=await google.createTecSheet(await accessToken(doc),{title:'Hoja TEC',timeZone:'America/Chicago'});
+        if (!await isSessionCurrent()) return back(res,'expired');
+        // Rifas van a Boletas y referidos a 4 en 14. Se cambia el permiso de la propuesta para que nada pendiente use la hoja anterior.
+        const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,
+          ticketsSheetId:TEC_SHEET_IDS.tickets,ticketsTitle:'Boletas',referralsSheetId:TEC_SHEET_IDS.referrals,referralsTitle:'4 en 14'}});
+        return back(res,updated.matchedCount?'sheetsCreated':'busy');
       }));
       for (const action of ['choose','map']) {
         app.post(sheetsApi+action,own(async (req,res,{id,session,isSessionCurrent})=>{

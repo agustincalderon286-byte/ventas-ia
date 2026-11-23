@@ -222,6 +222,14 @@ Pendiente de la Fase 2: correos dentro del ciclo, varias altas a la vez y la hoj
 - **Mapa.** La ventanita de la casa se conserva al redibujar, los puntos son más grandes en el teléfono y los toques seguidos se atienden en orden.
 - **Voz bilingüe a prueba.** `COACH_VOICE_TRIAL_EMAILS` decide quién oye `es-MX-JorgeMultilingualNeural`; si Azure la rechaza, se lee con Jorge. No se activa para nadie más sin la aprobación de Agustín.
 
+### Hoja TEC para cada vendedor (22 de noviembre de 2026)
+
+- En Mis conexiones, con Google Sheets autorizado, el botón «Crear mi Hoja TEC» crea en el Drive del vendedor la hoja de `src/coach-sheets-template.js` y la conecta: rifas → Boletas, referidos → 4 en 14. La hoja anterior no se toca.
+- 4 en 14 y Boletas conservan el formato que usan los telemarketers (bloques por anfitrión, sus columnas y su leyenda de colores) y agregan al final Telemarketer, Estado, Último contacto, Próxima llamada y Hubo contacto. El Estado pinta la fila sola. El lector de siempre (`layout` en `coach-sheets-google.js`) la reconoce sin cambios.
+- La hoja trae Agenda, Resumen con fórmulas (leads, citas, demos, ventas, cierre, referidos por demo y una tabla por telemarketer), Leyenda de colores y Listas. Nace sin datos de clientes.
+- Usa el permiso `drive.file` que ya tenía la conexión: el Coach solo puede abrir los archivos que crea o que el vendedor elige.
+- Modelo con datos inventados para enseñarlo: «Hoja TEC · modelo de prueba» en el Drive de Agustín.
+
 ## Archivos
 
 | Archivo | Cambio |

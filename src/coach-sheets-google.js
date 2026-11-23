@@ -20,7 +20,8 @@ const headerPatterns = {
   status:/^(?:estado|estatus|status)(?: del? (?:lead|prospecto|seguimiento))?$/,
 };
 
-function layout(info, headerRows, kind) {
+// Exportada para comprobar en las pruebas que la Hoja TEC se lee con el mismo lector.
+export function layout(info, headerRows, kind) {
   for (let n = 0; n < headerRows.length; n++) {
     const cols = {}, labels = headerRows[n].map(c => normal(c?.formattedValue));
     for (const [field, re] of Object.entries(headerPatterns)) {

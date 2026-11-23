@@ -17,6 +17,7 @@ export const notices = {
   sheetsConnected: 'Google Sheets autorizado. Elige el archivo y sus dos pestañas.',
   sheetsWrongAccount: 'Elige en Google la cuenta con el mismo correo que usas en tu Coach.',
   sheetsMapped: 'Los destinos de rifas y referidos están guardados en tu Coach.',
+  sheetsCreated: 'Tu Hoja TEC está lista en tu Google Drive y ya está conectada al Coach. Compártela con tus telemarketers como editores.',
   sheetsBadTabs: 'Elige una pestaña distinta para cada tipo de lead.',
   sheetsFileUnavailable: 'Comprueba que tienes permiso de edición y que el archivo tiene dos pestañas visibles. Vuelve a elegirlo en Google.',
   sheetsDisconnected: 'El Coach eliminó tu conexión con Google Sheets.',
@@ -168,12 +169,20 @@ const pilotBookFor=email=>['agustincalderon286@gmail.com','calderonrigoberto51@g
 const sheetField=(name,value)=>`<input type="hidden" name="${name}" value="${esc(value)}">`;
 const sheetPage=(title,body,scripts='')=>`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main><a href="/mis-conexiones/">← Mis conexiones</a><h1>${esc(title)}</h1>${body}</main>${scripts}</body></html>`;
 
+// La Hoja TEC nace en el Drive del vendedor con las pestañas de siempre y el Resumen de resultados.
+function createTecSheetForm({form,profile}) {
+  const fields=sheetField('grant',profile.grant);
+  return `<div class="tec-sheet-create"><p><strong>¿Empiezas de cero?</strong> El Coach puede crear tu Hoja TEC en tu Google Drive: 4 en 14 y Boletas con el formato y los colores que ya usan los telemarketers, una Agenda para las citas y un Resumen con tus números y los de cada telemarketer. Tu hoja actual no se toca.</p>
+    ${form('create',profile.spreadsheetId?'Crear una Hoja TEC nueva y usarla':'Crear mi Hoja TEC',!!profile.spreadsheetId,sheetsActions,fields)}</div>`;
+}
+
 function sheetsSection({form,profile,ready,email}) {
   if (!ready) return '<section><h2>Google Sheets</h2><p>La conexión estará disponible cuando TEC complete la configuración de Google Sheets.</p></section>';
   const hint=pilotBookFor(email) ? `<p>Para el piloto, elige <a href="https://docs.google.com/spreadsheets/d/${suggestedWorkbook}/edit" target="_blank" rel="noopener noreferrer">Base de datos Eric – Young Dreamers Chicago</a>.</p>`:'';
   const controls=profile?.grant ? `<p>Cuenta conectada · <strong>${esc(profile.mailbox)}</strong></p>
     ${profile.spreadsheetId?`<p><strong>${esc(profile.spreadsheetTitle)}</strong><br>Rifas → ${esc(profile.ticketsTitle)}<br>Referidos con anfitrión → ${esc(profile.referralsTitle)}</p><p>Pregunta «¿A quién le marco ahorita?» para ver el siguiente pendiente.</p>`:hint}
-    <div class="actions">${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>` :
+    <div class="actions">${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>
+    ${createTecSheetForm({form,profile})}` :
     `<p>Elige una hoja de tu cuenta de Google para registrar rifas y referencias. El Coach te mostrará los posibles duplicados antes de que confirmes cada guardado.</p>${hint}${form('start','Conectar mi Google Sheets',false,sheetsActions)}`;
   return `<section id="google-sheets"><h2>Google Sheets</h2>${controls}</section>`;
 }
