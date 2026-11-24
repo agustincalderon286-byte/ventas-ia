@@ -12,7 +12,8 @@ const schema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId, accountSub: {type:String,unique:true,sparse:true}, mailbox:String,
   encryptedToken:String, grant:String, stateHash:String, sessionId:String, deadline:Date, verifier:String, exchangeId:String,
   spreadsheetId:String, spreadsheetTitle:String, ticketsSheetId:Number, referralsSheetId:Number, ticketsTitle:String, referralsTitle:String,
-  tecSheet:Boolean, previousSpreadsheetId:String, previousSpreadsheetTitle:String, previousTicketsSheetId:Number, previousReferralsSheetId:Number
+  tecSheet:Boolean, previousSpreadsheetId:String, previousSpreadsheetTitle:String, previousTicketsSheetId:Number, previousReferralsSheetId:Number,
+  importedFromPrevious:Boolean
 }, {versionKey:false, writeConcern:{w:'majority'}});
 const Store = mongoose.models.CoachPersonalSheets || mongoose.model('CoachPersonalSheets', schema);
 const random = () => randomBytes(32).toString('base64url');
@@ -24,8 +25,13 @@ const allowedScopes = text => {
   const values = String(text || '').trim().split(/\s+/);
   return values.includes(sheetsScope) && values.every(value => knownScopes.has(value));
 };
-const panelFields = 'grant mailbox spreadsheetId spreadsheetTitle ticketsSheetId referralsSheetId ticketsTitle referralsTitle tecSheet previousSpreadsheetId previousSpreadsheetTitle';
+const panelFields = 'grant mailbox spreadsheetId spreadsheetTitle ticketsSheetId referralsSheetId ticketsTitle referralsTitle tecSheet previousSpreadsheetId previousSpreadsheetTitle importedFromPrevious';
 const sheetIdValid = id => typeof id === 'string' && /^[\w-]{10,160}$/.test(id);
+function idFromSheetsLink(value) {
+  return typeof value==='string' && value.length<=400
+    ? /^https:\/\/docs\.google\.com\/spreadsheets\/d\/([\w-]{10,160})(?:[/?#]|$)/.exec(value.trim())?.[1]
+    : undefined;
+}
 
 export function sheetsOAuthClient(config, fetcher = fetch) {
   const redirectUri = config.origin + '/api/coach/conexiones/gmail/callback';
@@ -185,7 +191,8 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
         const previous=doc.spreadsheetId && !doc.tecSheet && destination(doc) ? {previousSpreadsheetId:doc.spreadsheetId,previousSpreadsheetTitle:doc.spreadsheetTitle,
           previousTicketsSheetId:doc.ticketsSheetId,previousReferralsSheetId:doc.referralsSheetId} : {};
         const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,tecSheet:true,
-          ticketsSheetId:TEC_SHEET_IDS.tickets,ticketsTitle:'Boletas',referralsSheetId:TEC_SHEET_IDS.referrals,referralsTitle:'4 en 14',...previous}});
+          ticketsSheetId:TEC_SHEET_IDS.tickets,ticketsTitle:'Boletas',referralsSheetId:TEC_SHEET_IDS.referrals,referralsTitle:'4 en 14',...previous},
+          $unset:{importedFromPrevious:1}});
         return back(res,updated.matchedCount?'sheetsCreated':'busy');
       }));
       // Pasar los leads de la hoja anterior a la Hoja TEC: primero se muestra cuántos son y luego se confirma.
@@ -196,6 +203,7 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
           const back=(res,result,counts='')=>{ console.log('[sheets]',action,result,counts); return backTo(res,result); };
           const doc=await selectedDoc(id,req.body.grant);
           if (!reader || !doc.tecSheet || !sheetIdValid(doc.previousSpreadsheetId) || !destination(doc)) return back(res,'sheetsImportNone');
+          if (doc.importedFromPrevious) return back(res,'sheetsImportNotEmpty');
           const access=await accessToken(doc);
           const newBook=destination(doc);
           const oldBook={spreadsheetId:doc.previousSpreadsheetId,ticketsSheetId:doc.previousTicketsSheetId,referralsSheetId:doc.previousReferralsSheetId};
@@ -211,14 +219,24 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
           if (!planned.referrals.length && !planned.tickets.length) return back(res,'sheetsImportNone');
           if (!await current(id,doc.grant)) return back(res,'busy');
           const written=await runImport(reader,access,newBook,planned);
-          await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random()},$unset:{previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1}});
+          await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),importedFromPrevious:true}});
           return back(res,'sheetsImported',written.referrals+' referidos, '+written.tickets+' boletas');
         }));
       }
       for (const action of ['choose','map']) {
         app.post(sheetsApi+action,own(async (req,res,{id,session,isSessionCurrent})=>{
           const doc=await selectedDoc(id,req.body.grant);
-          const book=await google.metadata(await accessToken(doc),req.body.spreadsheetId);
+          let spreadsheetId=req.body.spreadsheetId;
+          if (action==='choose' && req.body.source==='previous') spreadsheetId=doc.previousSpreadsheetId;
+          else if (action==='choose' && req.body.sheetUrl!==undefined) spreadsheetId=idFromSheetsLink(req.body.sheetUrl);
+          if (!sheetIdValid(spreadsheetId)) return back(res,'sheetsBadLink');
+          const token=await accessToken(doc);
+          let book;
+          try { book=await google.metadata(token,spreadsheetId); }
+          catch (error) {
+            if (action==='choose' && !error.reauthorize && error.status===422) return back(res,'sheetsPickFile');
+            throw error;
+          }
           if (!await isSessionCurrent()) return back(res,'expired');
           if (action==='choose') {
             res.set('Referrer-Policy','same-origin');
@@ -228,9 +246,10 @@ export function createCoachSheetsConnections({config,store=Store,google=sheetsOA
           const find=key=>book.tabs.find(tab=>String(tab.sheetId)===req.body[key]);
           const tickets=find('ticketsSheetId'), referrals=find('referralsSheetId');
           if (!tickets || !referrals || tickets.sheetId===referrals.sheetId) return back(res,'sheetsBadTabs');
+          const sameBook=book.id===doc.spreadsheetId;
           const updated=await store.updateOne({_id:id,grant:doc.grant},{$set:{grant:random(),spreadsheetId:book.id,spreadsheetTitle:book.title,
             ticketsSheetId:tickets.sheetId,ticketsTitle:tickets.title,referralsSheetId:referrals.sheetId,referralsTitle:referrals.title},
-            $unset:{tecSheet:1,previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1}});
+            ...(!sameBook && {$unset:{tecSheet:1,previousSpreadsheetId:1,previousSpreadsheetTitle:1,previousTicketsSheetId:1,previousReferralsSheetId:1,importedFromPrevious:1}})});
           return back(res,updated.matchedCount?'sheetsMapped':'busy');
         }));
       }

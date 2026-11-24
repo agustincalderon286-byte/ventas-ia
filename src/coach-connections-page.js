@@ -22,6 +22,8 @@ export const notices = {
   sheetsImportNone: 'No encontré leads tuyos para pasar de la hoja anterior.',
   sheetsCreated: 'Tu Hoja TEC está lista en tu Google Drive y ya está conectada al Coach. Compártela con tus telemarketers como editores.',
   sheetsBadTabs: 'Elige una pestaña distinta para cada tipo de lead.',
+  sheetsBadLink: 'Pega el enlace del archivo de Google Sheets que quieres usar.',
+  sheetsPickFile: 'Google no dio acceso a TEC a ese archivo. Comprueba que eres editor y elígelo en el selector de Google Drive desde Safari o Chrome.',
   sheetsFileUnavailable: 'Comprueba que tienes permiso de edición y que el archivo tiene dos pestañas visibles. Vuelve a elegirlo en Google.',
   sheetsDisconnected: 'El Coach eliminó tu conexión con Google Sheets.',
   sheetsReconnect: 'Vuelve a autorizar Google Sheets en Mis conexiones.',
@@ -143,7 +145,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contact
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}</main></body></html>`;
+    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail,needsGoogleAuthorization:message===notices.sheetsReconnect}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}</main></body></html>`;
 }
 
 // Permiso para el asistente con ciclo de herramientas. El texto debe describir exactamente lo que
@@ -179,13 +181,15 @@ function createTecSheetForm({form,profile}) {
     ${form('create',profile.spreadsheetId?'Crear una Hoja TEC nueva y usarla':'Crear mi Hoja TEC',!!profile.spreadsheetId,sheetsActions,fields)}</div>`;
 }
 
-function sheetsSection({form,profile,ready,email}) {
+function sheetsSection({form,profile,ready,email,needsGoogleAuthorization}) {
   if (!ready) return '<section><h2>Google Sheets</h2><p>La conexión estará disponible cuando TEC complete la configuración de Google Sheets.</p></section>';
   const hint=pilotBookFor(email) ? `<p>Para el piloto, elige <a href="https://docs.google.com/spreadsheets/d/${suggestedWorkbook}/edit" target="_blank" rel="noopener noreferrer">Base de datos Eric – Young Dreamers Chicago</a>.</p>`:'';
   const controls=profile?.grant ? `<p>Cuenta conectada · <strong>${esc(profile.mailbox)}</strong></p>
     ${profile.spreadsheetId?`<p><strong>${esc(profile.spreadsheetTitle)}</strong><br>Rifas → ${esc(profile.ticketsTitle)}<br>Referidos con anfitrión → ${esc(profile.referralsTitle)}</p><p>Pregunta «¿A quién le marco ahorita?» para ver el siguiente pendiente.</p>`:hint}
-    <div class="actions">${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>
-    ${profile.tecSheet && profile.previousSpreadsheetId ? `<p>Puedes pasar a tu Hoja TEC los leads de <strong>${esc(profile.previousSpreadsheetTitle || 'tu hoja anterior')}</strong>. Primero verás cuántos son.</p>${form('import','Pasar mis leads a la Hoja TEC',false,sheetsActions,sheetField('grant',profile.grant))}` : ''}
+    <div class="actions">${needsGoogleAuthorization?form('start','Volver a autorizar Google Sheets',false,sheetsActions):''}${form('picker',profile.spreadsheetId?'Cambiar hoja o pestañas':'Elegir mi hoja de Google',false,sheetsActions)}${form('disconnect','Desconectar Google Sheets',true,sheetsActions)}</div>
+    ${profile.previousSpreadsheetId ? `<p>Hoja anterior · <strong>${esc(profile.previousSpreadsheetTitle || 'Google Sheets')}</strong></p>
+      ${form('choose','Volver a usar la hoja anterior',false,sheetsActions,sheetField('grant',profile.grant)+sheetField('source','previous'))}
+      ${profile.tecSheet && !profile.importedFromPrevious ? form('import','Copiar leads a la Hoja TEC',false,sheetsActions,sheetField('grant',profile.grant)) : ''}` : ''}
     ${createTecSheetForm({form,profile})}` :
     `<p>Elige una hoja de tu cuenta de Google para registrar rifas y referencias. El Coach te mostrará los posibles duplicados antes de que confirmes cada guardado.</p>${hint}${form('start','Conectar mi Google Sheets',false,sheetsActions)}`;
   return `<section id="google-sheets"><h2>Google Sheets</h2>${controls}</section>`;
@@ -202,7 +206,12 @@ export function importPage({csrf,grant,title,referrals,tickets,skipped}) {
 
 export function pickerPage({csrf,grant,email}) {
   return sheetPage('Elegir mi hoja de Google',`<p>Abre el selector de Google y elige un archivo en el que puedas editar las pestañas de rifas y referidos.</p>
-    ${pilotBookFor(email)?'<p>Para el piloto, busca <strong>Young Dreamers Chicago</strong>.</p>':''}
+    ${pilotBookFor(email)?`<form method="post" action="${sheetsActions}choose">${sheetField('csrf',csrf)}${sheetField('grant',grant)}${sheetField('spreadsheetId',suggestedWorkbook)}
+      <button type="submit">Usar Young Dreamers Chicago</button></form>`:''}
+    <form method="post" action="${sheetsActions}choose">${sheetField('csrf',csrf)}${sheetField('grant',grant)}
+      <p><label>Enlace de una hoja ya autorizada en TEC<br><input type="url" name="sheetUrl" inputmode="url" maxlength="400" required></label></p>
+      <button type="submit">Revisar pestañas del enlace</button></form>
+    <p>Si es un archivo nuevo, elígelo en Google Drive. En iPhone, abre Mis conexiones en Safari si el selector te pide iniciar sesión.</p>
     <button type="button" id="open-picker">Abrir Google Drive</button><p role="status" id="picker-status"></p>
     <form method="post" action="${sheetsActions}choose" id="picker-choice">${sheetField('csrf',csrf)}${sheetField('grant',grant)}${sheetField('spreadsheetId','')}</form>`,
     '<script defer src="https://apis.google.com/js/api.js"></script><script defer src="/coach/sheets-picker.js?v=1"></script>');
@@ -211,13 +220,15 @@ export function pickerPage({csrf,grant,email}) {
 export function sheetMappingPage({book,csrf,doc}) {
   const fold=text=>text.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const guessed=(title)=>book.tabs.find(tab=>fold(tab.title)===title)?.sheetId;
+  const savedTab=(id,names)=>book.tabs.some(tab=>tab.sheetId===id)?id:names.map(guessed).find(value=>value!==undefined);
   const isCurrent=book.id===doc.spreadsheetId;
+  const isPrevious=book.id===doc.previousSpreadsheetId;
   const select=(name,label,selected)=>`<p><label>${label}<br><select name="${name}" required><option value="">Elige una pestaña</option>${book.tabs.map(tab=>
     `<option value="${tab.sheetId}"${selected===tab.sheetId?' selected':''}>${esc(tab.title)}</option>`).join('')}</select></label></p>`;
   return sheetPage('Destino de tus leads',`<p>Archivo · <strong>${esc(book.title)}</strong></p><form method="post" action="${sheetsActions}map">
     ${sheetField('csrf',csrf)}${sheetField('grant',doc.grant)}${sheetField('spreadsheetId',book.id)}
-    ${select('ticketsSheetId','Pestaña para rifas',isCurrent?doc.ticketsSheetId:guessed('boletas nuevas'))}
-    ${select('referralsSheetId','Pestaña para referidos y anfitrión',isCurrent?doc.referralsSheetId:guessed('4 14 agustin y rigoberto'))}
+    ${select('ticketsSheetId','Pestaña para rifas',savedTab(isCurrent?doc.ticketsSheetId:isPrevious?doc.previousTicketsSheetId:undefined,['boletas nuevas','boletas']))}
+    ${select('referralsSheetId','Pestaña para referidos y anfitrión',savedTab(isCurrent?doc.referralsSheetId:isPrevious?doc.previousReferralsSheetId:undefined,['4 14 agustin y rigoberto','4 en 14']))}
     <p>Elige dos pestañas diferentes con la estructura de telemarketing del piloto. El Coach comprobará las columnas antes de preparar un guardado.</p>
     <button type="submit">Guardar destinos en mi Coach</button></form>`);
 }

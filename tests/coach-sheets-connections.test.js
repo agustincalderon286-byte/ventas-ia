@@ -105,6 +105,35 @@ test('el mapeo verifica la hoja con el acceso propio, acepta sheetId cero e inva
   assert.ok(h.records.get('b').encryptedToken);
 });
 
+test('la hoja anterior abre los destinos guardados sin Picker y solo se activa después de confirmar',async()=>{
+  const h=harness();
+  await h.callback('a',(await h.post('start','a')).state,'a');
+  await h.callback('b',(await h.post('start','b')).state,'b');
+  const a=h.records.get('a'), b=h.records.get('b');
+  Object.assign(a,{spreadsheetId:'tec-current-123456',ticketsSheetId:10,referralsSheetId:11,tecSheet:true,
+    previousSpreadsheetId:exampleId,previousSpreadsheetTitle:'Equipo',previousTicketsSheetId:0,previousReferralsSheetId:9});
+  const grant=a.grant;
+  const old=await h.post('choose','a',{grant,source:'previous',spreadsheetId:'ignored-spreadsheet'});
+  assert.match(old,/value="0" selected>BOLETAS NUEVAS/);
+  assert.match(old,/value="9" selected>4-14 Agustín y Rigoberto/);
+  assert.equal(a.spreadsheetId,'tec-current-123456');
+  assert.equal(await h.post('choose','b',{grant:b.grant,source:'previous',spreadsheetId:exampleId}),'sheetsBadLink');
+  assert.equal(await h.post('choose','a',{grant,sheetUrl:'https://example.net/spreadsheets/d/'+exampleId}),'sheetsBadLink');
+  assert.match(await h.post('choose','a',{grant,sheetUrl:'https://docs.google.com/spreadsheets/d/'+exampleId+'/edit?gid=9'}),/Destino de tus leads/);
+  const metadata=h.google.metadata;
+  h.google.metadata=async()=>{throw Object.assign(new Error('Google no autorizó ese archivo'),{status:422})};
+  assert.equal(await h.post('choose','a',{grant,source:'previous'}),'sheetsPickFile');
+  assert.equal(a.spreadsheetId,'tec-current-123456');
+  h.google.metadata=metadata;
+  assert.equal(await h.post('map','a',{grant,spreadsheetId:exampleId,ticketsSheetId:'0',referralsSheetId:'9'}),'sheetsMapped');
+  const connected=await h.handler.service.access('a');
+  assert.equal(connected.spreadsheetId,exampleId);
+  assert.equal(connected.ticketsSheetId,0);
+  assert.equal(connected.referralsSheetId,9);
+  assert.equal(await h.handler.service.current('a',grant),false);
+  assert.equal(await h.handler.service.getConnection('b'),null);
+});
+
 test('el cliente Google limita el OAuth al archivo elegido, verifica edición y excluye hojas ocultas',async()=>{
   const cfg={origin:'https://tec.example',clientId:'123-test',secret:'secret'};
   const fetches=[];
