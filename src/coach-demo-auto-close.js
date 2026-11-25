@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { followupTime, readFollowup, validTimeZone } from './coach-followup-input.js';
 import { sheetsPhoneKey } from './coach-sheets-transfer.js';
 import { autoSurveyFields, autoSurveyInstructions, verifiedAutoSurvey } from './coach-demo-survey.js';
+import { checkDemoFigures, demoQuoteMinute, figuresOf } from './coach-demo-figures.js';
 
 const strings = (...fields) => Object.fromEntries(fields.map(field => [field, { type: 'string' }]));
 const evidenceShape = { segment: { type: 'integer' }, quote: { type: 'string' } };
@@ -18,7 +19,7 @@ export const autoDemoCloseInstructions = [
   'En autoClose prepara candidatos a guardado automático. Transcribe literalmente y deja fuera cualquier dato dudoso, incompleto, contradictorio o solo sugerido.',
   'Cada referido requiere nombre completo y teléfono completo dictado para ESE referido del 4 en 14. Ambos deben figurar juntos, con el contexto explícito de referencia, en la misma cita literal continua. Excluye al anfitrión, al vendedor, nombres hipotéticos y ejemplos. Devuelve hasta 11.',
   'En incompleteReferrals cita las referencias de esta visita que sí mencionaron pero quedaron incompletas o dudosas. Incluye una sola cita por referido y no repitas los que ya devolviste completos.',
-  'En notes conserva las observaciones claras de ESE referido: si está casado o soltero, si renta o es dueño, si trabaja, cuándo lo pueden llamar, la relación con el anfitrión, intereses u otras notas de contacto. Copia frases breves, incluyendo el no cuando corresponda. En cada quote identifica al referido por nombre completo o su mismo teléfono en el mismo contexto. No guardes contraseñas, documentos, diagnósticos ni datos de cuentas en notas de referidos.',
+  'En notes conserva TODAS las observaciones claras de ESE referido, una por elemento: estado civil (casado, soltero), vivienda (renta, es dueño), trabajo y horario, cuándo lo pueden llamar, la relación con el anfitrión, intereses u otras notas de contacto. Si una frase dice varias cosas («es soltera, renta y trabaja por la mañana») devuelve un elemento por cada una, con el mismo quote. En text copia el fragmento literal mínimo, incluyendo el no cuando corresponda. En quote copia la frase literal continua; puede ser la frase que sigue inmediatamente a la mención del referido aunque no repita su nombre, siempre que nadie más haya sido mencionado entre ambas. No guardes contraseñas, documentos, diagnósticos ni datos de cuentas en notas de referidos.',
   'En products incluye únicamente los productos por los que el cliente mostró interés. En quote cita literalmente ese interés con el nombre del producto. En prices copia los precios, anticipos o cuotas que discutieron para ese mismo producto, con monto y moneda o periodo si se dijo. Cada quote de precio debe identificar el producto y respaldar la cifra. Una cotización no prueba una compra.',
   'En followUp devuelve únicamente un seguimiento aceptado expresamente: una cita literal continua con el acuerdo y una fecha y hora inequívocas. En when copia la frase exacta con el día y la hora. No conviertas fechas ni inventes horas. Si luego cambiaron o retiraron el acuerdo, usa el último acuerdo claro o devuelve null.',
   autoSurveyInstructions,
@@ -72,8 +73,27 @@ function confirmsFollowUp(quote) {
   return /^(?:si\b|de acuerdo\b|esta bien\b|perfecto\b)/.test(quote.slice(question + 1).trim());
 }
 
+// Kinds of referral notes the pilot measures. A note may belong to several.
+const noteKinds = {
+  estadoCivil: /\b(?:casad[oa]s?|solter[oa]s?|divorciad[oa]s?|viud[oa]s?|union libre|separad[oa]s?|tiene pareja|con pareja)\b/,
+  vivienda: /\b(?:rent\w*|alquil\w*|duen[oa]s?|casa propia|propietari[oa]s?|apartamento|hipoteca|vive con|viven con)\b/,
+  trabajo: /\b(?:trabaj\w*|emplead[oa]s?|turno|jornada|desemplead[oa]s?|jubilad[oa]s?|negocio propio)\b/,
+  disponibilidad: /\b(?:llam\w*|marc\w*|despues de|antes de|por la (?:manana|tarde|noche)|fin(?:es)? de semana|horario|disponib\w*|en la (?:manana|tarde|noche))\b/,
+  relacion: /\b(?:herman[oa]s?|prim[oa]s?|amig[oa]s?|companer[oa]s?|vecin[oa]s?|cunad[oa]s?|ti[oa]s?|suegr[oa]s?|hij[oa]s?|sobrin[oa]s?|mama|papa|madre|padre|novi[oa])\b/
+};
+const kindsOf = text => Object.keys(noteKinds).filter(kind => noteKinds[kind].test(fold(text)));
+// A note that does not repeat the referral's name may only borrow it from the sentence right before,
+// and never when it speaks in first or second person (then it is about the host or the seller).
+const otherPerson = /\b(?:yo|me|mi|mis|nosotr[oa]s|nuestr[oa]s?|usted|ustedes|tu|tus|te|conmigo|contigo|(?:llam|marc|escrib|mand|avis|busc)\w*(?:me|nos))\b/;
+const NEIGHBOR_CHARS = 320;
+
 export function verifyAutoDemoClose(raw, chunks) {
   const segments = new Map(chunks.map(chunk => [chunk.index + 1, fold(chunk.text)]));
+  const review = [];
+  const minute = candidate => demoQuoteMinute(chunks, candidate?.segment, candidate?.quote);
+  const figures = (kind, candidate, text) => checkDemoFigures(chunks, { segment: candidate?.segment, quote: candidate?.quote,
+    kind, values: figuresOf(kind, text) });
+  const note = (entry, check) => review.push({ ...entry, ...(check?.state === 'unchecked' && { verified: false }) });
   function evidence(candidate, review = false) {
     const quote = fold(candidate?.quote);
     const text = segments.get(candidate?.segment);
@@ -91,22 +111,88 @@ export function verifyAutoDemoClose(raw, chunks) {
   }
   const supplied = Array.isArray(raw?.referrals) ? raw.referrals.slice(0, 11) : [];
   const referralNames = supplied.map(row => fold(cleanName(row?.fullName))).filter(Boolean);
+  const referralPhones = supplied.map(row => sheetsPhoneKey(row?.phone)).filter(Boolean);
+
+  // Where each referral is named (by name or phone) inside a segment.
+  function mentions(text) {
+    const found = [];
+    for (const name of referralNames) for (let at = text.indexOf(name); at >= 0; at = text.indexOf(name, at + 1)) {
+      if (!/[\p{L}\d]/u.test(text[at - 1] || '') && !/[\p{L}\d]/u.test(text[at + name.length] || '')) found.push({ at, end: at + name.length, name });
+    }
+    for (const hit of text.matchAll(visiblePhones)) {
+      const phone = sheetsPhoneKey(hit[0]), index = referralPhones.indexOf(phone);
+      if (index >= 0) found.push({ at: hit.index, end: hit.index + hit[0].length, name: fold(cleanName(supplied[index]?.fullName)) });
+    }
+    return found.sort((a, b) => a.at - b.at);
+  }
+
+  // A note quoted without the name still belongs to the referral named just before it in the
+  // same segment, as long as nobody else is named in between.
+  function neighborOf(item, detail, names) {
+    const text = segments.get(item?.segment) || '';
+    const at = text.indexOf(detail);
+    // Without the name, only a plain personal observation can be attributed; never a price or product.
+    if (at < 0 || otherPerson.test(detail) || priceCue.test(detail) || !kindsOf(detail).length) return false;
+    const before = mentions(text).filter(hit => hit.end <= at);
+    const last = before[before.length - 1];
+    return Boolean(last && last.name === names && at - last.end <= NEIGHBOR_CHARS &&
+      !mentions(text).some(hit => hit.name !== names && hit.at >= last.end && hit.at < at + detail.length) &&
+      !anotherPerson(text.slice(last.end, at + detail.length)));
+  }
+  // A new referral cue or a phone in between means someone else may be the subject now, even if
+  // Luna did not return that person.
+  const phonePattern = new RegExp(visiblePhones.source);
+  const anotherPerson = between => definiteReferral.test(between) || phonePattern.test(between);
+
   const verified = supplied.map(row => {
     const fullName = cleanName(row?.fullName), phone = sheetsPhoneKey(row?.phone), quote = evidence(row);
     const names = fold(fullName);
     const phones = [...quote.matchAll(visiblePhones)].map(hit => sheetsPhoneKey(hit[0])).filter(Boolean);
     if (!fullName || !phone || !wordAt(quote,names) || !definiteReferral.test(quote) || phones.length !== 1 || phones[0] !== phone) return null;
+    const phoneCheck = figures('phone', row, phone);
+    if (phoneCheck.state === 'doubt') {
+      note({ field:'referral', label:fullName, state:'preguntar', reason:'Teléfono: ' + phoneCheck.reason, minute:minute(row) });
+      return null;
+    }
     const notes = new Map();
     for (const item of Array.isArray(row.notes) ? row.notes.slice(0,8) : []) {
       const detail = evidence(item), detailPhones = [...detail.matchAll(visiblePhones)].map(hit => sheetsPhoneKey(hit[0])).filter(Boolean);
-      if ((!wordAt(detail,names) && !detailPhones.includes(phone)) || detailPhones.some(value=>value!==phone) ||
-          referralNames.some(other=>other!==names && wordAt(detail,other))) continue;
-      const note = literalNote(item?.text, detail, 100);
-      if (note && !lostNegation(detail,fold(note)) && !referralNames.some(name=>wordAt(fold(note),name))) notes.set(fold(note),note);
+      if (!detail || detailPhones.some(value=>value!==phone) || referralNames.some(other=>other!==names && wordAt(detail,other))) continue;
+      if (!wordAt(detail,names) && !detailPhones.includes(phone) && !neighborOf(item, detail, names)) continue;
+      const text = literalNote(item?.text, detail, 100);
+      if (text && !lostNegation(detail,fold(text)) && !referralNames.some(name=>wordAt(fold(text),name))) {
+        notes.set(fold(text), { text, minute:minute(item) });
+      }
     }
-    const note = [...notes.values()].join(' · ').slice(0,640);
-    return { fullName, phone, ...(note && { note }) };
+    const saved = [...notes.values()];
+    for (const item of saved) note({ field:'note', label:fullName, state:'guardar', text:item.text, kinds:kindsOf(item.text), minute:item.minute });
+    note({ field:'referral', label:fullName, state:'guardar', minute:minute(row) }, phoneCheck);
+    const joined = saved.map(item => item.text).join(' · ').slice(0,640);
+    return { fullName, phone, ...(joined && { note: joined }) };
   });
+
+  // Measure what the notes may have missed: observations right after a saved referral that no
+  // saved note covers. They are listed for the seller and never written automatically.
+  for (const [position, row] of supplied.entries()) {
+    const kept = verified[position];
+    if (!kept) continue;
+    const names = fold(kept.fullName);
+    const covered = phrase => review.some(item => item.field === 'note' && item.label === kept.fullName &&
+      (phrase.includes(fold(item.text)) || fold(item.text).includes(phrase)));
+    const text = segments.get(row.segment) || '';
+    for (const hit of mentions(text).filter(item => item.name === names)) {
+      const next = mentions(text).find(item => item.at > hit.end && item.name !== names);
+      let window = text.slice(hit.end, Math.min(next ? next.at : text.length, hit.end + NEIGHBOR_CHARS));
+      const stop = window.search(/\b(?:referid[oa]s?|referencias?)\b|(?:\d[\s().-]*){7,}/);
+      if (stop >= 0) window = window.slice(0, stop);
+      for (const clause of window.split(/[.;!?]|,|\by\b/)) {
+        const phrase = clause.trim();
+        if (phrase.length < 4 || otherPerson.test(phrase) || !kindsOf(phrase).length || covered(phrase) || privateNote.test(phrase)) continue;
+        note({ field:'note', label:kept.fullName, state:'pendiente', text:phrase, kinds:kindsOf(phrase),
+          reason:'Posible observación que no se guardó.' });
+      }
+    }
+  }
   const unique = verified.filter(row => row && verified.filter(other => other && (other.phone === row.phone || fold(other.fullName) === fold(row.fullName))).length === 1);
   const incomplete = new Set();
   if (Array.isArray(raw?.incompleteReferrals)) {
@@ -116,9 +202,26 @@ export function verifyAutoDemoClose(raw, chunks) {
     }
   }
   const quote = evidence(raw?.followUp), when = typeof raw?.followUp?.when === 'string' ? raw.followUp.when.trim() : '';
-  const followUp = quote && when && when.length <= 120 && confirmsFollowUp(quote) && followUpAction.test(quote) &&
+  let followUp = quote && when && when.length <= 120 && confirmsFollowUp(quote) && followUpAction.test(quote) &&
     quote.includes(fold(when)) ? { when, segment: raw.followUp.segment } : null;
-  const survey = verifiedAutoSurvey(raw?.survey, evidence);
+  if (followUp) {
+    const check = figures('time', raw.followUp, when);
+    if (check.state === 'doubt') {
+      note({ field:'followUp', label:when, state:'preguntar', reason:'Fecha u hora: ' + check.reason, minute:minute(raw.followUp) });
+      followUp = null;
+    } else note({ field:'followUp', label:when, state:'guardar', minute:minute(raw.followUp) }, check);
+  }
+  const survey = verifiedAutoSurvey(raw?.survey, candidate => {
+    const quoted = evidence(candidate);
+    const values = Array.isArray(candidate?.values) ? candidate.values.filter(value => typeof value === 'string').join(' ') : '';
+    if (!quoted || !figuresOf('amount', values).length) return quoted;
+    const check = figures('amount', candidate, values);
+    if (check.state !== 'doubt') return quoted;
+    note({ field:'survey', label:candidate.field, state:'preguntar', text:values, reason:check.reason,
+      ...(check.heard?.length && { heard:check.heard }), minute:minute(candidate) });
+    return '';
+  });
+  for (const [field, value] of Object.entries(survey)) note({ field:'survey', label:field, state:'guardar', text:[].concat(value).join(', ') });
   const products = new Map();
   const productCandidates = Array.isArray(raw?.products) ? raw.products.slice(0,12) : [];
   const productNames = productCandidates.map(item=>fold(item?.name)).filter(Boolean);
@@ -128,15 +231,24 @@ export function verifyAutoDemoClose(raw, chunks) {
     const key = fold(name), seen = products.get(key) || { name, prices:[] };
     for (const price of Array.isArray(item.prices) ? item.prices.slice(0,5) : []) {
       const detail = evidence(price), text = literalNote(price?.text, detail, 120);
-      if (text && wordAt(detail,key) && !productNames.some(other=>other!==key && !key.includes(other) && wordAt(detail,other)) &&
-          priceCue.test(fold(text)) && moneyText.test(fold(text)) &&
-          !seen.prices.some(value=>fold(value)===fold(text))) seen.prices.push(text);
+      if (!text || !wordAt(detail,key) || productNames.some(other=>other!==key && !key.includes(other) && wordAt(detail,other)) ||
+          !priceCue.test(fold(text)) || !moneyText.test(fold(text)) || seen.prices.some(value=>fold(value)===fold(text))) continue;
+      const check = figures('amount', price, text);
+      if (check.state === 'doubt') {
+        note({ field:'price', label:name, state:'preguntar', text, reason:check.reason,
+          ...(check.heard?.length && { heard:check.heard }), minute:minute(price) });
+        continue;
+      }
+      seen.prices.push(text);
+      note({ field:'price', label:name, state:'guardar', text, minute:minute(price) }, check);
     }
     seen.prices = seen.prices.slice(0,5);
     products.set(key,seen);
   }
+  for (const excerpt of incomplete) review.push({ field:'referral', label:'', state:'preguntar', reason:'Referido incompleto o dudoso.', text:excerpt.slice(0,120) });
   return { referrals: unique, pendingReferrals: supplied.length - unique.length + incomplete.size, followUp,
-    ...(Object.keys(survey).length && { survey }), ...(products.size && { products:[...products.values()] }) };
+    ...(Object.keys(survey).length && { survey }), ...(products.size && { products:[...products.values()] }),
+    ...(review.length && { review: review.slice(0, 60) }) };
 }
 
 function whenFor(analysis, candidate, now) {

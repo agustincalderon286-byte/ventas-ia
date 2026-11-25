@@ -1,0 +1,269 @@
+{
+ "cierre-ficticio": {
+  "index": 0,
+  "text": "Señora Silvia, ¿qué agua toman en la casa? Tomamos agua de botella, compramos garrafones cada semana. ¿Le interesa el filtro premium? Sí, me interesa el filtro de agua. El filtro premium cuesta 799 dólares, antes de impuestos. Está bien. Le doy una referencia, anote a Julia Ríos, su número es 312-555-0147. Julia Ríos es soltera, renta su casa y trabaja por la mañana. Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde? Sí, de acuerdo. Mañana a las 4 de la tarde.",
+  "language": "es",
+  "voice": [
+   {
+    "start": 0.0,
+    "end": 2.34,
+    "text": "Señora Silvia, ¿qué agua toman en la casa?"
+   },
+   {
+    "start": 2.8,
+    "end": 6.62,
+    "text": "Tomamos agua de botella, compramos garrafones cada semana."
+   },
+   {
+    "start": 6.76,
+    "end": 8.18,
+    "text": "¿Le interesa el filtro premium?"
+   },
+   {
+    "start": 8.74,
+    "end": 11.04,
+    "text": "Sí, me interesa el filtro de agua."
+   },
+   {
+    "start": 11.14,
+    "end": 15.3,
+    "text": "El filtro premium cuesta 799 dólares, antes de impuestos."
+   },
+   {
+    "start": 15.82,
+    "end": 16.48,
+    "text": "Está bien."
+   },
+   {
+    "start": 16.8,
+    "end": 24.92,
+    "text": "Le doy una referencia, anote a Julia Ríos, su número es 312-555-0147."
+   },
+   {
+    "start": 24.92,
+    "end": 29.04,
+    "text": "Julia Ríos es soltera, renta su casa y trabaja por la mañana."
+   },
+   {
+    "start": 29.2,
+    "end": 29.72,
+    "text": "Perfecto."
+   },
+   {
+    "start": 30.0,
+    "end": 32.72,
+    "text": "¿Le parece si regreso mañana a las 4 de la tarde?"
+   },
+   {
+    "start": 33.22,
+    "end": 36.48,
+    "text": "Sí, de acuerdo. Mañana a las 4 de la tarde."
+   }
+  ],
+  "checks": [
+   {
+    "segment": 4,
+    "second": "El filtro premium cuesta 799 dólares, antes de impuestos.",
+    "gapBefore": 0.06,
+    "gapAfter": 0.04
+   },
+   {
+    "segment": 6,
+    "second": "le doy una referencia anote a julia ríos su número es 3 1 2 5 5 5 0 1 4 7 julia",
+    "gapBefore": 0.08,
+    "gapAfter": 0.0
+   },
+   {
+    "segment": 7,
+    "second": "7. Julia Ríos es soltera, renta su casa y trabaja por la mañana.",
+    "gapBefore": 0.0,
+    "gapAfter": 0.1
+   },
+   {
+    "segment": 9,
+    "second": "Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde?",
+    "gapBefore": 0.0,
+    "gapAfter": 0.12
+   },
+   {
+    "segment": 10,
+    "second": "Sí, de acuerdo. Mañana a las 4 de la tarde.",
+    "gapBefore": 0.12,
+    "gapAfter": 0.12
+   }
+  ]
+ },
+ "tapado-0.25": {
+  "index": 0,
+  "text": "Señora Silvia, ¿qué agua toman en la casa? Tomamos agua de botella, compramos garrafones cada semana. ¿Le interesa el filtro premium? Sí, me interesa el filtro de agua. El filtro premium cuesta $799 dólares antes de impuestos. Está bien, le doy una referencia, anote a Julia Ríos, su número es 312-555-0147. 7. Julia Ríos es soltera, renta su casa y trabaja por la mañana. Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde? Sí, de acuerdo. Mañana a las 4 de la tarde.",
+  "language": "es",
+  "voice": [
+   {
+    "start": 0.0,
+    "end": 2.34,
+    "text": "Señora Silvia, ¿qué agua toman en la casa?"
+   },
+   {
+    "start": 2.8,
+    "end": 6.62,
+    "text": "Tomamos agua de botella, compramos garrafones cada semana."
+   },
+   {
+    "start": 6.76,
+    "end": 8.18,
+    "text": "¿Le interesa el filtro premium?"
+   },
+   {
+    "start": 8.74,
+    "end": 11.04,
+    "text": "Sí, me interesa el filtro de agua."
+   },
+   {
+    "start": 11.14,
+    "end": 16.3,
+    "text": "El filtro premium cuesta $799 dólares antes de impuestos."
+   },
+   {
+    "start": 16.46,
+    "end": 25.3,
+    "text": "Está bien, le doy una referencia, anote a Julia Ríos, su número es 312-555-0147."
+   },
+   {
+    "start": 25.3,
+    "end": 30.04,
+    "text": "7. Julia Ríos es soltera, renta su casa y trabaja por la mañana."
+   },
+   {
+    "start": 30.22,
+    "end": 33.74,
+    "text": "Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde?"
+   },
+   {
+    "start": 34.2,
+    "end": 37.48,
+    "text": "Sí, de acuerdo. Mañana a las 4 de la tarde."
+   }
+  ],
+  "checks": [
+   {
+    "segment": 4,
+    "second": "El filtro premium cuesta $799 antes de impuestos.",
+    "gapBefore": 0.06,
+    "gapAfter": 0.04
+   },
+   {
+    "segment": 5,
+    "second": "puestos. Está bien. Le doy una referencia. Anote a Julia Ríos. Su número es 312-555-0147.",
+    "gapBefore": 0.04,
+    "gapAfter": 0.0
+   },
+   {
+    "segment": 6,
+    "second": "147. Julia Ríos es soltera, renta su casa y trabaja por la mañana.",
+    "gapBefore": 0.0,
+    "gapAfter": 0.12
+   },
+   {
+    "segment": 7,
+    "second": "Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde?",
+    "gapBefore": 0.12,
+    "gapAfter": 0.12
+   },
+   {
+    "segment": 8,
+    "second": "Sí, de acuerdo. Mañana a las 4 de la tarde.",
+    "gapBefore": 0.12,
+    "gapAfter": 0.14
+   }
+  ]
+ },
+ "tapado-0.12": {
+  "index": 0,
+  "text": "Señora Silvia, ¿qué agua toman en la casa? Tomamos agua de botella, compramos garrafones cada semana. ¿Le interesa el filtro premium? Sí, me interesa el filtro de agua. El filtro premium cuesta. 99 dólares, antes de impuestos. Está bien, le doy una referencia, anote a Julia Ríos, su número es 312-555-0147. Julia Ríos es soltera, renta su casa y trabaja por la mañana. Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde? Sí, de acuerdo. Mañana a las 4 de la tarde.",
+  "language": "es",
+  "voice": [
+   {
+    "start": 0.0,
+    "end": 2.34,
+    "text": "Señora Silvia, ¿qué agua toman en la casa?"
+   },
+   {
+    "start": 2.78,
+    "end": 6.62,
+    "text": "Tomamos agua de botella, compramos garrafones cada semana."
+   },
+   {
+    "start": 6.76,
+    "end": 8.18,
+    "text": "¿Le interesa el filtro premium?"
+   },
+   {
+    "start": 8.74,
+    "end": 11.04,
+    "text": "Sí, me interesa el filtro de agua."
+   },
+   {
+    "start": 11.14,
+    "end": 12.46,
+    "text": "El filtro premium cuesta."
+   },
+   {
+    "start": 14.06,
+    "end": 16.3,
+    "text": "99 dólares, antes de impuestos."
+   },
+   {
+    "start": 16.86,
+    "end": 25.94,
+    "text": "Está bien, le doy una referencia, anote a Julia Ríos, su número es 312-555-0147."
+   },
+   {
+    "start": 25.94,
+    "end": 30.06,
+    "text": "Julia Ríos es soltera, renta su casa y trabaja por la mañana."
+   },
+   {
+    "start": 30.24,
+    "end": 33.74,
+    "text": "Perfecto. ¿Le parece si regreso mañana a las 4 de la tarde?"
+   },
+   {
+    "start": 34.26,
+    "end": 37.5,
+    "text": "Sí, de acuerdo. Mañana a las 4 de la tarde."
+   }
+  ],
+  "checks": [
+   {
+    "segment": 5,
+    "second": "99 dólares antes de impuestos.",
+    "gapBefore": 0.9,
+    "gapAfter": 0.04
+   },
+   {
+    "segment": 6,
+    "second": "Está bien. Le doy una referencia. Anote a Julia Ríos. Su número es 312-555-0147.",
+    "gapBefore": 0.04,
+    "gapAfter": 0.0
+   },
+   {
+    "segment": 7,
+    "second": "7. Julia Ríos es soltera, renta su casa y trabaja por la mañana.",
+    "gapBefore": 0.0,
+    "gapAfter": 0.12
+   },
+   {
+    "segment": 8,
+    "second": "perfecto le parece si regreso mañana a las 4 de la tarde",
+    "gapBefore": 0.12,
+    "gapAfter": 0.12
+   },
+   {
+    "segment": 9,
+    "second": "Sí, de acuerdo. Mañana a las 4 de la tarde.",
+    "gapBefore": 0.12,
+    "gapAfter": 0.12
+   }
+  ]
+ }
+}

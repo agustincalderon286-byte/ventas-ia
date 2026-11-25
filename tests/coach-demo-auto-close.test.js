@@ -7,19 +7,23 @@ const ref = { fullName: 'Julia Ríos', phone: '3125550147', segment: 1,
 const followUp = { when: 'mañana a las tres de la tarde', segment: 1,
   quote: 'De acuerdo, llámame mañana a las tres de la tarde' };
 const chunks = [{ index: 0, durationSeconds: 180, text: `${ref.quote}. ${followUp.quote}.` }];
-const facts = verifyAutoDemoClose({ referrals: [ref], followUp }, chunks);
+const { review: factsReview, ...facts } = verifyAutoDemoClose({ referrals: [ref], followUp }, chunks);
+const withoutReview = ({ review, ...rest }) => rest;
 
 test('solo salen datos literales, con el teléfono completo junto al referido y un seguimiento acordado', () => {
   assert.deepEqual(facts, { referrals: [{ fullName: 'Julia Ríos', phone: '3125550147' }], pendingReferrals: 0,
     followUp: { segment: 1, when: followUp.when } });
+  // A recording without second readings (older worker) still saves, marked as unchecked.
+  assert.deepEqual(factsReview.map(({ field, state, verified }) => [field, state, verified]),
+    [['referral', 'guardar', false], ['followUp', 'guardar', false]]);
   const changed = verifyAutoDemoClose({ referrals: [{ ...ref, phone: '3125550148' }], followUp: { ...followUp, when: 'viernes a las 4 pm' } }, chunks);
   assert.deepEqual(changed, { referrals: [], followUp: null, pendingReferrals: 1 });
   const doubt = verifyAutoDemoClose({ referrals: [ref], followUp }, [{ index: 0,
     text: `No estoy segura, ${ref.quote}. ${followUp.quote}, si me queda bien.` }]);
   assert.deepEqual(doubt, { referrals: [], followUp: null, pendingReferrals: 1 });
   const incomplete = 'Como referencia anota a Ana Soto, luego te paso el número';
-  assert.deepEqual(verifyAutoDemoClose({ referrals:[], incompleteReferrals:[{ segment:1, quote:incomplete }] },
-    [{ index:0, text:incomplete }]), { referrals:[], pendingReferrals:1, followUp:null });
+  assert.deepEqual(withoutReview(verifyAutoDemoClose({ referrals:[], incompleteReferrals:[{ segment:1, quote:incomplete }] },
+    [{ index:0, text:incomplete }])), { referrals:[], pendingReferrals:1, followUp:null });
   const asked = '¿Te llamo mañana a las tres de la tarde?';
   assert.equal(verifyAutoDemoClose({ followUp:{ ...followUp, quote:asked } }, [{ index:0, text:asked }]).followUp, null);
   const accepted = `${asked} Sí, está bien.`;

@@ -3,6 +3,7 @@ import { demoCloseFactSchema, demoCloseInstructions, verifiedDemoCloseFacts } fr
 import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorker } from "./src/coach-demo-local.js";
 import { autoDemoCloseInstructions, autoDemoCloseSchema, createAutoDemoClose, verifyAutoDemoClose } from "./src/coach-demo-auto-close.js";
 import { createDemoSurveyWriter } from "./src/coach-demo-survey.js";
+import { demoFigureGuard } from "./src/coach-demo-figures.js";
 import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
 import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
 import { createSheetsTransfer, sheetsPhoneKey } from "./src/coach-sheets-transfer.js";
@@ -1296,7 +1297,10 @@ const coachDemoAnalysisChunkSchema = new mongoose.Schema(
     error: String,
     uploadedAt: Date,
     transcribedAt: Date,
-    lastAudioRetryId: String
+    lastAudioRetryId: String,
+    // From the Mac worker: sentences with their seconds, and a second reading of those with figures.
+    voice: mongoose.Schema.Types.Mixed,
+    checks: mongoose.Schema.Types.Mixed
   },
   { _id: false }
 );
@@ -12970,7 +12974,7 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
 
   try {
     const report = JSON.parse(rawText);
-    if (prepareClose) report.closeFacts = verifiedDemoCloseFacts(report.closeFacts, closeSegments);
+    if (prepareClose) report.closeFacts = verifiedDemoCloseFacts(report.closeFacts, closeSegments, demoFigureGuard(closeSegments));
     else delete report.closeFacts;
     if (prepareClose && autoClose) report.autoClose = verifyAutoDemoClose(report.autoClose, closeSegments);
     else delete report.autoClose;
@@ -31955,7 +31959,7 @@ async function finishLocalCoachDemo(doc, options) {
     console.error('No se pudo guardar la encuesta automática',{ name:error.name });
     return { state:'error' };
   })]);
-  result.autoCloseReceipt = { ...receipt, survey:surveyState, productSummary };
+  result.autoCloseReceipt = { ...receipt, survey:surveyState, productSummary, ...(facts.review && { review:facts.review }) };
   return result;
 }
 

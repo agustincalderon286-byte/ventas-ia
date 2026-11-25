@@ -96,6 +96,33 @@ test('la Mac recibe solo segmentos seleccionados y dos entregas con la misma con
   assert.equal(audio.rows.length, 0);
 });
 
+test('la cola guarda las frases con tiempos y la segunda lectura, rechaza lecturas mal formadas y acepta el formato anterior', async () => {
+  let received;
+  const { analyses, queue, enqueue } = fixture(async doc => { received = doc.chunks[0]; return { status: 'completed', report: {} }; });
+  await enqueue();
+  const job = await queue.claim();
+  const text = 'El filtro cuesta 799 dólares.';
+  const voice = [{ start: 0, end: 2.5, text }];
+  const bad = [
+    { voice, checks: [{ segment: 3, second: text, gapBefore: 0, gapAfter: 0 }] },
+    { voice, checks: [{ segment: 0, second: text, gapBefore: -1, gapAfter: 0 }] },
+    { voice: [{ start: 2, end: 1, text }], checks: [] },
+    { voice }
+  ];
+  for (const extra of bad) assert.equal(await queue.submit(job.id, job.lease, { chunks: [{ index: 0, text, language: 'es', ...extra }] }), 422);
+  const checks = [{ segment: 0, second: 'El filtro cuesta 799 dólares.', gapBefore: 0.06, gapAfter: 0.04, extra: 'fuera' }];
+  assert.equal(await queue.submit(job.id, job.lease, { chunks: [{ index: 0, text, language: 'es', voice, checks }] }), 204);
+  assert.deepEqual(received.checks, [{ segment: 0, second: 'El filtro cuesta 799 dólares.', gapBefore: 0.06, gapAfter: 0.04 }]);
+  assert.deepEqual(analyses.rows[0].chunks[0].voice, voice);
+
+  const legacy = fixture(async doc => { received = doc.chunks[0]; return { status: 'completed', report: {} }; });
+  await legacy.enqueue();
+  const old = await legacy.queue.claim();
+  assert.equal(await legacy.queue.submit(old.id, old.lease, { chunks: [{ index: 0, text, language: 'es' }] }), 204);
+  assert.equal(received.voice, undefined);
+  assert.equal(received.checks, undefined);
+});
+
 test('la cola recupera una concesión perdida una vez y conserva el audio al agotar sus intentos', async () => {
   const { analyses, audio, queue, enqueue, moveTime } = fixture(() => assert.fail('No se envió diálogo'));
   await enqueue();

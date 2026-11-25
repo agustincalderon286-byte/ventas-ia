@@ -95,15 +95,16 @@ for (const [index, word] of ['treinta', 'cuarenta', 'cincuenta', 'sesenta', 'set
 for (const [index, word] of ['cien', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'].entries()) spoken.set(word, 100 + index * 100);
 for (const [word, amount] of Object.entries({ un: 1, una: 1, veintiun: 21, ciento: 100, mil: 1000 })) spoken.set(word, amount);
 
-function containsAmount(quote, value) {
-  const expected = Number(value);
-  for (const match of quote.matchAll(/\d+(?:[.,]\d+)*/g)) {
+// Every whole amount in a phrase, written with digits or as a complete run of Spanish words.
+export function demoAmountsIn(quote) {
+  const found = [];
+  for (const match of String(quote).matchAll(/\d+(?:[.,]\d+)*/g)) {
     const written = match[0];
     const localized = /^\d{1,3}(?:[.]\d{3})+(?:,\d{1,2})?$/.test(written) ?
       written.replaceAll('.', '').replace(',', '.') : /^\d+,\d{1,2}$/.test(written) ? written.replace(',', '.') : written.replaceAll(',', '');
-    if (Number(localized) === expected) return true;
+    found.push(Number(localized));
   }
-  const tokens = fold(quote).match(/[\p{L}]+|[^\p{L}\s]+/gu) || [];
+  const tokens = fold(String(quote)).match(/[\p{L}]+|[^\p{L}\s]+/gu) || [];
   for (let i = 0; i < tokens.length; i++) {
     if (!spoken.has(tokens[i])) continue;
     let total = 0, group = 0;
@@ -115,9 +116,13 @@ function containsAmount(quote, value) {
       if (!spoken.has(tokens[i+1])) break;
       i++;
     }
-    if (total + group === expected) return true;
+    found.push(total + group);
   }
-  return false;
+  return found;
+}
+
+function containsAmount(quote, value) {
+  return demoAmountsIn(quote).includes(Number(value));
 }
 
 export { containsAmount as containsDemoAmount };
@@ -161,7 +166,9 @@ function hasEvidence(text, phrase, field, value) {
   return false;
 }
 
-export function verifiedDemoCloseFacts(candidates, chunks) {
+// figureOk(field, value, segment, quote) lets the caller veto an amount whose second reading
+// disagrees or that may have been cut; the field is then left for the seller to answer.
+export function verifiedDemoCloseFacts(candidates, chunks, figureOk = () => true) {
   const result = {};
   if (!Array.isArray(candidates)) return result;
   const segments = new Map(chunks.map(chunk => [Number(chunk.index) + 1, fold(String(chunk.text || ''))]));
@@ -173,6 +180,10 @@ export function verifiedDemoCloseFacts(candidates, chunks) {
     const text = segments.get(segment);
     const value = cleanField(field, candidate.value);
     if (!value || !text || phrase.length < 5 || phrase.length > 400 || !hasEvidence(text, phrase, field, value) || !corroborates(field, value, phrase)) continue;
+    if ((moneyFields.has(field) || field === 'cooksForCount') && !figureOk(field, value, segment, phrase)) {
+      disputed.add(field);
+      continue;
+    }
     if (result[field] && result[field] !== value) disputed.add(field);
     result[field] = value;
   }

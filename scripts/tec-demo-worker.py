@@ -6,6 +6,7 @@ import ctypes
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -53,12 +54,26 @@ class Queue:
         job_path = '/' + urllib.parse.quote(job['id'], safe='')
         lease = job['lease']
         try:
-            chunks = []
+            chunks, windows = [], []
             for chunk in sorted(job['chunks'], key=lambda item: item['index']):
                 index = int(chunk['index'])
                 audio = self.request(f'{job_path}/audio/{index}', lease=lease)
-                text, language = transcribe(audio)
-                chunks.append({'index': index, 'text': text, 'language': language})
+                heard = transcribe(audio)
+                if isinstance(heard, tuple):
+                    chunks.append({'index': index, 'text': heard[0], 'language': heard[1]})
+                    continue
+                entry = {'index': index, 'text': heard['text'], 'language': heard['language'],
+                         'voice': heard['voice'], 'checks': heard['checks']}
+                chunks.append(entry)
+                windows.append((entry, heard['windows']))
+            # The second model runs after every chunk so each job switches models only once.
+            verify = getattr(transcribe, 'verify', None)
+            if verify and windows:
+                try:
+                    verify(windows)
+                except Exception as error:
+                    # Unverified figures stay pending on the server; the rest of the visit still counts.
+                    print(f'Falló la segunda lectura de cifras ({type(error).__name__}).', file=sys.stderr, flush=True)
             result = {'chunks': chunks}
         except urllib.error.HTTPError as error:
             result = {'expiredAudio': True} if error.code == 404 else {'failed': True}
@@ -144,7 +159,25 @@ def decode_for_whisper(audio, ffmpeg, reduce_noise=None):
         return pcm(args, 16000)
 
 
-def local_transcriber(model, ffmpeg, rnnoise=None):
+SAMPLE_RATE = 16_000
+FRAME = 320  # 20 ms
+# Prices, phones, dates and times. A sentence that mentions one gets a second, independent reading.
+FIGURE = re.compile(
+    r'\d|\$|d[oó]lar|\b(?:cero|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|'
+    r'dieci\w+|veint\w*|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien\w*|doscient\w+|trescient\w+|'
+    r'cuatrocient\w+|quinient\w+|seiscient\w+|setecient\w+|ochocient\w+|novecient\w+|mil|lunes|martes|mi[eé]rcoles|'
+    r'jueves|viernes|s[aá]bado|domingo|mañana|mediod[ií]a|a las?)\b', re.IGNORECASE)
+MAX_CHECKS = 60
+WINDOW_MARGIN = 0.5
+
+
+def voiced_seconds(levels, threshold, start, end):
+    """Seconds of audible sound between two times that Whisper did not turn into text."""
+    first, last = max(0, int(start * SAMPLE_RATE / FRAME)), min(len(levels), int(end * SAMPLE_RATE / FRAME))
+    return round(float((levels[first:last] > threshold).sum()) * FRAME / SAMPLE_RATE, 2) if last > first else 0.0
+
+
+def local_transcriber(model, ffmpeg, rnnoise=None, check_model=None):
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
     import numpy as np
@@ -158,43 +191,91 @@ def local_transcriber(model, ffmpeg, rnnoise=None):
         except (OSError, AttributeError, ValueError) as error:
             print(f'RNNoise no se pudo cargar ({type(error).__name__}).', file=sys.stderr, flush=True)
 
+    def samples_of(pcm):
+        return np.frombuffer(pcm, dtype='<i2').astype(np.float32) / 32768
+
     def recognize(pcm):
         if not pcm:
             raise ValueError('Sin audio decodificable')
-        samples = np.frombuffer(pcm, dtype='<i2').astype(np.float32) / 32768
+        samples = samples_of(pcm)
         if not np.any(samples):
-            return '', '', float('-inf')
+            return [], '', float('-inf')
         result = transcribe(samples, path_or_hf_repo=str(model), verbose=None, condition_on_previous_text=False,
                             temperature=(0.0, 0.2, 0.4))
         segments = [item for item in result['segments'] if item['text'].strip() and
                     item['no_speech_prob'] < 0.85 and item['compression_ratio'] < 2.8]
         if not segments:
-            return '', result.get('language') or '', float('-inf')
+            return [], result.get('language') or '', float('-inf')
         durations = [max(0.01, item['end'] - item['start']) for item in segments]
         score = np.average([item['avg_logprob'] for item in segments], weights=durations)
-        return ' '.join(item['text'].strip() for item in segments)[:16_000], result.get('language') or '', score
+        return segments, result.get('language') or '', score
+
+    def heard(pcm, segments, language):
+        samples = samples_of(pcm)
+        usable = samples[:len(samples) // FRAME * FRAME]
+        levels = np.sqrt((usable.reshape(-1, FRAME) ** 2).mean(axis=1)) if usable.size else np.zeros(0)
+        threshold = max(float(np.percentile(levels, 20)) * 4, 0.01) if levels.size else 1.0
+        total = len(samples) / SAMPLE_RATE
+        voice, checks, windows = [], [], []
+        for position, item in enumerate(segments[:400]):
+            start, end = max(0.0, float(item['start'])), min(total, float(item['end']))
+            text = item['text'].strip()[:1000]
+            voice.append({'start': round(start, 2), 'end': round(max(start, end), 2), 'text': text})
+            if len(checks) >= MAX_CHECKS or not FIGURE.search(text):
+                continue
+            before = float(segments[position - 1]['end']) if position else 0.0
+            after = float(segments[position + 1]['start']) if position + 1 < len(segments) else total
+            checks.append({'segment': position, 'second': None,
+                           'gapBefore': voiced_seconds(levels, threshold, before, start),
+                           'gapAfter': voiced_seconds(levels, threshold, end, after)})
+            first = int(max(0.0, start - WINDOW_MARGIN) * SAMPLE_RATE)
+            last = int(min(total, end + WINDOW_MARGIN) * SAMPLE_RATE)
+            windows.append(samples[first:last].copy())
+        text = ' '.join(item['text'] for item in voice)[:16_000]
+        return {'text': text, 'language': language, 'voice': voice, 'checks': checks, 'windows': windows}
 
     def process(audio):
         cleaned = decode_for_whisper(audio, ffmpeg, reduce_noise)
-        text, language, score = recognize(cleaned)
+        segments, language, score = recognize(cleaned)
+        chosen = cleaned
         if reduce_noise and score < -0.24:
             # In uncertain passages compare the original before discarding quiet words or digits.
             try:
                 original = decode_for_whisper(audio, ffmpeg)
                 if original != cleaned:
-                    raw_text, raw_language, raw_score = recognize(original)
-                    if raw_text and raw_score > score + 0.02:
-                        return raw_text, raw_language
+                    raw_segments, raw_language, raw_score = recognize(original)
+                    if raw_segments and raw_score > score + 0.02:
+                        segments, language, chosen = raw_segments, raw_language, original
             except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
                 print(f'Comparación con audio original omitida ({type(error).__name__}).', file=sys.stderr, flush=True)
-        return text, language
+        result = heard(chosen, segments, language)
+        if not check_model:
+            result['checks'] = [{**check, 'second': None} for check in result['checks']]
+        return result
 
+    def verify(pending):
+        """Re-read every sentence with figures using a second local model."""
+        for entry, windows in pending:
+            for check, window in zip(entry['checks'], windows):
+                if not window.size or not np.any(window):
+                    check['second'] = ''
+                    continue
+                result = transcribe(window, path_or_hf_repo=str(check_model), verbose=None,
+                                    condition_on_previous_text=False, temperature=0.0,
+                                    language=entry['language'] or None)
+                check['second'] = ' '.join(item['text'].strip() for item in result['segments']
+                                           if item['text'].strip())[:1000]
+
+    if check_model:
+        process.verify = verify
     return process
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=Path, required=True)
+    parser.add_argument('--check-model', type=Path,
+                        help='Segundo modelo MLX que vuelve a escuchar las frases con precios, teléfonos, fechas u horas.')
     parser.add_argument('--origin', default='https://totalelitecoaching.com')
     parser.add_argument('--ffmpeg', default=shutil.which('ffmpeg'))
     noise_filter = parser.add_mutually_exclusive_group()
@@ -208,13 +289,21 @@ def main():
         origin.scheme != 'https' and (origin.scheme != 'http' or origin.hostname not in ('localhost', '127.0.0.1', '::1'))
     ):
         parser.error('Configura COACH_DEMO_LOCAL_WORKER_KEY y el origen HTTPS de TEC.')
+    def installed(directory):
+        return (directory / 'config.json').is_file() and any((directory / f).is_file() for f in ('weights.safetensors', 'weights.npz'))
+
     model = args.model.expanduser().resolve()
-    if not (model / 'config.json').is_file() or not any((model / f).is_file() for f in ('weights.safetensors', 'weights.npz')):
+    if not installed(model):
         parser.error('Indica el directorio del modelo MLX instalado en la Mac.')
+    check_model = args.check_model.expanduser().resolve() if args.check_model else None
+    if check_model and (not installed(check_model) or check_model == model):
+        parser.error('El segundo modelo debe ser otro modelo MLX instalado en la Mac.')
     if not args.ffmpeg or not Path(args.ffmpeg).is_file():
         parser.error('Indica la ruta local de ffmpeg.')
+    if not check_model:
+        print('Sin segundo modelo: las cifras quedarán pendientes de verificar.', file=sys.stderr, flush=True)
 
-    transcribe = local_transcriber(model, args.ffmpeg, args.rnnoise)
+    transcribe = local_transcriber(model, args.ffmpeg, args.rnnoise, check_model)
     queue = Queue(args.origin, key)
     while True:
         try:

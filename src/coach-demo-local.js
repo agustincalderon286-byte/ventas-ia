@@ -19,6 +19,28 @@ export function createLocalDemoAudioModel(mongoose) {
   return mongoose.models.CoachLocalDemoAudio || mongoose.model('CoachLocalDemoAudio', schema);
 }
 
+const seconds = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 400;
+const smallText = value => typeof value === 'string' && value.length <= 1000 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);
+
+// Sentences with their times, and the second reading of those with figures. Returns {} when the
+// worker sent neither (older format) and false when what it sent is malformed.
+function timedReadings(chunk) {
+  if (chunk.voice === undefined && chunk.checks === undefined) return {};
+  const { voice, checks } = chunk;
+  if (!Array.isArray(voice) || !Array.isArray(checks) || voice.length > 400 || checks.length > 60) return false;
+  if (voice.some(item => !item || !seconds(item.start) || !seconds(item.end) || item.end < item.start || !smallText(item.text))) return false;
+  const used = new Set();
+  for (const item of checks) {
+    if (!item || !Number.isInteger(item.segment) || item.segment < 0 || item.segment >= voice.length || used.has(item.segment) ||
+        !(item.second === null || smallText(item.second)) || !seconds(item.gapBefore) || !seconds(item.gapAfter)) return false;
+    used.add(item.segment);
+  }
+  return {
+    voice: voice.map(({ start, end, text }) => ({ start, end, text })),
+    checks: checks.map(({ segment, second, gapBefore, gapAfter }) => ({ segment, second, gapBefore, gapAfter }))
+  };
+}
+
 export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }) {
   const audioKey = (analysis, index) => `${analysis._id}:${index}`;
   const audioOwner = analysis => ({ analysisId: analysis._id, ownerUserId: analysis.ownerUserId });
@@ -100,6 +122,9 @@ export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }
             (chunk.language !== '' && !/^[a-z]{2,3}$/.test(chunk.language || ''))) ||
           inputs.reduce((length, chunk) => length + chunk.text.length, 0) > 140_000) return 422;
 
+      const readings = new Map(inputs.map(chunk => [chunk.index, timedReadings(chunk)]));
+      if ([...readings.values()].includes(false)) return 422;
+
       // A repeated POST with the same lease cannot start another Luna request.
       const active = await analyses.updateOne({ ...query, 'localProcessing.analyzing': false }, { $set: {
         'localProcessing.analyzing': true, 'localProcessing.leaseUntil': new Date(now() + 5 * 60 * 1000)
@@ -108,8 +133,11 @@ export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }
       const chunks = job.chunks.map(chunk => {
         const input = inputs.find(item => item.index === chunk.index);
         if (!input) return chunk;
-        return { ...chunk, status: 'transcribed', text: input.text.trim(), languages: input.language ? [input.language] : [],
-          transcribedAt: new Date(now()), error: '' };
+        // Older workers send text only; their figures are saved as before, marked as unchecked.
+        const { voice, checks } = readings.get(chunk.index) || {};
+        const { voice: oldVoice, checks: oldChecks, ...base } = chunk;
+        return { ...base, status: 'transcribed', text: input.text.trim(), languages: input.language ? [input.language] : [],
+          transcribedAt: new Date(now()), error: '', ...(voice && { voice, checks }) };
       });
       let completion;
       try {
