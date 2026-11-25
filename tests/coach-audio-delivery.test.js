@@ -195,6 +195,38 @@ test('actual client sync recovers lost upload and report responses, clears pendi
   assert.deepEqual(counts, { transcriptions: 2, reports: 1 });
 }));
 
+test('queued local processing keeps the original and checks for a completed report without reuploading', async () => {
+  const client = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
+  const syncSource = client.slice(client.indexOf('async function syncTecOfflineRecordingUnlocked'), client.indexOf('async function syncTecOfflineRecordings()'));
+  let row = { localId: 'local', serverSessionId: 'server', ownerEmail: 'test@example.invalid', consentConfirmed: true, status: 'ready' };
+  const chunks = [{ key: 'local:0000', index: 0, blob: { size: 80 } }];
+  let uploads = 0, status = 'queued_local';
+  const events = [];
+  const sync = vm.runInNewContext(`(${syncSource.trim()})`, {
+    navigator: { onLine: true }, tecActiveRecordingIds: new Set(), CustomEvent,
+    window: { dispatchEvent: event => events.push(event.detail) },
+    tecOfflineGet: async () => row, getTecCachedViewer: async () => ({ user: { email: 'test@example.invalid' } }),
+    getTecAudioTail: async () => [], getTecOfflineAudioChunks: async () => [...chunks],
+    saveTecOfflineRecording: async item => (row = item), uploadTecStoredAudioChunk: async () => { uploads++; },
+    apiRequest: async path => {
+      assert.equal(path, `/api/coach/demo-analyses/server${row.status === 'syncing' ? '/complete' : ''}`);
+      return { analysis: { id: 'server', status, ...(status === 'completed' ? { report: { title: 'Demo ficticia' } } : {}) } };
+    },
+    tecOfflineDelete: async store => { if (store === 'recordings') row = null; if (store === 'audioChunks') chunks.pop(); }
+  });
+  assert.equal((await sync('local')).status, 'queued_local');
+  assert.equal(row.status, 'queued-local');
+  await sync('local');
+  assert.equal(chunks.length, 1);
+  assert.equal(uploads, 1);
+  assert.equal(events.length, 0);
+  status = 'completed';
+  assert.equal((await sync('local')).status, 'completed');
+  assert.equal(chunks.length, 0);
+  assert.equal(row, null);
+  assert.equal(events[0].analysis.report.title, 'Demo ficticia');
+});
+
 test('the production empty-transcript case finishes in review instead of permanent HTTP 400 retries', () => harness(async ({ create, chunk, request, counts, records }) => {
   const id = await create();
   await chunk(id, 0);

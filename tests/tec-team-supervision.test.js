@@ -55,6 +55,7 @@ async function httpFixture(t){
   esCoachTeamManager:canManageTeamSeats,resolverCoachOwnerUserId:workspace,CoachUser:u,
   CoachDistributorProfile:model([]),CoachLeadInbox:model(structuredClone(records)),CoachProgramSheet:model(structuredClone(records)),
   CoachHealthSurvey:model(structuredClone(records)),CoachRecruitmentApplication:model(structuredClone(records)),CoachDemoAnalysis:model(analyses),
+  localDemoQueue:{expire:async()=>{}},
   responderCoachError:(res,status,error)=>res.status(status).json({error}),
   limpiarCoachTeamSeat:(user,profile,counts)=>({...user,id:String(user._id),counts,chef:{privateCode:'not-needed'},contactShare:{code:'not-needed'}}),
   construirCoachTeamSummary:seats=>({totalSeats:seats.length}),limpiarCoachInboxLead:x=>x,limpiarCoachProgramSheet:x=>x,

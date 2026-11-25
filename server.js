@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { demoCloseFactSchema, demoCloseInstructions, verifiedDemoCloseFacts } from "./src/coach-demo-close-facts.js";
+import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorker } from "./src/coach-demo-local.js";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
 import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
@@ -140,6 +141,7 @@ const COACH_DEMO_ANALYSIS_MODEL = String(process.env.COACH_DEMO_ANALYSIS_MODEL |
 const COACH_DEMO_MAX_SECONDS = 90 * 60;
 const COACH_DEMO_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
 const COACH_DEMO_MAX_CHUNKS = 30;
+const COACH_DEMO_LOCAL_EMAILS = String(process.env.COACH_DEMO_LOCAL_EMAILS || "").toLowerCase().split(",").map(email => email.trim()).filter(Boolean);
 
 const conversaciones = {};
 const estadosConversacion = {};
@@ -1318,6 +1320,7 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
   transcript: String,
   report: { type: mongoose.Schema.Types.Mixed, default: null },
   transcriptionModel: String,
+  localProcessing: mongoose.Schema.Types.Mixed,
   analysisModel: String,
   error: String,
   analyzedAt: Date,
@@ -1326,6 +1329,7 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
 });
 
 coachDemoAnalysisSchema.index({ ownerUserId: 1, createdAt: -1 });
+coachDemoAnalysisSchema.index({ status: 1, "localProcessing.queuedAt": 1 });
 coachDemoAnalysisSchema.index({ownerUserId:1,closeVisitId:1,startedAt:-1},{partialFilterExpression:{closeVisitId:{$type:"string"}}});
 coachDemoAnalysisSchema.index(
   { ownerUserId: 1, clientRecordingId: 1 },
@@ -12901,6 +12905,7 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
     },
     body: JSON.stringify({
       model: COACH_DEMO_ANALYSIS_MODEL,
+      store: false,
       input: [
         {
           role: "system",
@@ -31884,6 +31889,10 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
   }
 });
 
+const localDemoWorkerKey = String(process.env.COACH_DEMO_LOCAL_WORKER_KEY || '').trim();
+const localDemoQueue = createLocalDemoQueue({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), finish: completeCoachDemoReport });
+registerLocalDemoWorker(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', queue: localDemoQueue });
+
 app.get("/api/coach/demo-analyses", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -31893,6 +31902,7 @@ app.get("/api/coach/demo-analyses", async (req, res) => {
 
   try {
     const accessibleUserIds = await listarCoachDemoAnalysisUserIds(auth.user);
+    await localDemoQueue.expire({ ownerUserId: auth.user._id });
     const docs = await CoachDemoAnalysis.find({ ownerUserId: { $in: accessibleUserIds } })
       .sort({ createdAt: -1 })
       .limit(12)
@@ -31922,6 +31932,7 @@ app.get("/api/coach/demo-analyses/:id", async (req, res) => {
 
   try {
     const accessibleUserIds = await listarCoachDemoAnalysisUserIds(auth.user);
+    await localDemoQueue.expire({ _id: req.params.id, ownerUserId: auth.user._id });
     const doc = await CoachDemoAnalysis.findOne({
       _id: req.params.id,
       ownerUserId: { $in: accessibleUserIds }
@@ -31952,6 +31963,45 @@ async function withCoachDemoMutation(key, action) {
   coachDemoMutations.set(key, task);
   try { return await task; }
   finally { if (coachDemoMutations.get(key) === task) coachDemoMutations.delete(key); }
+}
+
+async function completeCoachDemoReport(doc, { partial, included, rawGaps, knownOutcome }, beforeAnalyze = async () => {}) {
+  const successfulChunks = doc.chunks
+    .filter(chunk => chunk?.status === 'transcribed' && (!partial || included.includes(chunk.index)) && String(chunk.text || '').trim())
+    .sort((a, b) => a.index - b.index);
+  const durationSeconds = duracionSegmentosCoachDemo(doc.chunks, partial ? included : null) ?? doc.durationSeconds;
+  const common = { durationSeconds, knownOutcome, stoppedAt: doc.stoppedAt || new Date() };
+  let transcript = successfulChunks.map(chunk => {
+    const before = doc.chunks.filter(other => other.index < chunk.index)
+      .reduce((total, other) => total + Math.max(0, Number(other.durationSeconds || 0)), 0);
+    const start = Math.floor(before / 60);
+    const end = Math.max(start + 1, Math.ceil((before + Number(chunk.durationSeconds || 0)) / 60));
+    return `[Segmento ${chunk.index + 1}; minutos aproximados ${start}-${end}]\n${chunk.text.trim()}`;
+  }).join('\n\n');
+
+  if (successfulChunks.map(chunk => chunk.text.trim()).join(' ').length < 40) return {
+    ...common, status: 'needs_audio', transcript, updatedAt: new Date(),
+    error: 'No se obtuvo suficiente diálogo para analizar. Revisa la copia de audio y vuelve a transcribirla, o inicia una nueva grabación.'
+  };
+
+  const partialNotice = 'REPORTE PARCIAL: hubo una interrupcion del audio. Solo se evaluan los segmentos disponibles; las partes ausentes no permiten concluir que el representante omitio pasos o no cerro la venta.';
+  if (partial) transcript = `${partialNotice}\nSegmentos incluidos: ${included.map(index => index + 1).join(', ')}.\n\n${transcript}`;
+  const gapNotice = rawGaps.map(gap => `Pausa sin audio: desde el minuto ${(gap.offsetSeconds / 60).toFixed(1)}, durante ${Math.round(gap.durationSeconds)} segundos.`).join('\n');
+  if (gapNotice) transcript = `${gapNotice}\nLos minutos de los segmentos son aproximados y no incluyen necesariamente estos intervalos.\n\n${transcript}`;
+  await beforeAnalyze({ ...common, transcript, status: 'processing', error: '', updatedAt: new Date() });
+  const report = await analizarCoachDemoTranscript({ transcript, knownOutcome, closeSegments: doc.closeVisitId ? successfulChunks : null });
+  if (partial) {
+    report.title = `[Parcial] ${report.title || 'Analisis de demostracion'}`;
+    report.summary = `${partialNotice}\n\n${report.summary || ''}`;
+    report.partial = true;
+    report.includedChunkIndexes = included;
+  }
+  if (gapNotice) {
+    report.summary = `${gapNotice}\n\n${report.summary || ''}`;
+    report.recordingGaps = rawGaps;
+  }
+  return { ...common, transcript, status: 'completed', report, error: '',
+    analysisModel: COACH_DEMO_ANALYSIS_MODEL, analyzedAt: new Date(), updatedAt: new Date() };
 }
 
 function duracionSegmentosCoachDemo(chunks, included) {
@@ -32000,6 +32050,11 @@ app.post("/api/coach/demo-analyses", async (req, res) => {
         !await CoachCrmRecord.exists(construirCoachCrmWorkspaceQuery(auth.user,{ _id:closeCrmId })))) {
       return responderCoachError(res, 409, "Revisa el cliente activo antes de asociar la grabación.");
     }
+    const useLocal = req.body?.localQueueVersion === 1 && !!closeVisitId && usuarioPuedeVerTorreControl(auth.user) &&
+      COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(auth.user.email));
+    if (useLocal && localDemoWorkerKey.length < 32) {
+      return responderCoachError(res, 503, "La cola de la Mac está en pausa. El audio se guarda en tu dispositivo.");
+    }
     const doc = await CoachDemoAnalysis.create({
       ...(closeVisitId ? {closeVisitId,closeCrmId,closeVersion:0} : {}),
       ownerUserId: auth.user._id,
@@ -32013,7 +32068,7 @@ app.post("/api/coach/demo-analyses", async (req, res) => {
       durationSeconds: 0,
       chunkCount: 0,
       chunks: [],
-      transcriptionModel: COACH_DEMO_TRANSCRIPTION_MODEL,
+      transcriptionModel: useLocal ? "whisper-local" : COACH_DEMO_TRANSCRIPTION_MODEL,
       analysisModel: COACH_DEMO_ANALYSIS_MODEL,
       updatedAt: now,
       createdAt: now
@@ -32048,7 +32103,7 @@ app.post(
     const mimeType = String(req.headers["content-type"] || "audio/webm").split(";")[0].toLowerCase();
     const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
 
-    if (!Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS) {
+    if (!Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS || !Number.isFinite(durationSeconds)) {
       return responderCoachError(res, 400, "El numero de fragmento no es valido.");
     }
 
@@ -32083,7 +32138,7 @@ app.post(
       const retryId = retryRequested && doc.status === "needs_audio"
         ? clientRetryId || "legacy:" + (doc.stoppedAt?.getTime() || 0) : "";
       const retranscribe = retryId && previousChunk?.lastAudioRetryId !== retryId;
-      if (previousChunk?.status === "transcribed" && !retranscribe) {
+      if ((previousChunk?.status === "transcribed" || (previousChunk?.status === 'staged' && doc.status === 'queued_local')) && !retranscribe) {
         return res.json({
           ok: true,
           duplicate: true,
@@ -32113,6 +32168,19 @@ app.post(
       }
 
       const now = new Date();
+      if (doc.transcriptionModel === 'whisper-local') {
+        const staged = await localDemoQueue.stage(doc, index, buffer, previousChunk?.status === 'staged' && !retranscribe);
+        if (!staged && previousChunk) return res.json({ ok: true, duplicate: true,
+          chunk: { index, durationSeconds: previousChunk.durationSeconds, status: 'staged' } });
+        doc.chunks = doc.chunks.filter(chunk => chunk.index !== index);
+        doc.chunks.push({ index, durationSeconds, mimeType, sizeBytes: buffer.length, status: 'staged', uploadedAt: now,
+          ...(retryId ? { lastAudioRetryId: retryId } : {}) });
+        doc.durationSeconds = otherDuration + durationSeconds;
+        doc.chunkCount = doc.chunks.length;
+        doc.updatedAt = now;
+        await doc.save();
+        return res.json({ ok: true, chunk: { index, durationSeconds, status: 'staged' } });
+      }
       try {
         const transcription = await transcribirCoachDemoChunk(buffer, { index, mimeType });
         doc.chunks = doc.chunks.filter(chunk => Number(chunk.index) !== index);
@@ -32209,92 +32277,54 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
         new Set(included).size !== included.length || included.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS))) {
       return responderCoachError(res, 400, "Selecciona los segmentos validos para el reporte parcial.");
     }
+    const isLocal = doc.transcriptionModel === "whisper-local";
     const expected = partial ? included : req.body?.expectedChunkIndexes;
-    if (expected !== undefined) {
-      if (!Array.isArray(expected) || !expected.length || expected.length > COACH_DEMO_MAX_CHUNKS ||
-          expected.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS)) {
-        return responderCoachError(res, 400, "La lista de segmentos de la grabacion no es valida.");
-      }
-      if (expected.some(index => !doc.chunks.some(chunk => Number(chunk.index) === index && chunk.status === "transcribed"))) {
-        return responderCoachError(res, 409, "Faltan segmentos por confirmar. Conservamos el audio pendiente para completar la demostracion.");
-      }
+    if (expected !== undefined && (!Array.isArray(expected) || !expected.length || expected.length > COACH_DEMO_MAX_CHUNKS ||
+        new Set(expected).size !== expected.length ||
+        expected.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS))) {
+      return responderCoachError(res, 400, "La lista de segmentos de la grabacion no es valida.");
     }
-
     if (doc.status === "completed" && doc.report) {
       return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true, viewerUserId: auth.user._id }) });
     }
-
-    const successfulChunks = doc.chunks
-      .filter(chunk => chunk?.status === "transcribed" && (!partial || included.includes(Number(chunk.index))) && String(chunk?.text || "").trim())
-      .sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
-
-    if (!doc.chunks.length || (!partial && doc.chunks.some(chunk => chunk.status !== "transcribed"))) {
-      return responderCoachError(res, 409, "Todavia hay segmentos pendientes de transcribir. La grabacion se conserva para reintentar.");
+    if (isLocal && doc.status === 'queued_local') {
+      return res.status(202).json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true, viewerUserId: auth.user._id }) });
     }
 
-    const recordedSeconds = duracionSegmentosCoachDemo(doc.chunks, partial ? included : null);
-    if (recordedSeconds !== null) doc.durationSeconds = recordedSeconds;
-    doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
-    let transcript = successfulChunks
-      .map(chunk => {
-        const precedingSeconds = doc.chunks.filter(other => Number(other.index) < Number(chunk.index))
-          .reduce((total, other) => total + Math.max(0, Number(other.durationSeconds || 0)), 0);
-        const startMinute = Math.floor(precedingSeconds / 60);
-        const endMinute = Math.max(startMinute + 1, Math.ceil((precedingSeconds + Number(chunk.durationSeconds || 0)) / 60));
-        return `[Segmento ${Number(chunk.index) + 1}; minutos aproximados ${startMinute}-${endMinute}]\n${String(chunk.text || "").trim()}`;
-      })
-      .join("\n\n")
-      .trim();
-
-    const dialogue = successfulChunks.map(chunk => String(chunk.text || "").trim()).join(" ");
-    if (dialogue.length < 40) {
-      doc.status = "needs_audio";
-      doc.transcript = transcript;
-      doc.stoppedAt = new Date();
-      doc.error = "No se obtuvo suficiente dialogo para analizar. Revisa la copia de audio y vuelve a transcribirla, o inicia una nueva grabacion.";
-      doc.updatedAt = new Date();
-      await doc.save();
-      // Older open clients assume every 200 completion means a report exists.
-      if (req.body?.audioReviewVersion !== 1) return responderCoachError(res, 422, doc.error);
+    const chunks = partial ? doc.chunks.filter(chunk => included.includes(chunk.index)) : doc.chunks;
+    if (isLocal && doc.status === 'needs_audio' && !chunks.some(chunk => chunk.status === 'staged')) {
       return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true, viewerUserId: auth.user._id }) });
     }
-
-    const partialNotice = "REPORTE PARCIAL: hubo una interrupcion del audio. Solo se evaluan los segmentos disponibles; las partes ausentes no permiten concluir que el representante omitio pasos o no cerro la venta.";
-    if (partial) transcript = `${partialNotice}\nSegmentos incluidos: ${included.map(index => index + 1).join(", ")}.\n\n${transcript}`;
-    const gapNotice = rawGaps.map(gap => `Pausa sin audio: desde el minuto ${(gap.offsetSeconds / 60).toFixed(1)}, durante ${Math.round(gap.durationSeconds)} segundos.`).join("\n");
-    if (gapNotice) transcript = `${gapNotice}\nLos minutos de los segmentos son aproximados y no incluyen necesariamente estos intervalos.\n\n${transcript}`;
-    doc.status = "processing";
-    doc.stoppedAt = new Date();
-    doc.transcript = transcript;
-    doc.error = "";
-    doc.updatedAt = new Date();
-    await doc.save();
-
-    const report = await analizarCoachDemoTranscript({
-      transcript,
-      knownOutcome: doc.knownOutcome,
-      closeSegments: doc.closeVisitId ? successfulChunks : null
-    });
-
-    if (partial) {
-      report.title = `[Parcial] ${report.title || "Analisis de demostracion"}`;
-      report.summary = `${partialNotice}\n\n${report.summary || ""}`;
-      report.partial = true;
-      report.includedChunkIndexes = included;
+    const accepted = isLocal ? 'staged' : 'transcribed';
+    if (!chunks.length || chunks.some(chunk => chunk.status !== accepted) ||
+        expected?.some(index => !chunks.some(chunk => chunk.index === index))) {
+      return responderCoachError(res, 409, "Faltan segmentos por confirmar. Conservamos el audio pendiente para completar la demostracion.");
     }
-    if (gapNotice) { report.summary = `${gapNotice}\n\n${report.summary || ""}`; report.recordingGaps = rawGaps; }
 
-    doc.status = "completed";
-    doc.report = report;
-    doc.analysisModel = COACH_DEMO_ANALYSIS_MODEL;
-    doc.analyzedAt = new Date();
-    doc.updatedAt = new Date();
+    const knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
+    if (isLocal) {
+      const indexes = chunks.map(chunk => chunk.index).sort((a, b) => a - b);
+      const gaps = rawGaps.map(({ offsetSeconds, durationSeconds }) => ({ offsetSeconds, durationSeconds }));
+      if (!await localDemoQueue.enqueue(doc, { indexes, partial, gaps, knownOutcome })) {
+        return responderCoachError(res, 409, "El audio anterior caducó. Vuelve a enviarlo desde este dispositivo.");
+      }
+      return res.status(202).json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true, viewerUserId: auth.user._id }) });
+    }
+
+    const completion = await completeCoachDemoReport(doc, { partial, included, rawGaps, knownOutcome }, async working => {
+      Object.assign(doc, working);
+      await doc.save();
+    });
+    Object.assign(doc, completion);
     await doc.save();
+    if (completion.status === "needs_audio" && req.body?.audioReviewVersion !== 1) {
+      return responderCoachError(res, 422, doc.error);
+    }
 
     res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true, viewerUserId: auth.user._id }) });
   } catch (error) {
     console.error("Error completando analisis de demostracion:", error.message);
-    if (doc?._id) {
+    if (doc?._id && doc.status !== 'queued_local') {
       doc.status = "error";
       doc.error = truncarTextoPrompt(error.message || "No pude generar el analisis.", 400);
       doc.updatedAt = new Date();
@@ -32321,6 +32351,7 @@ app.delete("/api/coach/demo-analyses/:id", async (req, res) => {
       _id: req.params.id,
       ownerUserId: auth.user._id
     });
+    if (deleted?.transcriptionModel === "whisper-local") await localDemoQueue.remove(deleted).catch(() => null);
     res.json({ deleted: Boolean(deleted) });
   } catch (error) {
     console.error("Error eliminando analisis de demostracion:", error.message);
