@@ -44,7 +44,8 @@ function closeDoubts(review) {
 
 function doubtQuestion({ field, label, text, heard }) {
   const other = heard.length && !heard.every(value => text.includes(value)) ? ' (la otra lectura oyó ' + heard.join(' o ') + ')' : '';
-  if (field === 'followUp') return 'No me quedó clara la fecha u hora del seguimiento' + (label ? ' («' + label + '»)' : '') + '. ¿Para cuándo quedó?';
+  if (field === 'followUp') return text ? 'Del seguimiento' + (label ? ' «' + label + '»' : '') + ': ' + text
+    : 'No me quedó clara la fecha u hora del seguimiento' + (label ? ' («' + label + '»)' : '') + '. ¿Para cuándo quedó?';
   if (field === 'calcPrice' || field === 'calcDown' || field === 'quotedMonthly') {
     const what = { calcPrice: 'el precio', calcDown: 'el anticipo', quotedMonthly: 'la mensualidad' }[field];
     return 'Del ' + (label || 'producto') + ' oí «' + text + '», pero pudo quedar cortado' + other + '. ¿Cuál fue ' + what + '?';

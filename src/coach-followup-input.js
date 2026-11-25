@@ -122,6 +122,13 @@ export function readFollowup(text, previous = {}, {timeZone, now=Date.now()} = {
     : t;
   const day = today == null ? null : parseDate(destination || dateText,today);
   if (Number.isNaN(day)) return result('Esa fecha no existe. ¿Qué fecha quieres usar?');
+  // «Mañana viernes» when tomorrow is Thursday: two different days, so ask instead of picking one.
+  const named = day == null ? -1 : weekdays.findIndex(w => new RegExp('\\b'+w+'\\b').test((destination || dateText).replace(/(?:de|por) la manana/g,'')));
+  if (named >= 0 && new Date(day).getUTCDay() !== named) {
+    const label = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const date = new Intl.DateTimeFormat('es-US',{timeZone:'UTC',day:'numeric',month:'long'}).format(day);
+    return result('Dijiste ' + label[named] + ', pero esa fecha cae en ' + label[new Date(day).getUTCDay()] + ' ' + date + '. ¿Qué día quieres?');
+  }
   if (day != null) state.day = day;
   const timeText = t.replace(/^\d{4}-\d{2}-\d{2}\b|^\d{1,2}[/-]\d{1,2}[/-]\d{4}\b|^\d{1,2} de [a-z]+\b/,'');
   const parsed = previous.kind === 'availability' ? null : parseClock(timeText);

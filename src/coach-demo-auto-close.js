@@ -17,11 +17,11 @@ export const autoDemoCloseSchema = strict({
 });
 export const autoDemoCloseInstructions = [
   'En autoClose prepara candidatos a guardado automático. Transcribe literalmente y deja fuera cualquier dato dudoso, incompleto, contradictorio o solo sugerido.',
-  'Cada referido requiere nombre completo y teléfono completo dictado para ESE referido del 4 en 14. Ambos deben figurar juntos, con el contexto explícito de referencia, en la misma cita literal continua. Excluye al anfitrión, al vendedor, nombres hipotéticos y ejemplos. Devuelve hasta 11.',
+  'Cada referido requiere nombre completo y teléfono completo dictado para ESE referido del 4 en 14. Ambos deben figurar juntos, con el contexto explícito de referencia (por ejemplo «referido», «te recomiendo», «anota a…», «apunta a…» o «su número es…»), en la misma cita literal continua. Excluye al anfitrión, al vendedor, nombres hipotéticos y ejemplos. Devuelve hasta 11.',
   'En incompleteReferrals cita las referencias de esta visita que sí mencionaron pero quedaron incompletas o dudosas. Incluye una sola cita por referido y no repitas los que ya devolviste completos.',
   'En notes conserva TODAS las observaciones claras de ESE referido, una por elemento: estado civil (casado, soltero), vivienda (renta, es dueño), trabajo y horario, cuándo lo pueden llamar, la relación con el anfitrión, intereses u otras notas de contacto. Si una frase dice varias cosas («es soltera, renta y trabaja por la mañana») devuelve un elemento por cada una, con el mismo quote. En text copia el fragmento literal mínimo, incluyendo el no cuando corresponda. En quote copia la frase literal continua; puede ser la frase que sigue inmediatamente a la mención del referido aunque no repita su nombre, siempre que nadie más haya sido mencionado entre ambas. No guardes contraseñas, documentos, diagnósticos ni datos de cuentas en notas de referidos.',
   'En products incluye únicamente los productos por los que el cliente mostró interés. En quote cita literalmente ese interés con el nombre del producto. En prices copia los precios, anticipos o cuotas que discutieron para ese mismo producto, con monto y moneda o periodo si se dijo. Cada quote de precio debe identificar el producto y respaldar la cifra. Una cotización no prueba una compra.',
-  'En followUp devuelve únicamente un seguimiento aceptado expresamente: una cita literal continua con el acuerdo y una fecha y hora inequívocas. En when copia la frase exacta con el día y la hora. No conviertas fechas ni inventes horas. Si luego cambiaron o retiraron el acuerdo, usa el último acuerdo claro o devuelve null.',
+  'En followUp devuelve únicamente un seguimiento aceptado expresamente (por ejemplo «quedamos», «de acuerdo», «agéndame», «nos vemos» o un «sí» a la propuesta): una cita literal continua con el acuerdo, el día y la hora. En when copia la frase exacta con el día y la hora, aunque diga a la vez «mañana» y un día de la semana; TEC comprueba si coinciden. No conviertas fechas ni inventes horas. Si luego cambiaron o retiraron el acuerdo, usa el último acuerdo claro o devuelve null.',
   autoSurveyInstructions,
   'Las citas de evidencia pertenecen al segmento que indicas. Mantén nombres y teléfonos de referidos únicamente en autoClose. El resumen de entrenamiento nunca los incluye.'
 ].join('\n');
@@ -29,9 +29,10 @@ export const autoDemoCloseInstructions = [
 const fold = text => String(text || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const digest = input => createHash('sha256').update(JSON.stringify(input)).digest('hex').slice(0, 32);
 const personName = /^[\p{L}][\p{L}\p{M} .’'\-]{1,110}$/u;
-const definiteReferral = /\b(?:referid[oa]s?|referencias?|te recomiendo|te refiero|te doy (?:el (?:contacto|numero)|una referencia))\b/;
+// Dictating someone for the 4 en 14 («anota a…», «apunta…», «su número es…») is a referral as clear as saying the word.
+const definiteReferral = /\b(?:referid[oa]s?|referencias?|te recomiendo|te refiero|te doy (?:el (?:contacto|numero)|una referencia)|anot(?:a|as|ale|alo|ala|e|en|ame)|apunt(?:a|as|ale|alo|ala|e|en|ame)|(?:4|cuatro) en (?:14|catorce)|su (?:numero|telefono|celular|cel)(?: es)?)\b/;
 const uncertainty = /\b(?:creo|quizas?|tal vez|a lo mejor|no estoy segur[oa]|no recuerdo|por confirmar|por ejemplo|si (?:puede|pudiera|se puede|estoy|esta|me da|me queda|te queda)|todavia no|luego te confirmo)\b/;
-const agreement = /\b(?:de acuerdo|acordamos|quedamos|queda (?:confirmado|confirmada|para)|si[, ]+(?:puedo|claro|esta bien|el |a las? |me queda|llamame|pasas?))\b/;
+const agreement = /\b(?:de acuerdo|acordamos|quedamos|queda (?:confirmado|confirmada|para)|si[, ]+(?:puedo|claro|esta bien|el |a las? |me queda|llamame|pasas?)|agend\w+|apunt\w+|nos vemos|te (?:veo|espero)|l[oa]s? (?:veo|espero)|me parece bien|esta bien|perfecto)\b/;
 const followUpAction = /\b(?:llam\w+|seguimiento|cita|demo|visit\w*|marc\w+|nos vemos|regres\w+|vuelv\w+|pasas|venir|vienes|escrib\w+)\b/;
 const changesOrAlternatives = /\b(?:mejor (?:el |el dia |a las? |manana)|pero (?:a las? |no |solo |hasta |el )|en vez de|(?:o|u) (?:el |la |a las? |manana|pasado|lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d)|cance(?:lo|la|lar|lamos|lado)|no (?:llam\w+|voy a poder|puedo|confirm\w+|agend\w+|qued\w+|queda)|no me (?:llam\w+|queda)|no (?:te|me) (?:refier\w+|recomiend\w+))\b/;
 const visiblePhones = /(?<!\d)(?:\+\d{1,3}[\s.-]*)?(?:\(\d{3}\)|\d{3})[\s.-]*\d{3}[\s.-]*\d{4}(?!\d)|(?<!\d)\+\d(?:[ .-]?\d){7,14}(?!\d)/g;
@@ -260,8 +261,10 @@ function whenFor(analysis, candidate, now) {
   const phrase = fold(candidate.when);
   if (/\b(?:antes de|despues de|entre|alrededor|cerca de|aproximadamente|la semana que viene|el otro|o|u)\b/.test(phrase)) return null;
   const parsed = readFollowup(candidate.when, {}, { timeZone: zone, now: anchor });
+  if (parsed.question) return { question: parsed.question };
   const result = followupTime(parsed.state, now);
-  if (parsed.question || result.question || Date.parse(result.start) - now > 90 * 86400_000) return null;
+  if (result.question) return { question: result.question };
+  if (Date.parse(result.start) - now > 90 * 86400_000) return null;
   return { ...result, timeZone: parsed.state.timeZone, reminderMinutes: parsed.state.reminderMinutes === undefined ? 10 : parsed.state.reminderMinutes };
 }
 
@@ -269,7 +272,7 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
   async function saveCalendar(analysis, facts, contact, partial) {
     if (!facts.followUp) return { state: 'pending' };
     const when = !partial && whenFor(analysis, facts.followUp, now());
-    if (!when) return { state: 'time' };
+    if (!when || when.question) return { state: 'time', ...(when?.question && { question: when.question }) };
     if (!await active(analysis)) return { state: 'stopped' };
     const owner = analysis.ownerUserId;
     const connection = await calendar.getConnection(owner);
@@ -317,6 +320,12 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
       facts.followUp || followUpMentioned ? saveCalendar(analysis, facts, contact, partial) : null,
       saveReferrals(analysis, facts, contact)
     ]);
+    // A date the recording left in doubt («mañana viernes» when tomorrow is Thursday) is asked by Jorge, not guessed.
+    if (facts.followUp && appointment.status === 'fulfilled' && appointment.value?.state === 'time') {
+      const label = facts.followUp.when, reason = appointment.value.question || '';
+      facts.review = [...(facts.review || []).filter(item => item.field !== 'followUp'),
+        { field:'followUp', label, state:'preguntar', reason:'Fecha u hora: ' + (reason || 'no se pudo leer con certeza.'), ...(reason && { text:reason }) }];
+    }
     const referralState = referrals.status === 'fulfilled' ? referrals.value : { state:'error', saved:0,
       pending:facts.pendingReferrals + facts.referrals.length };
     if (referralState.state !== 'checked') {

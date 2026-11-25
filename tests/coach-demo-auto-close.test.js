@@ -130,3 +130,52 @@ test('una hora sin periodo, un cierre truncado y un referido sin anfitrión se d
   assert.equal(partial.appointment.state, 'time');
   assert.equal(partial.referrals.saved, 1);
 });
+
+test('un referido dictado para el 4 en 14 sin decir «referido» se guarda y un «agéndame» o «nos vemos» cuenta como acuerdo', () => {
+  const said = [
+    ['Anota a mi prima Juana Pérez, el número es 773-555-0145', 'Juana Pérez', '7735550145'],
+    ['Para el 4 en 14, Pedro Ramírez, 773 555 0156, es mi compadre', 'Pedro Ramírez', '7735550156'],
+    ['Mi hermana Rosa Gil, su teléfono es 773-555-0178', 'Rosa Gil', '7735550178']
+  ];
+  for (const [quote, fullName, phone] of said) {
+    const saved = verifyAutoDemoClose({ referrals:[{ fullName, phone, segment:1, quote, notes:[] }] }, [{ index:0, text:quote }]);
+    assert.deepEqual(saved.referrals, [{ fullName, phone }], quote);
+  }
+  // A name without a phone, or just mentioned, is still not saved.
+  const mentioned = 'Mi prima Juana Pérez también cocina mucho';
+  assert.deepEqual(verifyAutoDemoClose({ referrals:[{ fullName:'Juana Pérez', phone:'7735550145', segment:1, quote:mentioned }] },
+    [{ index:0, text:mentioned }]).referrals, []);
+  for (const quote of ['Sí, agéndame la cita mañana viernes a las 6pm', 'Ok, nos vemos mañana viernes a las 6 de la tarde para la demo']) {
+    const when = quote.match(/mañana viernes a las (?:6pm|6 de la tarde)/)[0];
+    assert.deepEqual(verifyAutoDemoClose({ followUp:{ when, segment:1, quote } }, [{ index:0, text:quote }]).followUp, { when, segment:1 }, quote);
+  }
+  const doubtful = 'Tal vez nos vemos mañana a las 6 de la tarde';
+  assert.equal(verifyAutoDemoClose({ followUp:{ when:'mañana a las 6 de la tarde', segment:1, quote:doubtful } }, [{ index:0, text:doubtful }]).followUp, null);
+});
+
+test('«mañana viernes» cuando mañana es jueves no se agenda: Jorge pregunta el día', async () => {
+  const { run, analysis, writes, contact } = fixture();
+  // The demo was recorded on Monday 2026-11-23 in Chicago, so «mañana» is Tuesday.
+  const report = { ...facts, review:[{ field:'followUp', label:'mañana viernes a las 6 de la tarde', state:'guardar' }],
+    followUp:{ ...facts.followUp, when:'mañana viernes a las 6 de la tarde' } };
+  const result = await run(analysis, report, contact);
+  assert.equal(result.appointment.state, 'time');
+  assert.match(result.appointment.question, /Dijiste viernes, pero esa fecha cae en martes 24 de noviembre/);
+  assert.equal(writes.filter(([provider]) => provider === 'calendar').length, 0);
+  assert.deepEqual(report.review.map(({ field, state }) => [field, state]), [['followUp', 'preguntar']]);
+  assert.match(report.review[0].text, /¿Qué día quieres\?/);
+  assert.equal(result.referrals.saved, 1);
+});
+
+test('Jorge pregunta el día exacto que no cuadró y el chat de citas tampoco adivina', async () => {
+  const { demoCloseQuestions } = await import('../src/coach-demo-close.js');
+  const { readFollowup } = await import('../src/coach-followup-input.js');
+  const reason = 'Dijiste viernes, pero esa fecha cae en jueves 26 de noviembre. ¿Qué día quieres?';
+  const questions = demoCloseQuestions({ fields:{}, confirmed:{}, sellerFields:[], declaredOutcome:'follow_up',
+    doubts:[{ field:'followUp', label:'mañana viernes a las 6 de la tarde', text:reason, heard:[] }] });
+  assert.deepEqual(questions, [{ field:'followUp', question:'Del seguimiento «mañana viernes a las 6 de la tarde»: ' + reason }]);
+  const wednesday = { timeZone:'America/Chicago', now:Date.parse('2026-11-25T20:00:00Z') };
+  assert.equal(readFollowup('mañana viernes a las 6 de la tarde', {}, wednesday).question, reason);
+  assert.equal(readFollowup('mañana jueves a las 6 de la tarde', {}, wednesday).question, undefined);
+  assert.equal(readFollowup('el viernes a las 8 de la mañana', {}, wednesday).question, undefined);
+});
