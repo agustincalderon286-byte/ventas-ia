@@ -2,6 +2,7 @@
 """Process one TEC demonstration at a time with a local MLX Whisper model."""
 
 import argparse
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+
+RNNOISE_LIBRARY = Path('/Volumes/Modelos_IA/Voz_IA/RNNoise/librnnoise.dylib')
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -69,32 +73,121 @@ class Queue:
         return True
 
 
-def local_transcriber(model, ffmpeg):
+def create_rnnoise_filter(path):
+    import numpy as np
+
+    library = ctypes.CDLL(os.fspath(path))
+    library.rnnoise_get_frame_size.argtypes = []
+    library.rnnoise_get_frame_size.restype = ctypes.c_int
+    library.rnnoise_create.argtypes = [ctypes.c_void_p]
+    library.rnnoise_create.restype = ctypes.c_void_p
+    library.rnnoise_destroy.argtypes = [ctypes.c_void_p]
+    library.rnnoise_destroy.restype = None
+    frame_pointer = np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS')
+    library.rnnoise_process_frame.argtypes = [ctypes.c_void_p, frame_pointer, frame_pointer]
+    library.rnnoise_process_frame.restype = ctypes.c_float
+    frame_size = library.rnnoise_get_frame_size()
+    if frame_size != 480:
+        raise ValueError('RNNoise requiere cuadros de 480 muestras a 48 kHz')
+
+    def reduce_noise(pcm):
+        original = np.frombuffer(pcm, dtype='<i2')
+        if not original.size:
+            return pcm
+        # Flush the overlap and lookahead so each chunk keeps its original duration.
+        delay = 2 * frame_size
+        padded_size = ((original.size + frame_size - 1) // frame_size) * frame_size + delay
+        source = np.zeros(padded_size, dtype=np.float32)
+        source[:original.size] = original
+        cleaned = np.empty_like(source)
+        state = library.rnnoise_create(None)
+        if not state:
+            raise RuntimeError('No se pudo iniciar RNNoise')
+        try:
+            for raw, filtered in zip(source.reshape(-1, frame_size), cleaned.reshape(-1, frame_size)):
+                library.rnnoise_process_frame(state, filtered, raw)
+        finally:
+            library.rnnoise_destroy(state)
+
+        mixed = cleaned[delay:delay + original.size]
+        if not np.isfinite(mixed).all():
+            raise ValueError('RNNoise devolvió muestras inválidas')
+        # Keep some original signal so quiet words and consonants remain audible.
+        mixed *= 0.6
+        mixed += source[:original.size] * 0.4
+        return np.clip(mixed, -32768, 32767).astype('<i2').tobytes()
+
+    return reduce_noise
+
+
+def decode_for_whisper(audio, ffmpeg, reduce_noise=None):
+    def pcm(args, sample_rate, source_bytes=None):
+        command = [ffmpeg, '-nostdin', '-v', 'error', *args, '-map', '0:a:0', '-vn',
+                   '-t', '365', '-ac', '1', '-ar', str(sample_rate), '-f', 's16le', 'pipe:1']
+        return subprocess.run(command, input=source_bytes, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              check=True, timeout=45).stdout
+
+    # MP4 from Safari can keep its index at the end and needs a seekable input.
+    with tempfile.NamedTemporaryFile(prefix='tec-demo-') as source:
+        source.write(audio)
+        source.flush()
+        args = ['-i', source.name]
+        if reduce_noise:
+            try:
+                cleaned = reduce_noise(pcm(args, 48000))
+                if cleaned:
+                    converted = pcm(['-f', 's16le', '-ar', '48000', '-ac', '1', '-i', 'pipe:0'], 16000, cleaned)
+                    if converted:
+                        return converted
+            except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
+                print(f'RNNoise omitido para este segmento ({type(error).__name__}).', file=sys.stderr, flush=True)
+        return pcm(args, 16000)
+
+
+def local_transcriber(model, ffmpeg, rnnoise=None):
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
     import numpy as np
     from mlx_whisper import transcribe
 
-    def process(audio):
-        # MP4 from Safari can keep the index at the end, so the decoder must be able to seek.
-        with tempfile.NamedTemporaryFile(prefix='tec-demo-') as source:
-            source.write(audio)
-            source.flush()
-            command = [ffmpeg, '-nostdin', '-v', 'error', '-i', source.name, '-map', '0:a:0', '-vn',
-                       '-t', '365', '-ac', '1', '-ar', '16000', '-f', 's16le', 'pipe:1']
-            pcm = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                 check=True, timeout=45).stdout
+    reduce_noise = None
+    if rnnoise:
+        try:
+            reduce_noise = create_rnnoise_filter(rnnoise)
+            print('Reducción de ruido RNNoise activa.', file=sys.stderr, flush=True)
+        except (OSError, AttributeError, ValueError) as error:
+            print(f'RNNoise no se pudo cargar ({type(error).__name__}).', file=sys.stderr, flush=True)
+
+    def recognize(pcm):
         if not pcm:
             raise ValueError('Sin audio decodificable')
         samples = np.frombuffer(pcm, dtype='<i2').astype(np.float32) / 32768
         if not np.any(samples):
-            return '', ''
+            return '', '', float('-inf')
         result = transcribe(samples, path_or_hf_repo=str(model), verbose=None, condition_on_previous_text=False,
                             temperature=(0.0, 0.2, 0.4))
-        text = ' '.join(segment['text'].strip() for segment in result['segments']
-                        if segment['no_speech_prob'] < 0.85 and segment['compression_ratio'] < 2.8)
-        language = result.get('language') or ''
-        return text[:16_000], language
+        segments = [item for item in result['segments'] if item['text'].strip() and
+                    item['no_speech_prob'] < 0.85 and item['compression_ratio'] < 2.8]
+        if not segments:
+            return '', result.get('language') or '', float('-inf')
+        durations = [max(0.01, item['end'] - item['start']) for item in segments]
+        score = np.average([item['avg_logprob'] for item in segments], weights=durations)
+        return ' '.join(item['text'].strip() for item in segments)[:16_000], result.get('language') or '', score
+
+    def process(audio):
+        cleaned = decode_for_whisper(audio, ffmpeg, reduce_noise)
+        text, language, score = recognize(cleaned)
+        if reduce_noise and score < -0.24:
+            # In uncertain passages compare the original before discarding quiet words or digits.
+            try:
+                original = decode_for_whisper(audio, ffmpeg)
+                if original != cleaned:
+                    raw_text, raw_language, raw_score = recognize(original)
+                    if raw_text and raw_score > score + 0.02:
+                        return raw_text, raw_language
+            except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
+                print(f'Comparación con audio original omitida ({type(error).__name__}).', file=sys.stderr, flush=True)
+        return text, language
 
     return process
 
@@ -104,6 +197,9 @@ def main():
     parser.add_argument('--model', type=Path, required=True)
     parser.add_argument('--origin', default='https://totalelitecoaching.com')
     parser.add_argument('--ffmpeg', default=shutil.which('ffmpeg'))
+    noise_filter = parser.add_mutually_exclusive_group()
+    noise_filter.add_argument('--rnnoise', type=Path, default=RNNOISE_LIBRARY if RNNOISE_LIBRARY.is_file() else None)
+    noise_filter.add_argument('--no-denoise', action='store_const', const=None, dest='rnnoise')
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
     key = os.environ.get('COACH_DEMO_LOCAL_WORKER_KEY', '').strip()
@@ -118,7 +214,7 @@ def main():
     if not args.ffmpeg or not Path(args.ffmpeg).is_file():
         parser.error('Indica la ruta local de ffmpeg.')
 
-    transcribe = local_transcriber(model, args.ffmpeg)
+    transcribe = local_transcriber(model, args.ffmpeg, args.rnnoise)
     queue = Queue(args.origin, key)
     while True:
         try:
