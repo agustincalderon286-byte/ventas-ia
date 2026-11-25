@@ -127,3 +127,14 @@ test('como mucho cuatro avisos por demo y nada se procesa cuando la demo ya term
   await live.check(id);
   assert.equal((await live.notices(owner, id, 0)).recording, false);
 });
+
+test('Jorge avisa durante la demo si la cita instantánea de un referido no cuadra', async () => {
+  const { analyses, live, id } = fixture(async () => ({ referrals: [{ fullName: 'Julia Ríos', phone: '3125550147' }], pendingReferrals: 0, followUp: null,
+    referralAppointments: [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'mañana viernes a las seis de la tarde', segment: 1 }] }));
+  analyses.rows[0].live.texts = [{ index: 0, text: piece }];
+  await live.check(id);
+  const [notice] = (await live.notices(owner, id, 0)).notices;
+  assert.equal(notice.short, 'La fecha de una cita del 4 en 14 no quedó clara.');
+  assert.doesNotMatch(notice.short, /Julia|555|viernes|seis/);
+  assert.match(notice.text, /Cita instantánea con Julia Ríos .*Dijiste viernes, pero esa fecha cae en jueves 26 de noviembre/);
+});

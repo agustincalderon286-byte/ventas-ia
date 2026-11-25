@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261125-jorgevivo2",
+  "cache": "tec-coach-shell-20261125-citas1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261125-jorgevivo2"
+        "v=20261125-citas1"
       ],
-      "sha": "094ff0fe9e03e564"
+      "sha": "24d31fc42ba61b1d"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -366,9 +366,9 @@
     "/coach/styles.css": {
       "versions": [
         "v=20261117-visor1",
-        "v=20261125-jorgevivo2"
+        "v=20261125-citas1"
       ],
-      "sha": "cb9644f84d8e134e"
+      "sha": "5643ccdfad80be91"
     },
     "/coach/team-chat-media.js": {
       "versions": [

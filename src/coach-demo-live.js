@@ -27,6 +27,8 @@ export function liveNoticesFrom(facts, { followUp = '', lastSegmentText = '' } =
       text: 'Referido incompleto: «' + text + '». Pide el nombre completo y el teléfono.' });
     else if (item.field === 'price' && label) notices.push({ key: 'price:' + fold(label), short: 'Un precio no quedó claro.',
       text: 'Precio de ' + label + ': oí «' + text + '», pero pudo quedar cortado. Repítelo con el cliente.' });
+    else if (item.field === 'referralAppointment' && label) notices.push({ key: 'instant:' + fold(label), short: 'La fecha de una cita del 4 en 14 no quedó clara.',
+      text: 'Cita instantánea con ' + label + (text ? ' («' + text + '»)' : '') + ': confirma el día y la hora con el referido.' });
     else if (item.field === 'followUp') notices.push({ key: 'followUp:' + fold(label), short: 'La fecha de la cita no quedó clara.',
       text: 'Cita «' + label + '»: ' + (text || 'no quedó clara la fecha o la hora.') });
   }
@@ -51,6 +53,12 @@ export function createLiveDemo({ analyses, audio, analyze, now = Date.now }) {
       const facts = await analyze({ chunks });
       const followUp = facts?.followUp ? followUpQuestion(doc, facts.followUp, now()) : '';
       const found = liveNoticesFrom(facts, { followUp, lastSegmentText: chunks[chunks.length - 1]?.text });
+      // An instant appointment of the 4 en 14 whose day does not add up («mañana viernes» on a Wednesday).
+      for (const appointment of Array.isArray(facts?.referralAppointments) ? facts.referralAppointments : []) {
+        const question = followUpQuestion(doc, appointment, now()), key = 'instant:' + fold(appointment.fullName);
+        if (question && !found.some(notice => notice.key === key)) found.push({ key, short: 'La fecha de una cita del 4 en 14 no quedó clara.',
+          text: 'Cita instantánea con ' + clip(appointment.fullName, 80) + ' («' + clip(appointment.when, 80) + '»): ' + clip(question, 160) });
+      }
       const known = new Set((doc.live.notices || []).map(notice => notice.key));
       const fresh = found.filter(notice => !known.has(notice.key)).slice(0, Math.max(0, LIVE_MAX_NOTICES - known.size));
       if (!fresh.length) return;

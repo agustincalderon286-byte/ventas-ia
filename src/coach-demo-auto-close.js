@@ -13,7 +13,8 @@ export const autoDemoCloseSchema = strict({
   incompleteReferrals: { type: 'array', items: strict(evidenceShape) },
   survey: { type:'array', items:strict({ ...evidenceShape, field:{type:'string',enum:autoSurveyFields}, values:{type:'array',items:{type:'string'}} }) },
   products: { type:'array', items:strict({ ...strings('name'), ...evidenceShape, prices:notesSchema }) },
-  followUp: { anyOf: [strict({ ...strings('when'), ...evidenceShape }), { type: 'null' }] }
+  followUp: { anyOf: [strict({ ...strings('when'), ...evidenceShape }), { type: 'null' }] },
+  referralAppointments: { type: 'array', items: strict({ ...strings('fullName', 'when'), ...evidenceShape }) }
 });
 export const autoDemoCloseInstructions = [
   'En autoClose prepara candidatos a guardado automático. Transcribe literalmente y deja fuera cualquier dato dudoso, incompleto, contradictorio o solo sugerido.',
@@ -22,6 +23,7 @@ export const autoDemoCloseInstructions = [
   'En notes conserva TODAS las observaciones claras de ESE referido, una por elemento: estado civil (casado, soltero), vivienda (renta, es dueño), trabajo y horario, cuándo lo pueden llamar, la relación con el anfitrión, intereses u otras notas de contacto. Si una frase dice varias cosas («es soltera, renta y trabaja por la mañana») devuelve un elemento por cada una, con el mismo quote. En text copia el fragmento literal mínimo, incluyendo el no cuando corresponda. En quote copia la frase literal continua; puede ser la frase que sigue inmediatamente a la mención del referido aunque no repita su nombre, siempre que nadie más haya sido mencionado entre ambas. No guardes contraseñas, documentos, diagnósticos ni datos de cuentas en notas de referidos.',
   'En products incluye únicamente los productos por los que el cliente mostró interés. En quote cita literalmente ese interés con el nombre del producto. En prices copia los precios, anticipos o cuotas que discutieron para ese mismo producto, con monto y moneda o periodo si se dijo. Cada quote de precio debe identificar el producto y respaldar la cifra. Una cotización no prueba una compra.',
   'En followUp devuelve únicamente un seguimiento aceptado expresamente (por ejemplo «quedamos», «de acuerdo», «agéndame», «nos vemos» o un «sí» a la propuesta): una cita literal continua con el acuerdo, el día y la hora. En when copia la frase exacta con el día y la hora, aunque diga a la vez «mañana» y un día de la semana; TEC comprueba si coinciden. No conviertas fechas ni inventes horas. Si luego cambiaron o retiraron el acuerdo, usa el último acuerdo claro o devuelve null.',
+  'En referralAppointments devuelve las citas instantáneas del 4 en 14: una cita (demo o visita) que un REFERIDO aceptó expresamente durante la visita, casi siempre por teléfono desde la casa del anfitrión. En fullName copia el nombre completo de ese referido tal como lo devolviste en referrals; en when la frase exacta con el día y la hora; en quote la frase literal continua con la propuesta y el sí. No incluyas aquí el seguimiento con el anfitrión. Devuelve hasta 3.',
   autoSurveyInstructions,
   'Las citas de evidencia pertenecen al segmento que indicas. Mantén nombres y teléfonos de referidos únicamente en autoClose. El resumen de entrenamiento nunca los incluye.'
 ].join('\n');
@@ -247,7 +249,27 @@ export function verifyAutoDemoClose(raw, chunks) {
     products.set(key,seen);
   }
   for (const excerpt of incomplete) review.push({ field:'referral', label:'', state:'preguntar', reason:'Referido incompleto o dudoso.', text:excerpt.slice(0,120) });
+  // Instant appointments of the 4 en 14: a referral saved above accepted a demo on a day and time.
+  const referralAppointments = [];
+  for (const item of Array.isArray(raw?.referralAppointments) ? raw.referralAppointments.slice(0, 3) : []) {
+    const name = fold(cleanName(item?.fullName)), row = unique.find(ref => fold(ref.fullName) === name);
+    const text = evidence(item), whenText = typeof item?.when === 'string' ? item.when.trim() : '';
+    const first = name.split(' ')[0];
+    if (!row || referralAppointments.some(found => found.phone === row.phone) || !text || !whenText || whenText.length > 120 ||
+        !text.includes(fold(whenText)) || !confirmsFollowUp(text) || !followUpAction.test(text) ||
+        !(wordAt(text, name) || wordAt(text, first) || wordAt(segments.get(item.segment) || '', name))) continue;
+    const check = figures('time', item, whenText);
+    if (check.state === 'doubt') {
+      note({ field:'referralAppointment', label:row.fullName, state:'preguntar', text:whenText, reason:'Fecha u hora: ' + check.reason, minute:minute(item) });
+      continue;
+    }
+    note({ field:'referralAppointment', label:row.fullName, state:'guardar', text:whenText, minute:minute(item) }, check);
+    referralAppointments.push({ fullName:row.fullName, phone:row.phone, when:whenText, segment:item.segment });
+    // The 4 en 14 row keeps the appointment in its notes too.
+    row.note = [row.note, 'Cita instantánea: ' + whenText].filter(Boolean).join(' · ').slice(0, 640);
+  }
   return { referrals: unique, pendingReferrals: supplied.length - unique.length + incomplete.size, followUp,
+    ...(referralAppointments.length && { referralAppointments }),
     ...(Object.keys(survey).length && { survey }), ...(products.size && { products:[...products.values()] }),
     ...(review.length && { review: review.slice(0, 60) }) };
 }
@@ -297,6 +319,35 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
     return { state: 'saved', start: when.start, timeZone: when.timeZone, htmlLink: saved.htmlLink || '' };
   }
 
+  // Instant appointments with referrals: one Google Calendar event each, in the same calendar as the follow-up.
+  async function saveReferralAppointments(analysis, facts, contact, partial) {
+    const results = [];
+    for (const appointment of facts.referralAppointments || []) {
+      const label = { name: appointment.fullName };
+      const when = !partial && whenFor(analysis, appointment, now());
+      if (!when || when.question) { results.push({ ...label, state:'time', ...(when?.question && { question:when.question }) }); continue; }
+      if (!await active(analysis)) { results.push({ ...label, state:'stopped' }); continue; }
+      const owner = analysis.ownerUserId;
+      const connection = await calendar.getConnection(owner);
+      if (!connection?.calendarId || !connection.availabilityEnabled || connection.grant !== analysis.autoClose.calendarGrant) {
+        results.push({ ...label, state:'connection' }); continue;
+      }
+      const eventId = digest([String(owner), analysis.closeVisitId, 'referral-appointment', appointment.phone]);
+      const summary = ('Demo · ' + appointment.fullName + (contact.name ? ' (4 en 14 de ' + contact.name + ')' : '')).slice(0, 180);
+      try {
+        const saved = await calendar.saveEvent({ owner, grant: connection.grant, eventId, operationId: 'demo-' + eventId, ...when, summary,
+          mode: 'create', checkAvailability: true, retryGoogle: true });
+        await followups.rememberEvent({ owner, calendarId: connection.calendarId }, { ...when, name: appointment.fullName, summary,
+          action: 'demo', operationId: 'demo-' + eventId, eventId, htmlLink: saved.htmlLink || '', etag: saved.etag || '' })
+          .catch(() => console.error('No se pudo indexar una cita instantánea de demostración.'));
+        results.push({ ...label, state:'saved', start: when.start, timeZone: when.timeZone, htmlLink: saved.htmlLink || '' });
+      } catch (error) {
+        results.push({ ...label, state: error?.slotBusy ? 'busy' : 'error' });
+      }
+    }
+    return results;
+  }
+
   async function saveReferrals(analysis, facts, contact) {
     const pending = facts.pendingReferrals;
     if (!facts.referrals.length) return { state: pending ? 'pending' : 'none', saved: 0, pending };
@@ -322,10 +373,20 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
   }
 
   return async function save(analysis, facts, contact, { partial = false, followUpMentioned = false } = {}) {
-    const [appointment, referrals] = await Promise.allSettled([
+    const [appointment, referrals, instant] = await Promise.allSettled([
       facts.followUp || followUpMentioned ? saveCalendar(analysis, facts, contact, partial) : null,
-      saveReferrals(analysis, facts, contact)
+      saveReferrals(analysis, facts, contact),
+      saveReferralAppointments(analysis, facts, contact, partial)
     ]);
+    const referralAppointments = instant.status === 'fulfilled' ? instant.value
+      : (facts.referralAppointments || []).map(item => ({ name: item.fullName, state: 'error' }));
+    // An instant appointment whose day does not add up is asked by Jorge too.
+    for (const item of referralAppointments.filter(result => result.state === 'time')) {
+      const source = (facts.referralAppointments || []).find(found => found.fullName === item.name);
+      facts.review = [...(facts.review || []).filter(entry => !(entry.field === 'referralAppointment' && entry.label === item.name)),
+        { field:'referralAppointment', label:item.name, state:'preguntar', text:source?.when || '',
+          reason:'Fecha u hora: ' + (item.question || 'no se pudo leer con certeza.') }];
+    }
     // A date the recording left in doubt («mañana viernes» when tomorrow is Thursday) is asked by Jorge, not guessed.
     if (facts.followUp && appointment.status === 'fulfilled' && appointment.value?.state === 'time') {
       const label = facts.followUp.when, reason = appointment.value.question || '';
@@ -339,6 +400,6 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
       if (notes.length) referralState.notesToReview = notes;
     }
     return { appointment: appointment.status === 'fulfilled' ? appointment.value : { state:appointment.reason?.slotBusy ? 'busy' : 'error' },
-      referrals:referralState };
+      referrals:referralState, ...(referralAppointments.length && { referralAppointments }) };
   };
 }

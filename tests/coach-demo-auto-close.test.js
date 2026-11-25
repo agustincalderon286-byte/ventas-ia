@@ -179,3 +179,40 @@ test('Jorge pregunta el día exacto que no cuadró y el chat de citas tampoco ad
   assert.equal(readFollowup('mañana jueves a las 6 de la tarde', {}, wednesday).question, undefined);
   assert.equal(readFollowup('el viernes a las 8 de la mañana', {}, wednesday).question, undefined);
 });
+
+test('una cita instantánea del 4 en 14 se agenda en Calendar, queda en la nota del referido y, si el día no cuadra, Jorge la pregunta', async () => {
+  const referral = 'Como referencia anota a Julia Ríos con el número 312-555-0147';
+  const call = 'Julia, ¿te parece si paso el viernes a las seis de la tarde para la demo? Sí, está bien';
+  const wrong = 'Entonces Julia, quedamos mañana viernes a las seis de la tarde para la demo';
+  const text = `${referral}. ${call}. ${wrong}.`;
+  const instant = verifyAutoDemoClose({
+    referrals: [{ fullName: 'Julia Ríos', phone: '3125550147', segment: 1, quote: referral, notes: [] }],
+    referralAppointments: [
+      { fullName: 'Julia Ríos', when: 'el viernes a las seis de la tarde', segment: 1, quote: call },
+      { fullName: 'Persona Inventada', when: 'el sábado a las diez', segment: 1, quote: 'Persona Inventada, ¿el sábado a las diez para la demo? Sí, está bien' }
+    ]
+  }, [{ index: 0, durationSeconds: 180, text }]);
+  assert.deepEqual(instant.referralAppointments, [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'el viernes a las seis de la tarde', segment: 1 }],
+    'only a referral saved in this visit, with an explicit yes');
+  assert.match(instant.referrals[0].note, /Cita instantánea: el viernes a las seis de la tarde/);
+  // A proposal without a yes is not an appointment.
+  const asked = 'Julia, ¿te parece si paso el viernes a las seis de la tarde para la demo?';
+  assert.equal(verifyAutoDemoClose({ referrals: [{ fullName: 'Julia Ríos', phone: '3125550147', segment: 1, quote: referral }],
+    referralAppointments: [{ fullName: 'Julia Ríos', when: 'el viernes a las seis de la tarde', segment: 1, quote: asked }] },
+  [{ index: 0, text: `${referral}. ${asked}` }]).referralAppointments, undefined);
+
+  const { run, analysis, writes, contact } = fixture();
+  const saved = await run(analysis, { ...facts, referralAppointments: instant.referralAppointments }, contact);
+  assert.equal(saved.referralAppointments[0].state, 'saved');
+  // The demo was recorded on Monday 2026-11-23 in Chicago: «el viernes» is Friday the 27th, 6 pm.
+  assert.equal(saved.referralAppointments[0].start, '2026-11-28T00:00:00.000Z');
+  const events = writes.filter(([provider]) => provider === 'calendar').map(([, event]) => event);
+  assert.deepEqual(events.map(event => event.summary).sort(), ['Demo · Julia Ríos (4 en 14 de Silvia Prueba)', 'Seguimiento · Silvia Prueba']);
+  assert.notEqual(events[1].eventId, events[0].eventId);
+
+  const doubtful = { ...facts, review: [], referralAppointments: [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'mañana viernes a las seis de la tarde', segment: 1 }] };
+  const asksJorge = await run(analysis, doubtful, contact);
+  assert.equal(asksJorge.referralAppointments[0].state, 'time');
+  assert.deepEqual(doubtful.review.map(({ field, state, label }) => [field, state, label]), [['referralAppointment', 'preguntar', 'Julia Ríos']]);
+  assert.match(doubtful.review[0].reason, /Dijiste viernes, pero esa fecha cae en martes 24 de noviembre/);
+});

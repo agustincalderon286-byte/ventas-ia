@@ -577,6 +577,7 @@ function initTecOfflineStatus() {
   document.body.appendChild(status);
 
   const render = async event => {
+    if (status.dataset.busy === "true") return;
     const pending = await getTecOfflinePendingCount().catch(() => 0);
     const online = navigator.onLine;
     status.hidden = online && pending === 0;
@@ -596,9 +597,23 @@ function initTecOfflineStatus() {
     }
   };
 
-  status.addEventListener("click", () => {
-    if (navigator.onLine) {
-      flushTecOfflineOutbox().catch(() => null);
+  // The seller must see that the tap did something: «Enviando…» while it works, then the result.
+  status.addEventListener("click", async () => {
+    if (!navigator.onLine || status.dataset.busy === "true") return;
+    status.dataset.busy = "true";
+    status.textContent = "Enviando…";
+    let result = null;
+    try {
+      result = await flushTecOfflineOutbox();
+    } catch {
+      result = { pending: 1 };
+    }
+    status.dataset.busy = "false";
+    if (result?.pending) {
+      status.textContent = `No se pudo enviar todavía · ${result.pending} pendiente${result.pending === 1 ? "" : "s"}. Está guardado en el teléfono.`;
+      window.setTimeout(() => render().catch(() => null), 4000);
+    } else {
+      await render({ detail: { synced: Math.max(1, Number(result?.synced || 0)) } }).catch(() => null);
     }
   });
   window.addEventListener("tec:offline-status", render);
@@ -16967,6 +16982,18 @@ function renderDemoAutoCloseReceipt(receipt) {
     items.push(({ time: "Revisa la fecha y la hora del seguimiento.", busy: "El horario acordado está ocupado.",
       connection: "Revisa la conexión o el permiso de horarios libres en Google Calendar.", error: "Revisa Calendar para confirmar si se guardó el seguimiento." })[appointment.state] || "El seguimiento requiere una aclaración.");
   }
+  // Instant appointments of the 4 en 14 (a referral accepted a demo during the visit).
+  for (const item of Array.isArray(receipt.referralAppointments) ? receipt.referralAppointments : []) {
+    const name = String(item?.name || "").slice(0, 120);
+    if (item?.state === "saved") {
+      let date = "";
+      try { date = new Intl.DateTimeFormat("es-US", { timeZone: item.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(item.start)); } catch {}
+      items.push("Cita instantánea con " + name + " guardada en Google Calendar" + (date ? " · " + date : "") + ".");
+    } else if (item?.state !== "time") {
+      items.push("Cita instantánea con " + name + ": " + ({ busy: "ese horario está ocupado en tu calendario.",
+        connection: "revisa la conexión o el permiso de horarios libres en Google Calendar." })[item?.state] || "revisa Calendar para confirmar si se guardó.");
+    }
+  }
   const refs = receipt.referrals;
   if (refs?.saved) items.push(refs.saved + (refs.saved === 1 ? " referido guardado" : " referidos guardados") + " en " + refs.sheetTitle + ".");
   if (refs?.duplicates) items.push(refs.duplicates + (refs.duplicates === 1 ? " referido ya estaba en la hoja." : " referidos ya estaban en la hoja."));
@@ -16983,6 +17010,8 @@ function renderDemoAutoCloseReceipt(receipt) {
   const describe = {
     price: item => "Precio de " + item.label + ": oí «" + item.text + "», pero pudo quedar cortado." + other(item),
     followUp: item => "Seguimiento «" + item.label + "»: no quedó clara la fecha o la hora.",
+    referralAppointment: item => "Cita instantánea con " + item.label + (item.text ? " («" + item.text + "»)" : "") + ": " +
+      String(item.reason || "no quedó clara la fecha o la hora.").replace(/^Fecha u hora: /, ""),
     referral: item => item.label ? "Referido " + item.label + ": el teléfono no quedó claro; no se guardó." : "Referido incompleto: «" + item.text + "».",
     survey: item => "Encuesta: oí «" + item.text + "», pero no estoy seguro." + other(item)
   };
@@ -18067,8 +18096,9 @@ function createFloatingCoachSurface(panel) {
     panel.style.setProperty("--tec-chat-viewport-top", `${Math.max(0, viewport?.offsetTop || 0)}px`);
   };
   const canScroll = (target, delta) => {
-    const scroller = target?.closest?.(".coach-float-messages, textarea");
-    if (!scroller || !panel?.contains(scroller)) return false;
+    // Windows opened from the chat (such as «Cierre de la visita») live outside the panel but must scroll too.
+    const scroller = target?.closest?.(".coach-float-messages, textarea, .demo-close-dialog");
+    if (!scroller || !(panel?.contains(scroller) || scroller.matches(".demo-close-dialog"))) return false;
     return delta > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : delta < 0 && scroller.scrollTop > 1;
   };
   document.addEventListener("touchstart", event => {
