@@ -16975,13 +16975,29 @@ function renderDemoAutoCloseReceipt(receipt) {
   if (/^[\w-]{20,120}$/.test(refs?.file || "")) links.push(["Abrir hoja del 4 en 14", "https://docs.google.com/spreadsheets/d/" + refs.file + "/edit"]);
   const products = String(receipt.productSummary || "").split("\n").filter(Boolean);
   const notes = Array.isArray(refs?.notesToReview) ? refs.notesToReview : [];
-  if (!items.length && !products.length && !notes.length) return "";
+  // What the recording left in doubt: Jorge asks for it instead of saving a figure that may be wrong.
+  const review = Array.isArray(receipt.review) ? receipt.review : [];
+  const at = item => Number.isInteger(item.minute) ? " · minuto " + item.minute : "";
+  const other = item => Array.isArray(item.heard) && item.heard.length && !item.heard.every(value => String(item.text || "").includes(value))
+    ? " La otra lectura oyó " + item.heard.join(" o ") + "." : "";
+  const describe = {
+    price: item => "Precio de " + item.label + ": oí «" + item.text + "», pero pudo quedar cortado." + other(item),
+    followUp: item => "Seguimiento «" + item.label + "»: no quedó clara la fecha o la hora.",
+    referral: item => item.label ? "Referido " + item.label + ": el teléfono no quedó claro; no se guardó." : "Referido incompleto: «" + item.text + "».",
+    survey: item => "Encuesta: oí «" + item.text + "», pero no estoy seguro." + other(item)
+  };
+  const asks = review.filter(item => item?.state === "preguntar" && describe[item.field]).map(item => describe[item.field](item) + at(item));
+  const possible = review.filter(item => item?.state === "pendiente" && item.field === "note")
+    .map(item => item.label + " · «" + item.text + "»");
+  if (!items.length && !products.length && !notes.length && !asks.length && !possible.length) return "";
   return `<section class="coach-demo-report-section">
     ${items.length ? `<h5>Datos de la visita</h5><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
     ${survey?.state === "saved" && /^[a-f\d]{24}$/i.test(survey.id) ? `<button type="button" class="secondary-button" data-demo-open-saved-survey="${survey.id}">Editar encuesta</button><p class="mini-note" data-demo-open-survey-status aria-live="polite"></p>` : ""}
     ${links.map(([label, url]) => `<a class="secondary-button" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">${label}</a>`).join(" ")}
     ${products.length ? `<h5>Productos y precios comentados</h5><ul>${products.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
     ${notes.length ? `<h5>Notas de referidos por revisar</h5><ul>${notes.map(item => `<li><strong>${escapeHtml(item.name)}</strong> · ${escapeHtml(item.note)}</li>`).join("")}</ul>` : ""}
+    ${asks.length ? `<h5>No lo guardé porque no quedó claro</h5><p class="mini-note">Coach Jorge te lo pregunta en el chat.</p><ul>${asks.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+    ${possible.length ? `<h5>Posibles notas que no se guardaron</h5><ul>${possible.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
   </section>`;
 }
 

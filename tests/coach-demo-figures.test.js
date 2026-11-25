@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { verifyAutoDemoClose } from '../src/coach-demo-auto-close.js';
 import { verifiedDemoCloseFacts } from '../src/coach-demo-close-facts.js';
 import { checkDemoFigures, demoFigureGuard } from '../src/coach-demo-figures.js';
@@ -129,4 +130,18 @@ test('las notas se quedan con su referido aunque la frase no repita el nombre, s
     quote: 'referencia: anote a Julia Ríos, su número es 312-555-0147', notes: [{ segment: 1, quote: sentence, text: 'trabaja por la mañana' }] }] }, chunks);
   assert.equal(missed.referrals[0].note, 'trabaja por la mañana');
   assert.deepEqual(missed.review.filter(item => item.state === 'pendiente').map(item => item.text), ['es soltera', 'renta su casa']);
+});
+
+test('el recibo de Mis demostraciones dice qué no se guardó y por qué, sin teléfonos', () => {
+  const app = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
+  const source = app.slice(app.indexOf('function renderDemoAutoCloseReceipt'), app.indexOf('function initCoachDemoRecorder'));
+  const escapeHtml = value => String(value).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const render = vm.runInNewContext(`(${source.trim()})`, { escapeHtml, Intl, URL });
+  const { review } = verifyAutoDemoClose(lunaFor('tapado-0.12'), chunksOf('tapado-0.12'));
+  const html = render({ referrals: { state: 'checked', saved: 1, pending: 0, sheetTitle: '4 en 14' }, review: [...review,
+    { field: 'note', label: 'Julia Ríos', state: 'pendiente', text: 'tiene <dos> hijos' }] });
+  assert.match(html, /No lo guardé porque no quedó claro/);
+  assert.match(html, /Precio de Filtro Premium: oí «99 dólares», pero pudo quedar cortado\. · minuto 0/);
+  assert.match(html, /Julia Ríos · «tiene &lt;dos&gt; hijos»/);
+  assert.equal(/3125550147|312-555-0147/.test(html), false);
 });

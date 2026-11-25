@@ -22,7 +22,36 @@ export function inDemoClosePilot(auth, switched, allowed = pilotEmails) {
   return !switched && !!auth?.session?.tokenHash && pilotEmails.includes(email) && (allowed.includes(email) || allowed.includes('*')) &&
     (auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat'));
 }
-const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state autoCloseReceipt.survey.state autoCloseReceipt.productSummary';
+const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state autoCloseReceipt.survey.state autoCloseReceipt.productSummary autoCloseReceipt.review';
+const cleanText = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u001f<>]/gu, ' ').trim().slice(0, max) : '';
+
+// Figures the automatic close did not save because the recording left them in doubt. Each one maps to
+// the close field the seller's answer fills, so Jorge asks for exactly that value.
+function closeDoubts(review) {
+  const doubts = [];
+  for (const item of Array.isArray(review) ? review : []) {
+    if (item?.state !== 'preguntar') continue;
+    const text = cleanText(item.text, 120), label = cleanText(item.label, 120);
+    const heard = (Array.isArray(item.heard) ? item.heard : []).filter(v => typeof v === 'string' && /^\d{1,9}(?:\.\d{1,2})?$/.test(v)).slice(0, 3);
+    let field = '';
+    if (item.field === 'price') field = /\b(?:mes|mensual\w*)\b/i.test(text) ? 'quotedMonthly' : /\b(?:anticipo|enganche|entrada|inicial)\b/i.test(text) ? 'calcDown' : 'calcPrice';
+    else if (item.field === 'followUp') field = 'followUp';
+    else if (item.field === 'survey' && ['cooksForCount', 'foodSpendWeekly', 'waterSpendWeekly'].includes(label)) field = label;
+    if (field && !doubts.some(d => d.field === field)) doubts.push({ field, label, text, heard });
+  }
+  return doubts;
+}
+
+function doubtQuestion({ field, label, text, heard }) {
+  const other = heard.length && !heard.every(value => text.includes(value)) ? ' (la otra lectura oyó ' + heard.join(' o ') + ')' : '';
+  if (field === 'followUp') return 'No me quedó clara la fecha u hora del seguimiento' + (label ? ' («' + label + '»)' : '') + '. ¿Para cuándo quedó?';
+  if (field === 'calcPrice' || field === 'calcDown' || field === 'quotedMonthly') {
+    const what = { calcPrice: 'el precio', calcDown: 'el anticipo', quotedMonthly: 'la mensualidad' }[field];
+    return 'Del ' + (label || 'producto') + ' oí «' + text + '», pero pudo quedar cortado' + other + '. ¿Cuál fue ' + what + '?';
+  }
+  return 'En ' + (labels[field] || 'la encuesta').toLowerCase() + ' oí «' + text + '», pero no estoy seguro' + other + '. ¿Cuál fue?';
+}
+
 function shape(doc) {
   const suggested = Object.fromEntries(Object.entries(doc.report?.closeFacts || {}).filter(([key,val]) => Object.hasOwn(limits,key) && key !== 'sellerNote' && typeof val === 'string' && val));
   if (doc.autoCloseReceipt?.productSummary) suggested.productDiscussion = doc.autoCloseReceipt.productSummary;
@@ -31,7 +60,8 @@ function shape(doc) {
     fields:{...suggested,...doc.closeDraft}, sellerFields:Object.keys(doc.closeDraft || {}), confirmed:doc.closeConfirmed || {}, declaredOutcome:declaredOutcome || '', answered:!!doc.closeAnswered,
     partial:Boolean(doc.report?.partial || doc.report?.recordingGaps?.length),
     ...(doc.autoCloseReceipt?.appointment?.state === 'saved' && { appointmentSaved:true }),
-    ...(doc.autoCloseReceipt?.survey?.state === 'saved' && { surveySaved:true })};
+    ...(doc.autoCloseReceipt?.survey?.state === 'saved' && { surveySaved:true }),
+    doubts:closeDoubts(doc.autoCloseReceipt?.review)};
 }
 function chosenFields(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Object.keys(raw).length) throw fail(422,'Elige los datos que quieres guardar.');
@@ -96,6 +126,9 @@ export function createDemoCloseService(analyses) {
       const suggested={...proposal?.fields,...(proposal?.note && {sellerNote:proposal.note})};
       if (!Object.keys(suggested).length) return {close,understood:false};
       const fields=chosenFields(suggested);
+      // An answered price belongs to the product the recording named, unless the seller already chose one.
+      const priced=(close.doubts || []).find(d=>['calcPrice','calcDown','quotedMonthly'].includes(d.field) && fields[d.field] && d.label);
+      if (priced && !close.fields.calcProduct && !close.confirmed.calcProduct && !fields.calcProduct) fields.calcProduct=priced.label;
       const set=Object.fromEntries(Object.entries(fields).map(([key,val])=>['closeDraft.'+key,val]));
       const doc=await analyses.findOneAndUpdate({...own(owner,id),closeVisitId:visitId,closeVersion:version},
         {$set:set,$inc:{closeVersion:1}},{new:true}).select(select).lean();
@@ -114,14 +147,20 @@ export function createDemoCloseService(analyses) {
 export function demoCloseQuestions(close) {
   const f={...close.fields,...close.confirmed};
   const questions=[];
+  // First the figures the recording left in doubt, until the seller answers them.
+  for (const doubt of close.doubts || []) {
+    if (f[doubt.field] || close.sellerFields.includes(doubt.field) || (doubt.field==='followUp' && close.appointmentSaved)) continue;
+    questions.push({field:doubt.field,question:doubtQuestion(doubt)});
+  }
   if (close.declaredOutcome && f.outcome && !close.confirmed.outcome && !close.sellerFields.includes('outcome') && f.outcome!==close.declaredOutcome)
     questions.push({field:'outcome',question:'El resultado indicado y lo que recogió el audio difieren. ¿Cómo terminó la visita?'});
   else if (!f.outcome && !close.declaredOutcome)
     questions.push({field:'outcome',question:'¿Cómo terminó la visita: hubo venta, quedó seguimiento o decidieron dejarlo aquí?'});
   const outcome=f.outcome || close.declaredOutcome;
   if (outcome==='venta' && !f.saleAmount && !/monto|importe/i.test(f.sellerNote || '')) questions.push({field:'saleAmount',question:'¿En cuánto quedó la venta, o dejamos el monto pendiente?'});
-  if (!close.appointmentSaved && outcome==='follow_up' && !f.followUp) questions.push({field:'followUp',question:'¿Qué prometiste hacer y para cuándo quedó el seguimiento?'});
-  else if (!close.appointmentSaved && outcome==='follow_up' && f.followUp && !close.confirmed.followUp && !close.sellerFields.includes('followUp') &&
+  const asked=field=>questions.some(q=>q.field===field);
+  if (!close.appointmentSaved && outcome==='follow_up' && !f.followUp && !asked('followUp')) questions.push({field:'followUp',question:'¿Qué prometiste hacer y para cuándo quedó el seguimiento?'});
+  else if (!close.appointmentSaved && outcome==='follow_up' && f.followUp && !asked('followUp') && !close.confirmed.followUp && !close.sellerFields.includes('followUp') &&
       !/\b(?:\d{1,2}[:.]\d{2}|a las? (?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce))\b/i.test(f.followUp))
     questions.push({field:'followUp',question:'El seguimiento quedó como «'+f.followUp+'». ¿Acordaron una hora o queda abierta?'});
   return questions.slice(0,2);

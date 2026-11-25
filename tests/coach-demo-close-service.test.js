@@ -161,6 +161,30 @@ test('audio parcial y resultado incierto preguntan sin fabricar venta; las discr
   assert.deepEqual(demoCloseQuestions(await f.service.read('A',id(2))).map(q=>q.field),['outcome','saleAmount']);
 });
 
+test('Jorge pregunta primero la cifra que la grabación dejó en duda y la respuesta queda con su producto', async () => {
+  const review = [
+    { field:'referral', label:'Julia Ríos', state:'guardar' },
+    { field:'price', label:'Filtro Premium', state:'preguntar', text:'99 dólares', heard:['799'], reason:'Se oyó voz sin transcribir junto a la cifra.' },
+    { field:'note', label:'Julia Ríos', state:'pendiente', text:'renta su casa' }
+  ];
+  const f=fixture([demo(1,'A',{knownOutcome:'follow_up',autoCloseReceipt:{review,appointment:{state:'saved'}}})]);
+  const close=await f.service.read('A',id(1));
+  assert.deepEqual(close.doubts,[{ field:'calcPrice', label:'Filtro Premium', text:'99 dólares', heard:['799'] }]);
+  const [first]=demoCloseQuestions(close);
+  assert.equal(first.field,'calcPrice');
+  assert.equal(first.question,'Del Filtro Premium oí «99 dólares», pero pudo quedar cortado (la otra lectura oyó 799). ¿Cuál fue el precio?');
+  const answered=await f.service.clarify('A',id(1),{visitId:visit,version:0,text:'799'},async (text,context)=>{
+    assert.deepEqual(context.questions.map(q=>q.field),['calcPrice']);
+    return {fields:{calcPrice:'799.00'}};
+  });
+  assert.deepEqual(answered.changed,{calcPrice:'799.00',calcProduct:'Filtro Premium'});
+  assert.deepEqual(demoCloseQuestions(answered.close),[]);
+  // A doubtful hour asks for the follow-up only while the calendar has nothing saved.
+  const hour=fixture([demo(2,'A',{knownOutcome:'follow_up',autoCloseReceipt:{review:[{ field:'followUp', label:'mañana a las 4', state:'preguntar' }]}})]);
+  assert.deepEqual(demoCloseQuestions(await hour.service.read('A',id(2))).map(q=>q.question),
+    ['No me quedó clara la fecha u hora del seguimiento («mañana a las 4»). ¿Para cuándo quedó?']);
+});
+
 test('el piloto exige sesión individual de Agustín o Rigoberto, también ante listas de acceso amplias', () => {
   const who = email=>({user:{email},session:{tokenHash:'test-only',accessMode:'direct'}});
   const a=who('agustincalderon286@gmail.com'), b=who('calderonrigoberto51@gmail.com');

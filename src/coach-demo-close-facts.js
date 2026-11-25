@@ -268,7 +268,8 @@ export async function extractSellerCloseReply(text, {questions = [], fields: pre
     if (!value || !phrase || uncertain.test(fold(phrase)) || !hasEvidence(foldedAnswer,phrase,field,value)) continue;
     // A bare number answers exactly one open numeric question. It cannot be borrowed from
     // another question or be reassigned from a hypothetical or delayed amount.
-    const promptOnlyNumber = open.length === 1 && open[0].field === field && numericAnswer(answer) &&
+    const numericQuestions = open.filter(q => moneyFields.has(q.field) || q.field === 'cooksForCount');
+    const promptOnlyNumber = numericQuestions.length === 1 && numericQuestions[0].field === field && numericAnswer(answer) &&
       (moneyFields.has(field) || field === 'cooksForCount') && containsAmount(phrase,value) &&
       !/\b(?:mes|mensual\w*|anticipo|enganche|seman\w*|posible|seria|pesos?|euros?|mxn)\b/.test(fold(phrase)) &&
       !/\b(?:podria|podrian|si fuera|si costara|si fuera de|aproximad\w*|quizas?|tal vez|pesos?|euros?|mxn)\b/.test(foldedAnswer);

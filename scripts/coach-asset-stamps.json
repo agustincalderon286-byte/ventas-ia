@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261124-cierre-detalles2",
+  "cache": "tec-coach-shell-20261125-dudas1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261124-cierre-detalles2"
+        "v=20261125-dudas1"
       ],
-      "sha": "c2e61b890b50132c"
+      "sha": "a4b7e9cc7a1f2991"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
