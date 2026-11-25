@@ -284,6 +284,41 @@ test("offline private HTML and its exact versioned assets can fall back to the p
   assert.equal(await vm.runInContext('cacheFirst("/coach/app.js?v=previous", TEC_CACHE_VERSION)', context), asset);
 });
 
+test("en la app de iPhone la grabación pasa al grabador nativo solo con consentimiento y sin pedir el micrófono a la página", async () => {
+  const state = { recording: false, processing: false, uploadQueue: Promise.resolve() };
+  const consent = { checked: false }, outcome = { value: 'sale' };
+  const rows = [], nativeCalls = [];
+  let webMicrophone = 0;
+  const startAt = app.indexOf('  const startRecording = async () =>');
+  const endAt = app.indexOf('  root.addEventListener("close"', startAt);
+  const nativeRecorder = { async start(options) { nativeCalls.push(options); return { active: true }; } };
+  const start = vm.runInNewContext(app.slice(startAt, endAt) + '\nstartRecording;', {
+    state, consent, outcome, emergency: { hidden: true }, nativeRecorder, closePilot: false, autoClosePilot: false,
+    SEGMENT_MS: 240000, MAX_RECORDING_MS: 5400000, Date, Intl, Number, String, Boolean,
+    window: {}, navigator: { onLine: false, mediaDevices: { async getUserMedia() { webMicrophone++; } } },
+    createTecOfflineId: () => 'recording-qa-5550101', holdTecRecordingLock: async () => async () => {},
+    tecActiveRecordingIds: new Set(), saveTecOfflineRecording: async row => { rows.push(row); return row; },
+    apiRequest: async () => { throw new Error('sin red en la prueba'); }, audioFailure: () => ({ text: '' }),
+    analysisNotice: { dataset: {} }, timer: {}, chunkStatus: {}, currentReport: {},
+    startClock() {}, updateControls() {}, setRecorderMessage() {}, stopMediaTracks() {}, releaseWakeLock() {},
+    attachCaptureMonitor() { throw new Error('la app no usa el monitor web'); }, beginSegment() { throw new Error('la app no usa MediaRecorder'); }
+  });
+  await start();
+  assert.equal(nativeCalls.length, 0, 'sin consentimiento no se inicia nada');
+  consent.checked = true;
+  await start();
+  assert.equal(webMicrophone, 0);
+  assert.equal(nativeCalls.length, 1);
+  assert.equal(nativeCalls[0].consentConfirmed, true);
+  assert.equal(nativeCalls[0].localId, 'recording-qa-5550101');
+  assert.equal(nativeCalls[0].segmentSeconds, 240);
+  assert.equal(rows[0].consentConfirmed, true, 'el consentimiento queda guardado antes de pedir el micrófono');
+  assert.equal(rows[0].status, 'recording');
+  assert.equal(state.recording, true);
+  assert.equal(state.native, true);
+  assert.equal(consent.checked, false, 'cada demo requiere confirmar de nuevo');
+});
+
 test("cada intento de grabar requiere consentimiento nuevo y parte de un resultado por definir", async () => {
   const state = { recording: false, processing: false };
   const consent = { checked: false }, outcome = { value: 'sale' };
@@ -291,7 +326,7 @@ test("cada intento de grabar requiere consentimiento nuevo y parte de un resulta
   const startAt = app.indexOf('  const startRecording = async () =>');
   const endAt = app.indexOf('  root.addEventListener("close"', startAt);
   const start = vm.runInNewContext(app.slice(startAt, endAt) + '\nstartRecording;', {
-    state, consent, outcome, emergency: { hidden: true },
+    state, consent, outcome, emergency: { hidden: true }, nativeRecorder: null,
     window: { MediaRecorder: {}, TecPwaSafety: { createAudioJournal() {} } },
     navigator: { mediaDevices: { async getUserMedia() {
       requests++;

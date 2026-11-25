@@ -17054,10 +17054,14 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     wakeLock: null,
     releaseCaptureLock: null, segmentStopped: null, journal: null, storageFailure: false,
     captureMonitor: null, interruptionReason: "", capturePaused: false, pausePromise: null,
-    resumeBusy: false, verifyingResume: false, pausedAt: 0, pausedMs: 0, recordingGaps: []
+    resumeBusy: false, verifyingResume: false, pausedAt: 0, pausedMs: 0, recordingGaps: [],
+    native: false
   };
   const SEGMENT_MS = 4 * 60 * 1000;
   const MAX_RECORDING_MS = 90 * 60 * 1000;
+  // Inside the TEC iPhone app the recording is native, so it continues with the
+  // screen locked. Safari and older app versions keep the MediaRecorder path.
+  const nativeRecorder = globalThis.window?.TecNativeDemoRecorder?.available === true ? window.TecNativeDemoRecorder : null;
 
   const setRecorderMessage = (message, type = "info") => setMessage(status, message, type);
   const audioFailure = error => window.TecPwaSafety.describeAudioFailure(error, navigator.onLine);
@@ -17143,6 +17147,12 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   const resumeCapture = async (manual = true) => {
     if (!state.recording || !state.capturePaused || state.processing || state.resumeBusy || state.storageFailure) return;
     state.resumeBusy = true; updateControls();
+    if (state.native) {
+      try { applyNativeStatus(await nativeRecorder.resume()); }
+      catch (error) { setRecorderMessage(`${error.message || "No pude recuperar el micrófono."} La demo sigue pausada; no se ha borrado.`, "error"); }
+      finally { state.resumeBusy = false; updateControls(); }
+      return;
+    }
     try {
       await state.pausePromise;
       if (!state.recording || state.processing) return;
@@ -17200,6 +17210,75 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       }
     }
     throw lastError || new Error("No pude subir un fragmento.");
+  };
+
+  const startClock = () => {
+    window.clearInterval(state.clockTimer);
+    state.clockTimer = window.setInterval(() => {
+      const elapsedMs = (state.capturePaused ? state.pausedAt : Date.now()) - state.startedAt - state.pausedMs;
+      timer.textContent = formatCoachDemoRecordingTime(elapsedMs / 1000);
+      if (elapsedMs >= MAX_RECORDING_MS) {
+        finishRecording(true);
+      }
+    }, 1000);
+  };
+
+  const applyNativeStatus = status => {
+    if (!state.native || !status || !state.recording) return;
+    if (status.active && status.localId === state.localSessionId) {
+      const wasPaused = state.capturePaused;
+      state.capturePaused = status.phase === "paused";
+      state.pausedAt = Number(status.pausedAt || 0) || state.pausedAt;
+      state.pausedMs = Number(status.pausedMs || 0);
+      if (Array.isArray(status.recordingGaps)) state.recordingGaps = status.recordingGaps;
+      state.uploadedChunks = Number(status.protectedChunks || 0);
+      state.verifyingResume = false;
+      if (state.capturePaused && !wasPaused) {
+        setRecorderMessage(`${status.reason || "El micrófono se interrumpió. La demo está en PAUSA."} TEC intentará continuar sola; si no, toca Reanudar.`, "info");
+      } else if (!state.capturePaused && wasPaused) {
+        setRecorderMessage("Grabación reanudada en la misma demostración. La pausa quedará señalada en el reporte.", "success");
+      }
+      const count = state.uploadedChunks;
+      chunkStatus.textContent = count
+        ? `${count} fragmento${count === 1 ? "" : "s"} protegido${count === 1 ? "" : "s"} en este iPhone${status.waitingForNetwork ? " · envío pendiente de conexión" : ""}`
+        : "Grabando en este iPhone · puedes bloquear la pantalla";
+      updateControls();
+      return;
+    }
+    // The app ended it (90 minutes, segment limit or its own menu), or it is gone.
+    if (!state.processing && (!status.active || status.localId !== state.localSessionId)) {
+      finishRecording(Boolean(status.ended?.localId === state.localSessionId && status.ended.autoStopped));
+    }
+  };
+
+  // The page can reload (or iOS can close it) while the app keeps recording.
+  const reattachNativeRecording = async () => {
+    if (!nativeRecorder || state.recording || state.processing) return;
+    const status = await nativeRecorder.status().catch(() => null);
+    const target = status?.active ? status : status?.ended;
+    if (!target?.localId) return;
+    const row = await tecOfflineGet("recordings", target.localId).catch(() => null);
+    if (!row || row.consentConfirmed !== true || state.recording || state.processing) return;
+    Object.assign(state, {
+      native: true, recording: true, processing: false, localSessionId: target.localId,
+      sessionId: target.serverSessionId || row.serverSessionId || "",
+      startedAt: Number(target.startedAt) || Date.parse(row.startedAt) || Date.now(),
+      segmentIndex: 0, uploadedChunks: Number(target.protectedChunks || 0), uploadErrors: [], storageFailure: false,
+      interruptionReason: "", capturePaused: false, pausePromise: null, resumeBusy: false, verifyingResume: false,
+      pausedAt: 0, pausedMs: Number(target.pausedMs || 0), recordingGaps: target.recordingGaps || [], uploadQueue: Promise.resolve()
+    });
+    tecActiveRecordingIds.add(target.localId);
+    state.releaseCaptureLock = await holdTecRecordingLock(target.localId).catch(() => null);
+    analysisNotice.hidden = true;
+    startClock();
+    updateControls();
+    renderLocalRecovery().catch(() => null);
+    if (status.active) {
+      applyNativeStatus(status);
+      setRecorderMessage("La grabación siguió activa en TEC mientras se recargaba la pantalla. Presiona Finalizar cuando termine la demostración.", "success");
+    } else {
+      finishRecording(Boolean(target.autoStopped));
+    }
   };
 
   const beginSegment = () => {
@@ -17558,14 +17637,25 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     setRecorderMessage(state.interruptionReason || "Terminando el ultimo fragmento...", state.interruptionReason ? "error" : "info");
 
     try {
-      await rotateSegment(true);
-      await state.pausePromise;
-      if (state.capturePaused && state.recordingGaps.length) state.recordingGaps[state.recordingGaps.length - 1].durationSeconds = Math.max(1, Math.round((Date.now() - state.pausedAt) / 1000));
+      if (state.native) {
+        // The app closes the last chunk, protects it and returns the pauses.
+        const summary = await nativeRecorder.stop(state.localSessionId);
+        if (Array.isArray(summary?.recordingGaps)) state.recordingGaps = summary.recordingGaps;
+        state.uploadedChunks = Number(summary?.protectedChunks || 0);
+        state.storageFailure = summary?.storageFailure === true;
+        state.capturePaused = false;
+      } else {
+        await rotateSegment(true);
+        await state.pausePromise;
+        if (state.capturePaused && state.recordingGaps.length) state.recordingGaps[state.recordingGaps.length - 1].durationSeconds = Math.max(1, Math.round((Date.now() - state.pausedAt) / 1000));
+      }
       stopMediaTracks();
       await releaseWakeLock();
       if (!state.interruptionReason) setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
       await state.uploadQueue;
-      if (state.storageFailure) throw new Error("Hay audio sin guardar. Descarga la copia de emergencia antes de salir.");
+      if (state.storageFailure) throw new Error(state.native
+        ? "Parte del audio no se pudo guardar. TEC la conserva en el iPhone; no borres la app y revisa Mis análisis."
+        : "Hay audio sin guardar. Descarga la copia de emergencia antes de salir.");
       await saveTecOfflineRecording({
         localId: state.localSessionId,
         serverSessionId: state.sessionId,
@@ -17630,7 +17720,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
         : null;
       showAnalysisNotice({
         title: protectedRecording ? "Grabacion protegida y pendiente" : "No pudimos terminar el reporte",
-        copy: state.storageFailure ? "Parte del audio no se pudo guardar. Descarga la copia de emergencia antes de cerrar esta página." : audioFailure(error).text
+        copy: state.storageFailure ? (state.native ? error.message : "Parte del audio no se pudo guardar. Descarga la copia de emergencia antes de cerrar esta página.") : audioFailure(error).text
       });
       setRecorderMessage(
         state.storageFailure ? error.message : audioFailure(error).text,
@@ -17646,6 +17736,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       tecActiveRecordingIds.delete(state.localSessionId);
       state.localSessionId = "";
       state.recorder = null;
+      state.native = false;
       updateControls();
       renderLocalRecovery().catch(() => null);
     }
@@ -17655,7 +17746,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     if (!consent.checked || state.recording || state.processing || !emergency.hidden) {
       return;
     }
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.TecPwaSafety?.createAudioJournal) {
+    if (!nativeRecorder && (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.TecPwaSafety?.createAudioJournal)) {
       setRecorderMessage("La grabación no está disponible en este dispositivo.", "error");
       return;
     }
@@ -17668,7 +17759,9 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     setRecorderMessage("Preparando micrófono…", "info");
 
     try {
-      state.stream = await navigator.mediaDevices.getUserMedia({
+      state.native = Boolean(nativeRecorder);
+      // The app asks for the microphone itself when the native recorder starts.
+      if (!state.native) state.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -17745,22 +17838,27 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
         : navigator.onLine ? "Grabando en este dispositivo · envío aún no confirmado" : "Dispositivo sin conexión · guardando audio local";
       currentReport.hidden = true;
       currentReport.innerHTML = "";
-      if (navigator.wakeLock?.request) {
-        state.wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
-      }
-      attachCaptureMonitor();
-      beginSegment();
-      state.captureMonitor?.check();
-      if (!state.recording) return;
-      state.clockTimer = window.setInterval(() => {
-        const elapsedMs = (state.capturePaused ? state.pausedAt : Date.now()) - state.startedAt - state.pausedMs;
-        timer.textContent = formatCoachDemoRecordingTime(elapsedMs / 1000);
-        if (elapsedMs >= MAX_RECORDING_MS) {
-          finishRecording(true);
+      if (state.native) {
+        // Consent was confirmed above and saved on the local row; the app checks it again.
+        await nativeRecorder.start({
+          localId: state.localSessionId, serverSessionId: state.sessionId, consentConfirmed: true,
+          startedAt: state.startedAt, segmentSeconds: SEGMENT_MS / 1000, maxSeconds: MAX_RECORDING_MS / 1000, maxChunks: 30
+        });
+        state.verifyingResume = false;
+      } else {
+        if (navigator.wakeLock?.request) {
+          state.wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
         }
-      }, 1000);
+        attachCaptureMonitor();
+        beginSegment();
+        state.captureMonitor?.check();
+      }
+      if (!state.recording) return;
+      startClock();
       setRecorderMessage(
-        state.sessionId
+        state.native
+          ? `Grabación iniciada. Puedes bloquear la pantalla: TEC sigue grabando. Si entra una llamada, la demo se pausa y TEC intenta continuar al terminar.${state.sessionId ? "" : ` ${audioFailure(sessionError || {}).text}`}`
+          : state.sessionId
           ? "Grabación iniciada. Mantén esta página abierta. Si usas dictado, comprueba que TEC indique Grabando al terminar; puedes tocar Reanudar si queda pausada."
           : `Grabación activa en este dispositivo. ${audioFailure(sessionError || {}).text}`,
         state.sessionId ? "success" : "info"
@@ -17769,6 +17867,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     } catch (error) {
       state.recording = false;
       state.processing = false;
+      state.native = false;
       await state.releaseCaptureLock?.();
       state.releaseCaptureLock = null;
       stopMediaTracks();
@@ -17808,6 +17907,18 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   });
   startButton.addEventListener("click", startRecording);
   stopButton.addEventListener("click", () => finishRecording(false));
+  if (nativeRecorder) {
+    window.addEventListener("tec:native-demo-recorder", event => {
+      if (state.native) applyNativeStatus(event.detail);
+      else reattachNativeRecording().catch(() => null);
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      if (state.native && state.recording && !state.processing) nativeRecorder.status().then(applyNativeStatus).catch(() => null);
+      else reattachNativeRecording().catch(() => null);
+    });
+    reattachNativeRecording().catch(() => null);
+  }
   resumeButton?.addEventListener("click", () => resumeCapture(true));
   refreshButton?.addEventListener("click", loadHistory);
   analysisNoticeOpen?.addEventListener("click", async () => {
