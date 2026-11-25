@@ -216,7 +216,7 @@
       reload.type = "button";
       reload.addEventListener("click", load);
       actions.appendChild(reload);
-      if (renderedSame && str(confirmed.followUp) && typeof opts.onFollowUp === "function") {
+      if (renderedSame && !close.appointmentSaved && str(confirmed.followUp) && typeof opts.onFollowUp === "function") {
         var fu = make("button", null, "Preparar recordatorio");
         fu.type = "button";
         fu.addEventListener("click", function () {

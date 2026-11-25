@@ -22,13 +22,14 @@ export function inDemoClosePilot(auth, switched, allowed = pilotEmails) {
   return !switched && !!auth?.session?.tokenHash && pilotEmails.includes(email) && (allowed.includes(email) || allowed.includes('*')) &&
     (auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat'));
 }
-const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps';
+const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state';
 function shape(doc) {
   const suggested = Object.fromEntries(Object.entries(doc.report?.closeFacts || {}).filter(([key,val]) => Object.hasOwn(limits,key) && key !== 'sellerNote' && typeof val === 'string' && val));
   const declaredOutcome = {sale:'venta',follow_up:'follow_up',no_sale:'no_venta'}[doc.knownOutcome];
   return {visitId:doc.closeVisitId,crmId:String(doc.closeCrmId || ''),version:doc.closeVersion || 0,
     fields:{...suggested,...doc.closeDraft}, sellerFields:Object.keys(doc.closeDraft || {}), confirmed:doc.closeConfirmed || {}, declaredOutcome:declaredOutcome || '', answered:!!doc.closeAnswered,
-    partial:Boolean(doc.report?.partial || doc.report?.recordingGaps?.length)};
+    partial:Boolean(doc.report?.partial || doc.report?.recordingGaps?.length),
+    ...(doc.autoCloseReceipt?.appointment?.state === 'saved' && { appointmentSaved:true })};
 }
 function chosenFields(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Object.keys(raw).length) throw fail(422,'Elige los datos que quieres guardar.');
@@ -117,8 +118,8 @@ export function demoCloseQuestions(close) {
     questions.push({field:'outcome',question:'¿Cómo terminó la visita: hubo venta, quedó seguimiento o decidieron dejarlo aquí?'});
   const outcome=f.outcome || close.declaredOutcome;
   if (outcome==='venta' && !f.saleAmount && !/monto|importe/i.test(f.sellerNote || '')) questions.push({field:'saleAmount',question:'¿En cuánto quedó la venta, o dejamos el monto pendiente?'});
-  if (outcome==='follow_up' && !f.followUp) questions.push({field:'followUp',question:'¿Qué prometiste hacer y para cuándo quedó el seguimiento?'});
-  else if (outcome==='follow_up' && f.followUp && !close.confirmed.followUp && !close.sellerFields.includes('followUp') &&
+  if (!close.appointmentSaved && outcome==='follow_up' && !f.followUp) questions.push({field:'followUp',question:'¿Qué prometiste hacer y para cuándo quedó el seguimiento?'});
+  else if (!close.appointmentSaved && outcome==='follow_up' && f.followUp && !close.confirmed.followUp && !close.sellerFields.includes('followUp') &&
       !/\b(?:\d{1,2}[:.]\d{2}|a las? (?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce))\b/i.test(f.followUp))
     questions.push({field:'followUp',question:'El seguimiento quedó como «'+f.followUp+'». ¿Acordaron una hora o queda abierta?'});
   return questions.slice(0,2);

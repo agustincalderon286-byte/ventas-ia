@@ -1,6 +1,11 @@
 import "dotenv/config";
 import { demoCloseFactSchema, demoCloseInstructions, verifiedDemoCloseFacts } from "./src/coach-demo-close-facts.js";
 import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorker } from "./src/coach-demo-local.js";
+import { autoDemoCloseInstructions, autoDemoCloseSchema, createAutoDemoClose, verifyAutoDemoClose } from "./src/coach-demo-auto-close.js";
+import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
+import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
+import { createSheetsTransfer, sheetsPhoneKey } from "./src/coach-sheets-transfer.js";
+import { validTimeZone } from "./src/coach-followup-input.js";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
 import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
@@ -142,6 +147,7 @@ const COACH_DEMO_MAX_SECONDS = 90 * 60;
 const COACH_DEMO_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
 const COACH_DEMO_MAX_CHUNKS = 30;
 const COACH_DEMO_LOCAL_EMAILS = String(process.env.COACH_DEMO_LOCAL_EMAILS || "").toLowerCase().split(",").map(email => email.trim()).filter(Boolean);
+const COACH_DEMO_AUTO_CLOSE = process.env.COACH_DEMO_AUTO_CLOSE === '1';
 
 const conversaciones = {};
 const estadosConversacion = {};
@@ -1309,6 +1315,8 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
   closeConfirmed: mongoose.Schema.Types.Mixed,
   closeDraft: mongoose.Schema.Types.Mixed,
   closeAnswered: Boolean,
+  autoClose: mongoose.Schema.Types.Mixed,
+  autoCloseReceipt: mongoose.Schema.Types.Mixed,
   status: { type: String, default: "recording", index: true },
   consentConfirmed: { type: Boolean, default: false },
   knownOutcome: { type: String, default: "unknown" },
@@ -12673,7 +12681,7 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
   const completedChunks = chunks.filter(chunk => chunk?.status === "transcribed" && chunk?.text).length;
   // Older reports saved only the duration of segments containing speech.
   const included = doc.report?.includedChunkIndexes;
-  const { closeFacts: privateCloseFields, ...trainingReport } = doc.report || {};
+  const { closeFacts: privateCloseFields, autoClose: privateAutoClose, ...trainingReport } = doc.report || {};
   const knownSelection = !doc.report?.partial || Array.isArray(included);
   const recordedSeconds = doc.status === "completed" && knownSelection
     ? duracionSegmentosCoachDemo(chunks, included) : null;
@@ -12694,6 +12702,7 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
     completedChunks,
     brief: doc.status === "completed" && doc.report ? resumirCoachDemoReport(doc.report) : null,
     closeAvailable: Boolean(doc.closeVisitId && ownerUserId && viewerUserId === ownerUserId && doc.status === "completed"),
+    ...(includeDetail && ownerUserId && viewerUserId === ownerUserId && doc.autoCloseReceipt ? { autoCloseReceipt: doc.autoCloseReceipt } : {}),
     report: includeDetail ? (doc.report ? trainingReport : null) : doc.report
       ? {
           title: doc.report.title || "Analisis de demostracion",
@@ -12884,7 +12893,7 @@ const COACH_DEMO_REPORT_SCHEMA = {
   }
 };
 
-async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "unknown", closeSegments = null } = {}) {
+async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "unknown", closeSegments = null, autoClose = false } = {}) {
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) {
     throw new Error("La clave de OpenAI no esta configurada en el servidor.");
@@ -12894,8 +12903,8 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
   const prepareClose = Array.isArray(closeSegments) && closeSegments.length > 0;
   const schema = prepareClose ? {
     ...COACH_DEMO_REPORT_SCHEMA,
-    required: [...COACH_DEMO_REPORT_SCHEMA.required, "closeFacts"],
-    properties: { ...COACH_DEMO_REPORT_SCHEMA.properties, closeFacts: demoCloseFactSchema }
+    required: [...COACH_DEMO_REPORT_SCHEMA.required, "closeFacts", ...(autoClose ? ['autoClose'] : [])],
+    properties: { ...COACH_DEMO_REPORT_SCHEMA.properties, closeFacts: demoCloseFactSchema, ...(autoClose && { autoClose: autoDemoCloseSchema }) }
   } : COACH_DEMO_REPORT_SCHEMA;
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -12916,7 +12925,7 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
             "al representante a mejorar conexion, descubrimiento de necesidades, demostracion de valor, manejo de " +
             "objeciones y cierre. Escribe en español natural. No incluyas datos personales en el resumen ni en las recomendaciones. " +
             "Si falta audio, limita cada observación a los fragmentos disponibles. No deduzcas una venta ni un rechazo del silencio." +
-            (prepareClose ? "\n" + demoCloseInstructions : "")
+            (prepareClose ? "\n" + demoCloseInstructions : "") + (prepareClose && autoClose ? '\n' + autoDemoCloseInstructions : '')
         },
         {
           role: "user",
@@ -12959,6 +12968,8 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
     const report = JSON.parse(rawText);
     if (prepareClose) report.closeFacts = verifiedDemoCloseFacts(report.closeFacts, closeSegments);
     else delete report.closeFacts;
+    if (prepareClose && autoClose) report.autoClose = verifyAutoDemoClose(report.autoClose, closeSegments);
+    else delete report.autoClose;
     return report;
   } catch (error) {
     throw new Error("El reporte de OpenAI no llego en el formato esperado.");
@@ -25682,6 +25693,7 @@ app.get("/api/coach/me", async (req, res) => {
       stripeReady: stripeListoParaCheckout(),
       user: await construirCoachUserView(userDoc),
       demoClosePilot: canUseDemoClose(auth,req),
+      demoAutoClosePilot: COACH_DEMO_AUTO_CLOSE && COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(auth.user.email)) && canUseDemoClose(auth,req),
       profile: profilePayload,
       marketing,
       integrations: {
@@ -31890,7 +31902,35 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
 });
 
 const localDemoWorkerKey = String(process.env.COACH_DEMO_LOCAL_WORKER_KEY || '').trim();
-const localDemoQueue = createLocalDemoQueue({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), finish: completeCoachDemoReport });
+const autoDemoCalendar = createCoachCalendarConnections({ config: personalConnectionsConfig }).service;
+const autoDemoSheets = createCoachSheetsConnections({ config: personalConnectionsConfig }).service;
+const autoDemoClose = createAutoDemoClose({ calendar: autoDemoCalendar, sheets: autoDemoSheets, followups: personalFollowups,
+  transfer: createSheetsTransfer({ key: personalConnectionsConfig.key }), active: demoAutoCloseActive });
+
+async function demoAutoCloseActive(doc) {
+  if (!COACH_DEMO_AUTO_CLOSE || !COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(doc.ownerEmail)) || !doc.localProcessing?.lease) return false;
+  return Boolean(await CoachDemoAnalysis.exists({ _id:doc._id, ownerUserId:doc.ownerUserId, status:'queued_local',
+    'localProcessing.lease':doc.localProcessing.lease, 'localProcessing.leaseUntil':{ $gt:new Date() } }));
+}
+
+async function finishLocalCoachDemo(doc, options) {
+  const enabled = Boolean(doc.autoClose && await demoAutoCloseActive(doc));
+  const result = await completeCoachDemoReport(enabled ? doc : { ...doc, autoClose:null }, options);
+  if (!result.report?.autoClose) return result;
+  const facts = result.report.autoClose;
+  delete result.report.autoClose;
+  let contact = {};
+  if (doc.closeCrmId && doc.autoClose.crmOwner) {
+    const source = await CoachCrmRecord.findOne({ _id:doc.closeCrmId, ownerUserId:doc.autoClose.crmOwner }).select('leadName phone').lean();
+    if (source) contact = { name:String(source.leadName || '').replace(/[\p{Cc}]/gu,'').trim().slice(0,100), phone:sheetsPhoneKey(source.phone) };
+  }
+  result.autoCloseReceipt = await autoDemoClose(doc, facts, contact, {
+    partial: Boolean(options.partial || options.rawGaps?.length), followUpMentioned: Boolean(result.report.closeFacts?.followUp || result.report.closeFacts?.outcome === 'follow_up')
+  });
+  return result;
+}
+
+const localDemoQueue = createLocalDemoQueue({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), finish: finishLocalCoachDemo });
 registerLocalDemoWorker(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', queue: localDemoQueue });
 
 app.get("/api/coach/demo-analyses", async (req, res) => {
@@ -31989,7 +32029,7 @@ async function completeCoachDemoReport(doc, { partial, included, rawGaps, knownO
   const gapNotice = rawGaps.map(gap => `Pausa sin audio: desde el minuto ${(gap.offsetSeconds / 60).toFixed(1)}, durante ${Math.round(gap.durationSeconds)} segundos.`).join('\n');
   if (gapNotice) transcript = `${gapNotice}\nLos minutos de los segmentos son aproximados y no incluyen necesariamente estos intervalos.\n\n${transcript}`;
   await beforeAnalyze({ ...common, transcript, status: 'processing', error: '', updatedAt: new Date() });
-  const report = await analizarCoachDemoTranscript({ transcript, knownOutcome, closeSegments: doc.closeVisitId ? successfulChunks : null });
+  const report = await analizarCoachDemoTranscript({ transcript, knownOutcome, closeSegments: doc.closeVisitId ? successfulChunks : null, autoClose: Boolean(doc.autoClose) });
   if (partial) {
     report.title = `[Parcial] ${report.title || 'Analisis de demostracion'}`;
     report.summary = `${partialNotice}\n\n${report.summary || ''}`;
@@ -32055,8 +32095,15 @@ app.post("/api/coach/demo-analyses", async (req, res) => {
     if (useLocal && localDemoWorkerKey.length < 32) {
       return responderCoachError(res, 503, "La cola de la Mac está en pausa. El audio se guarda en tu dispositivo.");
     }
+    let autoClose = null;
+    if (useLocal && COACH_DEMO_AUTO_CLOSE && req.body?.autoSaveVersion === 1) {
+      const [calendar, sheets] = await Promise.allSettled([autoDemoCalendar.getConnection(auth.user._id), autoDemoSheets.getConnection(auth.user._id)]);
+      autoClose = { zone:validTimeZone(req.body?.coachTimeZone), calendarGrant:calendar.value?.grant || '', sheetsGrant:sheets.value?.grant || '',
+        crmOwner: closeCrmId ? String(resolverCoachOwnerUserId(auth.user)) : '' };
+    }
     const doc = await CoachDemoAnalysis.create({
       ...(closeVisitId ? {closeVisitId,closeCrmId,closeVersion:0} : {}),
+      ...(autoClose && { autoClose }),
       ownerUserId: auth.user._id,
       ownerEmail: auth.user.email || "",
       ownerName: auth.user.name || "",

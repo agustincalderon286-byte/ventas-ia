@@ -79,6 +79,33 @@ test("solicita a OpenAI un reporte estricto y estructurado", async () => {
   }
 });
 
+test('el análisis del piloto valida los candidatos al guardado y mantiene privado su recibo', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-key';
+  const quote = 'Como referencia anota a Julia Ríos con el número 312-555-0147';
+  globalThis.fetch = async (_url, request) => {
+    const body = JSON.parse(request.body);
+    assert.equal(body.store, false);
+    assert.ok(body.text.format.schema.required.includes('autoClose'));
+    return new Response(JSON.stringify({ output_text:JSON.stringify({ title:'Cierre ficticio', closeFacts:[],
+      autoClose:{ referrals:[{fullName:'Julia Ríos',phone:'3125550147',segment:1,quote}], incompleteReferrals:[], followUp:null } }) }));
+  };
+  try {
+    const report = await analizarCoachDemoTranscript({ transcript:quote, closeSegments:[{ index:0, text:quote }], autoClose:true });
+    assert.equal(report.autoClose.referrals.length, 1);
+    const row = { _id:'demo', ownerUserId:'vendedor', status:'completed', report, autoCloseReceipt:{ referrals:{ saved:1 } } };
+    const colleague = limpiarCoachDemoAnalysis(row,{ includeDetail:true, viewerUserId:'otro' });
+    assert.equal(colleague.autoCloseReceipt, undefined);
+    assert.equal(colleague.report.autoClose, undefined);
+    assert.equal(limpiarCoachDemoAnalysis(row,{ includeDetail:true, viewerUserId:'vendedor' }).autoCloseReceipt.referrals.saved, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalKey;
+  }
+});
+
 const recordedDemo = {
   _id: "demo-prueba",
   ownerUserId: "vendedor",

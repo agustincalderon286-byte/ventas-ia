@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261124-demo1",
+  "cache": "tec-coach-shell-20261124-cierre-auto1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261124-demo1"
+        "v=20261124-cierre-auto1"
       ],
-      "sha": "81de6bd847ec217a"
+      "sha": "6ea2a1a2f07524a6"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -142,9 +142,9 @@
     },
     "/coach/demo-close-review.js": {
       "versions": [
-        "v=20261121-cierredemo2"
+        "v=20261124-cierre-auto1"
       ],
-      "sha": "983f9ef9f82354b6"
+      "sha": "1108d420e2c802b9"
     },
     "/coach/demo-close-tools.js": {
       "versions": [

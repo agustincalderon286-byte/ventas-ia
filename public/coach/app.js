@@ -900,6 +900,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
           knownOutcome: recording.knownOutcome || "unknown",
           startedAt: recording.startedAt || recording.createdAt,
           ...(recording.closeVisitId ? { closeVisitId:recording.closeVisitId, closeCrmId:recording.closeCrmId || "" } : {}),
+          ...(recording.autoSave || {}),
           clientRecordingId: recording.localId, localQueueVersion: 1
         }, timeoutMs: 15000
       });
@@ -16774,6 +16775,7 @@ function renderCoachDemoReport(root, analysis = null) {
 
   const report = analysis.report || {};
   const brief = analysis.brief || { summary: report.summary, partial: Boolean(report.partial || report.recordingGaps?.length) };
+  const automatic = renderDemoAutoCloseReceipt(analysis.autoCloseReceipt);
   const scores = report.scores || {};
   const scoreItems = [
     ["Conexion", scores.conexion],
@@ -16801,6 +16803,7 @@ function renderCoachDemoReport(root, analysis = null) {
       </div>
     </div>
     ${brief.partial ? '<p class="coach-demo-partial">Resumen parcial · Faltan tramos de audio.</p>' : ""}
+    ${automatic}
     ${!brief.summary && !brief.strength && !brief.nextStep ? '<p class="mini-note">La grabación no aporta suficiente información para un resumen.</p>' : ""}
     <dl class="coach-demo-brief">
       ${[["Qué pasó", brief.summary], ["Qué funcionó", brief.strength], ["Próximo paso", brief.nextStep]]
@@ -16916,13 +16919,46 @@ function renderCoachDemoReport(root, analysis = null) {
   root.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function initCoachDemoRecorder(closePilot = false) {
+function renderDemoAutoCloseReceipt(receipt) {
+  if (!receipt) return "";
+  const items = [];
+  const links = [];
+  const appointment = receipt.appointment;
+  if (appointment?.state === "saved") {
+    const date = new Intl.DateTimeFormat("es-US", { timeZone: appointment.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(appointment.start));
+    items.push("Seguimiento guardado en Google Calendar · " + date);
+    try {
+      const url = new URL(appointment.htmlLink);
+      if (url.protocol === "https:" && ["calendar.google.com", "www.google.com"].includes(url.host) && !url.username && !url.password && url.pathname.startsWith("/calendar/")) {
+        links.push(["Abrir seguimiento", url.href]);
+      }
+    } catch {}
+  } else if (appointment) {
+    items.push(({ time: "Revisa la fecha y la hora del seguimiento.", busy: "El horario acordado está ocupado.",
+      connection: "Revisa la conexión o el permiso de horarios libres en Google Calendar.", error: "Revisa Calendar para confirmar si se guardó el seguimiento." })[appointment.state] || "El seguimiento requiere una aclaración.");
+  }
+  const refs = receipt.referrals;
+  if (refs?.saved) items.push(refs.saved + (refs.saved === 1 ? " referido guardado" : " referidos guardados") + " en " + refs.sheetTitle + ".");
+  if (refs?.duplicates) items.push(refs.duplicates + (refs.duplicates === 1 ? " referido ya estaba en la hoja." : " referidos ya estaban en la hoja."));
+  if (refs?.pending) items.push(({ host: "Falta vincular al anfitrión de los referidos.", connection: "Revisa la hoja del 4 en 14 en Mis conexiones.",
+    error: "Revisa la hoja del 4 en 14 para confirmar qué se guardó." })[refs.state] || refs.pending + (refs.pending === 1 ? " referido por revisar." : " referidos por revisar."));
+  if (/^[\w-]{20,120}$/.test(refs?.file || "")) links.push(["Abrir hoja del 4 en 14", "https://docs.google.com/spreadsheets/d/" + refs.file + "/edit"]);
+  if (!items.length) return "";
+  return `<section class="coach-demo-report-section"><h5>Seguimientos y referidos</h5><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    ${links.map(([label, url]) => `<a class="secondary-button" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">${label}</a>`).join(" ")}</section>`;
+}
+
+function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   const root = document.querySelector("[data-demo-recorder]");
   if (!root) {
     return;
   }
 
   const consent = root.querySelector("[data-demo-recorder-consent]");
+  if (autoClosePilot) {
+    const label = consent.parentElement.querySelector("span");
+    if (label) label.textContent = "Todos aceptaron la grabación. El Coach guardará los referidos y seguimientos claros de la visita.";
+  }
   const outcome = document.querySelector("[data-demo-recorder-outcome]");
   consent.checked = false;
   outcome.value = "unknown";
@@ -17590,6 +17626,7 @@ function initCoachDemoRecorder(closePilot = false) {
       });
       const startedAt = new Date().toISOString();
       const visitLink = closePilot ? {closeVisitId:getTecVisitId(), closeCrmId:getActiveCoachCrmContext()?.id || ""} : {};
+      const autoSave = autoClosePilot ? { autoSaveVersion: 1, coachTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } : {};
       state.localSessionId = createTecOfflineId("recording");
       state.releaseCaptureLock = await holdTecRecordingLock(state.localSessionId);
       tecActiveRecordingIds.add(state.localSessionId);
@@ -17598,6 +17635,7 @@ function initCoachDemoRecorder(closePilot = false) {
         status: "recording",
         consentConfirmed: true,
         ...visitLink,
+        autoSave,
         knownOutcome: "unknown",
         protectedChunks: 0,
         startedAt,
@@ -17614,6 +17652,7 @@ function initCoachDemoRecorder(closePilot = false) {
               consentConfirmed: true,
               knownOutcome: "unknown",
               ...visitLink,
+              ...autoSave,
               startedAt,
               clientRecordingId: state.localSessionId, localQueueVersion: 1
             }
@@ -18043,7 +18082,7 @@ async function loadCoachAppPage() {
     initBuyerProfileTool();
     initDailyPrizeTool(me.user);
     initCoachDemoOutcomeWorkspace(me.user);
-    initCoachDemoRecorder(me.demoClosePilot === true);
+    initCoachDemoRecorder(me.demoClosePilot === true, me.demoAutoClosePilot === true);
     initTecNewClient(me.user);
   }
 
