@@ -319,6 +319,49 @@ test("en la app de iPhone la grabación pasa al grabador nativo solo con consent
   assert.equal(consent.checked, false, 'cada demo requiere confirmar de nuevo');
 });
 
+test("Coach Jorge avisa en la barra de grabación y Siri empieza la demo solo con el sí y después de revisar la grabación en curso", async () => {
+  const startAt = app.indexOf('  // Coach Jorge during the demo: what the recording left unclear');
+  const endAt = app.indexOf('  if (nativeRecorder) {\n    window.addEventListener("tec:native-demo-recorder"', startAt);
+  assert.ok(startAt > 0 && endAt > startAt);
+  const items = [], asked = [], intervals = [], starts = [];
+  const list = { hidden: true, get children() { return items; }, replaceChildren() { items.length = 0; }, append(item) { items.push(item); } };
+  const state = { recording: true, processing: false, sessionId: 'qa5550101demo000000000001' };
+  const consent = { checked: false, dispatchEvent() {} };
+  const chunkStatus = { textContent: '' };
+  const context = {
+    state, consent, chunkStatus, emergency: { hidden: true }, nativeRecorder: { available: true },
+    recordingDock: { querySelector: selector => selector === '[data-demo-live-notices]' ? list : null },
+    document: { hidden: false, addEventListener() {}, createElement: () => ({ textContent: '' }) },
+    navigator: { vibrate() {} }, window: {}, Event: class { constructor(type) { this.type = type; } },
+    setInterval: (fn, ms) => intervals.push(ms), encodeURIComponent, Number, String, Array, Object,
+    getActiveCoachCrmContext: () => null,
+    startRecording: async () => { starts.push(consent.checked); state.recording = true; },
+    finishRecording: async () => { state.recording = false; },
+    apiRequest: async url => { asked.push(url); return { recording: true, notices: [
+      { n: 1, short: 'Un referido tiene el teléfono dudoso.', text: 'Referido Ana Prueba: el teléfono no quedó claro.' }] }; }
+  };
+  const run = vm.runInNewContext(app.slice(startAt, endAt) + '\n({ pollLiveNotices, setChecked: () => { voiceChecked = true; } });', context);
+  assert.deepEqual(intervals, [45000]);
+  await run.pollLiveNotices();
+  await run.pollLiveNotices();
+  assert.deepEqual(asked, ['/api/coach/demo-analyses/qa5550101demo000000000001/live?after=0', '/api/coach/demo-analyses/qa5550101demo000000000001/live?after=1']);
+  assert.deepEqual(items.map(item => item.textContent), ['Referido Ana Prueba: el teléfono no quedó claro.'], 'each notice once');
+  assert.equal(list.hidden, false);
+
+  state.recording = false;
+  const voice = context.window.TecVoiceDemo;
+  assert.equal(voice.start(), 'waiting', 'first the page looks for a recording the app kept going');
+  run.setChecked();
+  assert.equal(voice.start(), 'ready');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(starts, [true], 'Siri\'s yes is the consent for this demo');
+  assert.match(chunkStatus.textContent, /sin cliente abierto/);
+  assert.equal(voice.start(), 'ready', 'a second «graba la demo» does not start another one');
+  assert.equal(starts.length, 1);
+  assert.equal(voice.stop(), 'ready');
+  assert.equal(state.recording, false);
+});
+
 test("cada intento de grabar requiere consentimiento nuevo y parte de un resultado por definir", async () => {
   const state = { recording: false, processing: false };
   const consent = { checked: false }, outcome = { value: 'sale' };

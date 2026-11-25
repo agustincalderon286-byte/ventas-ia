@@ -17907,6 +17907,66 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   });
   startButton.addEventListener("click", startRecording);
   stopButton.addEventListener("click", () => finishRecording(false));
+
+  // Coach Jorge during the demo: what the recording left unclear, a few minutes after it was said.
+  // The TEC apps also show it as a notice when the screen is off; here it stays in the recording bar.
+  const liveList = recordingDock?.querySelector("[data-demo-live-notices]");
+  const live = { id: "", after: 0, busy: false };
+  const pollLiveNotices = async () => {
+    if (!liveList || !state.recording || !state.sessionId || live.busy || document.hidden) return;
+    if (live.id !== state.sessionId) {
+      live.id = state.sessionId;
+      live.after = 0;
+      liveList.replaceChildren();
+      liveList.hidden = true;
+    }
+    live.busy = true;
+    try {
+      const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(live.id)}/live?after=${live.after}`, { timeoutMs: 8000 });
+      for (const notice of Array.isArray(data?.notices) ? data.notices : []) {
+        if (!Number.isInteger(notice?.n) || notice.n <= live.after) continue;
+        live.after = notice.n;
+        const item = document.createElement("li");
+        item.textContent = String(notice.text || notice.short || "").slice(0, 300);
+        liveList.append(item);
+        navigator.vibrate?.(120);
+      }
+      liveList.hidden = !liveList.children.length;
+    } catch {
+      // A missed check is retried on the next round; the recording is not affected.
+    } finally {
+      live.busy = false;
+    }
+  };
+  setInterval(() => pollLiveNotices().catch(() => null), 45_000);
+  document.addEventListener("visibilitychange", () => pollLiveNotices().catch(() => null));
+
+  // Siri in the TEC iPhone app: «Oye Siri, graba la demo en TEC». Siri has already asked out loud
+  // whether everyone accepted the recording, and only a «sí» reaches this page. The app retries
+  // while the answer is "waiting".
+  let voiceChecked = false; // Until the page has looked for a recording the app kept going.
+  if (nativeRecorder) window.TecVoiceDemo = Object.freeze({
+    start() {
+      if (!voiceChecked) return "waiting";
+      if (state.recording) return "ready";
+      if (state.processing || !emergency.hidden) return "busy";
+      consent.checked = true;
+      consent.dispatchEvent(new Event("change"));
+      startRecording().then(() => {
+        if (state.recording && !getActiveCoachCrmContext()?.id) {
+          chunkStatus.textContent = "Grabando sin cliente abierto: abre su ficha para que se guarden sus referidos.";
+        }
+      }).catch(() => null);
+      return "ready";
+    },
+    stop() {
+      if (!voiceChecked) return "waiting";
+      if (!state.recording) return "ready";
+      if (state.processing) return "busy";
+      finishRecording(false).catch(() => null);
+      return "ready";
+    }
+  });
   if (nativeRecorder) {
     window.addEventListener("tec:native-demo-recorder", event => {
       if (state.native) applyNativeStatus(event.detail);
@@ -17917,7 +17977,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       if (state.native && state.recording && !state.processing) nativeRecorder.status().then(applyNativeStatus).catch(() => null);
       else reattachNativeRecording().catch(() => null);
     });
-    reattachNativeRecording().catch(() => null);
+    reattachNativeRecording().catch(() => null).finally(() => { voiceChecked = true; });
   }
   resumeButton?.addEventListener("click", () => resumeCapture(true));
   refreshButton?.addEventListener("click", loadHistory);

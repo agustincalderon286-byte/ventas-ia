@@ -3,6 +3,7 @@ import { demoCloseFactSchema, demoCloseInstructions, verifiedDemoCloseFacts } fr
 import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorker } from "./src/coach-demo-local.js";
 import { autoDemoCloseInstructions, autoDemoCloseSchema, createAutoDemoClose, verifyAutoDemoClose } from "./src/coach-demo-auto-close.js";
 import { createDemoSurveyWriter } from "./src/coach-demo-survey.js";
+import { createLiveDemo, registerLiveDemo } from "./src/coach-demo-live.js";
 import { demoFigureGuard } from "./src/coach-demo-figures.js";
 import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
 import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
@@ -1323,6 +1324,8 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
   closeAnswered: Boolean,
   autoClose: mongoose.Schema.Types.Mixed,
   autoCloseReceipt: mongoose.Schema.Types.Mixed,
+  // Coach Jorge during the demo: pieces transcribed while recording and the notices sent to the seller.
+  live: mongoose.Schema.Types.Mixed,
   status: { type: String, default: "recording", index: true },
   consentConfirmed: { type: Boolean, default: false },
   knownOutcome: { type: String, default: "unknown" },
@@ -31933,6 +31936,8 @@ async function demoAutoCloseActive(doc) {
 async function finishLocalCoachDemo(doc, options) {
   const enabled = Boolean(doc.autoClose && await demoAutoCloseActive(doc));
   const result = await completeCoachDemoReport(enabled ? doc : { ...doc, autoClose:null }, options);
+  // The pieces transcribed during the visit are not kept once the full report exists.
+  if (doc.live) Object.assign(result, { 'live.texts': [], 'live.pending': [] });
   if (!result.report?.autoClose) return result;
   const facts = result.report.autoClose;
   delete result.report.autoClose;
@@ -31963,8 +31968,36 @@ async function finishLocalCoachDemo(doc, options) {
   return result;
 }
 
+// The live check sees only what is already transcribed, while the visit goes on. It saves nothing.
+async function analizarCoachDemoEnVivo({ chunks }) {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) throw new Error("La clave de OpenAI no esta configurada en el servidor.");
+  const transcript = chunks.map(chunk => `[Segmento ${chunk.index + 1}]\n${String(chunk.text || '').trim()}`).join('\n\n');
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: COACH_DEMO_ANALYSIS_MODEL,
+      store: false,
+      input: [
+        { role: "system", content: "Revisas en vivo una demostración de Royal Prestige que sigue en curso. La transcripción llega por partes " +
+          "y la última puede terminar a media frase. Solo preparas los datos de cierre; no evalúes al vendedor.\n" + autoDemoCloseInstructions },
+        { role: "user", content: `TRANSCRIPCION HASTA AHORA:\n${transcript}` }
+      ],
+      text: { format: { type: "json_schema", name: "coach_demo_live", strict: true, schema: autoDemoCloseSchema } }
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `OpenAI respondio ${response.status}.`);
+  const rawText = extraerCoachDemoResponseText(data);
+  if (!rawText) throw new Error("OpenAI no devolvio la revisión en vivo.");
+  return verifyAutoDemoClose(JSON.parse(rawText), chunks);
+}
+
 const localDemoQueue = createLocalDemoQueue({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), finish: finishLocalCoachDemo });
 registerLocalDemoWorker(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', queue: localDemoQueue });
+const liveDemo = createLiveDemo({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), analyze: analizarCoachDemoEnVivo });
+registerLiveDemo(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', live: liveDemo, active: (req, res) => requireCoachActivo(req, res) });
 
 app.get("/api/coach/demo-analyses", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
@@ -32136,7 +32169,7 @@ app.post("/api/coach/demo-analyses", async (req, res) => {
     }
     const doc = await CoachDemoAnalysis.create({
       ...(closeVisitId ? {closeVisitId,closeCrmId,closeVersion:0} : {}),
-      ...(autoClose && { autoClose }),
+      ...(autoClose && { autoClose, live: liveDemo.initial() }),
       ownerUserId: auth.user._id,
       ownerEmail: auth.user.email || "",
       ownerName: auth.user.name || "",
@@ -32259,6 +32292,7 @@ app.post(
         doc.chunkCount = doc.chunks.length;
         doc.updatedAt = now;
         await doc.save();
+        if (doc.live?.enabled && doc.status === 'recording') await liveDemo.queue(doc._id, index).catch(() => null);
         return res.json({ ok: true, chunk: { index, durationSeconds, status: 'staged' } });
       }
       try {

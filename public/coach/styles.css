@@ -9593,3 +9593,19 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
 .demo-close-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .55rem; }
 .demo-close-actions button { min-height: 2.75rem; padding: .4rem .85rem; border: 1px solid #c3cfd9; border-radius: .65rem; color: #173951; background: #fff; font: inherit; cursor: pointer; }
 .demo-close-actions button[type=submit] { background: #0d304e; color: white; }
+
+/* Coach Jorge during the demo: notices under the recording bar. */
+.coach-demo-live-notices {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  border-radius: 10px;
+  background: rgba(255, 214, 102, 0.14);
+  color: #fff6d6;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.coach-demo-live-notices li + li {
+  margin-top: 4px;
+}

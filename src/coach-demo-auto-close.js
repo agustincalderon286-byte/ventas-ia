@@ -268,6 +268,12 @@ function whenFor(analysis, candidate, now) {
   return { ...result, timeZone: parsed.state.timeZone, reminderMinutes: parsed.state.reminderMinutes === undefined ? 10 : parsed.state.reminderMinutes };
 }
 
+// What Jorge should ask about an agreed follow-up before it can be booked; '' when it can be booked.
+export function followUpQuestion(analysis, candidate, now = Date.now()) {
+  const when = whenFor(analysis, candidate, now);
+  return !when ? 'No pude leer con certeza el día y la hora. ¿Para cuándo quedó?' : when.question || '';
+}
+
 export function createAutoDemoClose({ calendar, followups, sheets, transfer, active, now = Date.now }) {
   async function saveCalendar(analysis, facts, contact, partial) {
     if (!facts.followUp) return { state: 'pending' };
