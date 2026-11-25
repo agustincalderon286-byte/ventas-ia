@@ -5081,6 +5081,21 @@ function initHealthSurveyTool(user) {
     fillForm(survey);
     loadSurveys().catch(() => null);
   };
+  form.openDemoSurvey = async id => {
+    await offlineForm.ready;
+    if (offlineForm.hasDraft() && String(form.elements.namedItem("surveyId")?.value || "") !== id) {
+      throw new Error("Termina la encuesta que tienes abierta para conservar ese borrador.");
+    }
+    if (!offlineForm.hasDraft()) {
+      const data = await apiRequest(`/api/coach/health-surveys/${encodeURIComponent(id)}`);
+      if (offlineForm.hasDraft()) throw new Error("La encuesta abierta cambió. Vuelve a intentarlo cuando termines el borrador.");
+      form.showClosedSurvey(data.survey);
+    }
+    setCoachWorkspaceTab("cierre");
+    setCoachDemoStageId("encuesta_salud");
+    syncFormToggle(true);
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   syncFormToggle(false);
   syncFolderToggle(false);
@@ -16916,6 +16931,16 @@ function renderCoachDemoReport(root, analysis = null) {
   `;
   const closeRoot=root.querySelector("[data-demo-close-root]");
   if (closeRoot) window.tecVisitClose?.mount(closeRoot,analysis.id);
+  const openSurvey = root.querySelector("[data-demo-open-saved-survey]");
+  openSurvey?.addEventListener("click", async () => {
+    openSurvey.disabled = true;
+    const status = root.querySelector("[data-demo-open-survey-status]");
+    try {
+      status.textContent = "";
+      await document.querySelector("[data-health-survey-form]").openDemoSurvey(openSurvey.dataset.demoOpenSavedSurvey);
+    } catch (error) { status.textContent = error.message || "No pude abrir la encuesta."; }
+    finally { openSurvey.disabled = false; }
+  });
   root.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -16923,6 +16948,11 @@ function renderDemoAutoCloseReceipt(receipt) {
   if (!receipt) return "";
   const items = [];
   const links = [];
+  const survey = receipt.survey;
+  if (survey?.state === "saved") {
+    items.push(survey.filled ? "Encuesta guardada · " + survey.filled + (survey.filled === 1 ? " campo completado." : " campos completados.") : "Encuesta disponible en TEC.");
+    if (survey.conflicts) items.push("Se conservaron las respuestas que ya estaban en la encuesta.");
+  } else if (survey) items.push(survey.state === "client" ? "Vincula al cliente con nombre y teléfono para guardar las respuestas de la encuesta." : "La encuesta requiere revisión.");
   const appointment = receipt.appointment;
   if (appointment?.state === "saved") {
     const date = new Intl.DateTimeFormat("es-US", { timeZone: appointment.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(appointment.start));
@@ -16943,9 +16973,16 @@ function renderDemoAutoCloseReceipt(receipt) {
   if (refs?.pending) items.push(({ host: "Falta vincular al anfitrión de los referidos.", connection: "Revisa la hoja del 4 en 14 en Mis conexiones.",
     error: "Revisa la hoja del 4 en 14 para confirmar qué se guardó." })[refs.state] || refs.pending + (refs.pending === 1 ? " referido por revisar." : " referidos por revisar."));
   if (/^[\w-]{20,120}$/.test(refs?.file || "")) links.push(["Abrir hoja del 4 en 14", "https://docs.google.com/spreadsheets/d/" + refs.file + "/edit"]);
-  if (!items.length) return "";
-  return `<section class="coach-demo-report-section"><h5>Seguimientos y referidos</h5><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-    ${links.map(([label, url]) => `<a class="secondary-button" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">${label}</a>`).join(" ")}</section>`;
+  const products = String(receipt.productSummary || "").split("\n").filter(Boolean);
+  const notes = Array.isArray(refs?.notesToReview) ? refs.notesToReview : [];
+  if (!items.length && !products.length && !notes.length) return "";
+  return `<section class="coach-demo-report-section">
+    ${items.length ? `<h5>Datos de la visita</h5><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+    ${survey?.state === "saved" && /^[a-f\d]{24}$/i.test(survey.id) ? `<button type="button" class="secondary-button" data-demo-open-saved-survey="${survey.id}">Editar encuesta</button><p class="mini-note" data-demo-open-survey-status aria-live="polite"></p>` : ""}
+    ${links.map(([label, url]) => `<a class="secondary-button" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">${label}</a>`).join(" ")}
+    ${products.length ? `<h5>Productos y precios comentados</h5><ul>${products.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+    ${notes.length ? `<h5>Notas de referidos por revisar</h5><ul>${notes.map(item => `<li><strong>${escapeHtml(item.name)}</strong> · ${escapeHtml(item.note)}</li>`).join("")}</ul>` : ""}
+  </section>`;
 }
 
 function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
@@ -16957,7 +16994,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   const consent = root.querySelector("[data-demo-recorder-consent]");
   if (autoClosePilot) {
     const label = consent.parentElement.querySelector("span");
-    if (label) label.textContent = "Todos aceptaron la grabación. El Coach guardará los referidos y seguimientos claros de la visita.";
+    if (label) label.textContent = "Todos aceptaron la grabación. El Coach guardará los datos claros de esta visita.";
   }
   const outcome = document.querySelector("[data-demo-recorder-outcome]");
   consent.checked = false;

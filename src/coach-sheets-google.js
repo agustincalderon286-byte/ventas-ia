@@ -12,6 +12,7 @@ const headerPatterns = {
   city:/^(?:ciudad(?: o zona(?: de residencia)?(?: zip code)?)?|zona de residencia|city)$/,
   address:/^(?:direccion(?: del (?:referido|prospecto))?|domicilio|address)$/,
   relationship:/^(?:relacion(?: con el (?:anfitrion|cliente))?|parentesco|vinculo|relationship)$/,
+  sellerNotes:/^(?:observaciones|notas|comentarios)(?: (?:del? (?:vendedor|prospectador)|de (?:la )?(?:referencia|captura)|del (?:referido|prospecto)))?(?: pais estado civil etc)?$/,
   seller:/^(?:vendedor(?: que prospecto)?|representante|seller)$/,
   startDate:/^(?:fecha del 4 14|fecha del 4 en 14|fecha del programa)$/,
   history:/^(?:comentarios? (?:del? )?telemarketing|historial(?: de (?:llamadas|seguimiento))?|notas? de seguimiento|follow up notes)$/,
@@ -331,6 +332,10 @@ export function createSheetsGoogle(fetcher = fetch) {
           }
           if (cols.number != null) cells[cols.number] = {userEnteredValue:{numberValue:order+1}};
           set(cols.relationship,person.relationship); set(cols.startDate,input.startDate);
+          if (person.note) {
+            if (cols.sellerNotes != null) set(cols.sellerNotes, person.note);
+            else cells[cols.phone].note = person.note;
+          }
         }
         set(cols.seller,input.sellerName);
         if (order === 0) cells[cols.fullName].note = marker;

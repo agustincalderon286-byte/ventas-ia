@@ -120,6 +120,8 @@ function containsAmount(quote, value) {
   return false;
 }
 
+export { containsAmount as containsDemoAmount };
+
 function corroborates(field, value, phrase) {
   const source = fold(phrase);
   if (field === 'outcome') {

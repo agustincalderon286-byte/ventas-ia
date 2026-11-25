@@ -20,8 +20,11 @@
     calcDown: ["Enganche", "num"],
     quotedMonthly: ["Mensualidad cotizada", "num"],
     saleAmount: ["Monto de venta", "num"],
+    productDiscussion: ["Productos y precios comentados", "area"],
     sellerNote: ["Nota final (opcional)", "area"]
   };
+  var SURVEY_FIELDS = new Set(["cooksForCount", "foodSpendWeekly", "mealPrepTime", "drinkingWaterType",
+    "cookingWaterType", "waterSpendWeekly", "familyPriority", "productInterest"]);
   var seq = 0;
 
   function str(v) { return v === undefined || v === null ? "" : String(v).trim(); }
@@ -176,14 +179,15 @@
 
       var list = make("div");
       form.appendChild(list);
-      Object.keys(FIELDS).forEach(function (k) {
+      var fields = Object.keys(FIELDS).filter(function (k) { return !close.surveySaved || !SURVEY_FIELDS.has(k); });
+      fields.forEach(function (k) {
         if (k !== "sellerNote" && (str((close.fields || {})[k]) || (k === "outcome" && close.declaredOutcome) || str(confirmed[k]))) addRow(k, list);
       });
 
       var pick = make("label", "demo-close-row", "Añadir otro campo ");
       var sel = make("select");
       sel.appendChild(make("option", null, "Elige un campo…")).value = "";
-      Object.keys(FIELDS).forEach(function (k) {
+      fields.forEach(function (k) {
         if (!rows[k] && k !== "sellerNote") sel.appendChild(make("option", null, FIELDS[k][0])).value = k;
       });
       sel.addEventListener("change", function () {

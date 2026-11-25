@@ -2,6 +2,7 @@ import "dotenv/config";
 import { demoCloseFactSchema, demoCloseInstructions, verifiedDemoCloseFacts } from "./src/coach-demo-close-facts.js";
 import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorker } from "./src/coach-demo-local.js";
 import { autoDemoCloseInstructions, autoDemoCloseSchema, createAutoDemoClose, verifyAutoDemoClose } from "./src/coach-demo-auto-close.js";
+import { createDemoSurveyWriter } from "./src/coach-demo-survey.js";
 import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
 import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
 import { createSheetsTransfer, sheetsPhoneKey } from "./src/coach-sheets-transfer.js";
@@ -1204,6 +1205,7 @@ const coachHealthSurveySchema = new mongoose.Schema({
   weeklyBudget: String,
   monthlyBudget: String,
   topProducts: [String],
+  autoDemoVisitIds: { type:[String], default:undefined },
   summary: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
@@ -12702,7 +12704,9 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
     completedChunks,
     brief: doc.status === "completed" && doc.report ? resumirCoachDemoReport(doc.report) : null,
     closeAvailable: Boolean(doc.closeVisitId && ownerUserId && viewerUserId === ownerUserId && doc.status === "completed"),
-    ...(includeDetail && ownerUserId && viewerUserId === ownerUserId && doc.autoCloseReceipt ? { autoCloseReceipt: doc.autoCloseReceipt } : {}),
+    ...(includeDetail && ownerUserId && viewerUserId === ownerUserId && doc.autoCloseReceipt ? { autoCloseReceipt: {
+      ...doc.autoCloseReceipt, productSummary:doc.closeConfirmed?.productDiscussion || doc.autoCloseReceipt.productSummary || ''
+    } } : {}),
     report: includeDetail ? (doc.report ? trainingReport : null) : doc.report
       ? {
           title: doc.report.title || "Analisis de demostracion",
@@ -31343,6 +31347,15 @@ app.get("/api/coach/health-surveys", async (req, res) => {
   }
 });
 
+app.get("/api/coach/health-surveys/:id", async (req, res) => {
+  const auth = await requireCoachActivo(req,res);
+  if (!auth) return;
+  if (!mongoose.Types.ObjectId.isValid(req.params.id || '')) return responderCoachError(res,404,'No encontré esa encuesta.');
+  const survey = await CoachHealthSurvey.findOne(construirCoachWorkspaceQuery(auth.user,{ _id:req.params.id })).lean();
+  if (!survey) return responderCoachError(res,404,'No encontré esa encuesta.');
+  res.json({ survey:limpiarCoachHealthSurvey(survey) });
+});
+
 app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
   const auth = req.tecFormAuth || await requireCoachActivo(req, res);
 
@@ -31401,11 +31414,15 @@ app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
   try {
     const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
+    let surveyDoc = surveyId ? await CoachHealthSurvey.findOne(construirCoachWorkspaceQuery(auth.user,{ _id:surveyId })) : null;
+    if (surveyId && !surveyDoc) return responderCoachError(res,404,'No encontré esa encuesta.');
+    const automaticSurvey = Boolean(surveyDoc?.autoDemoVisitIds?.length);
+    const recordId = automaticSurvey ? String(surveyDoc.linkedCrmRecordId || '') : activeCrmRecordId;
     const linkedCrmRecordDoc =
-      activeCrmRecordId && mongoose.Types.ObjectId.isValid(activeCrmRecordId)
+      recordId && mongoose.Types.ObjectId.isValid(recordId)
         ? await CoachCrmRecord.findOne(
             construirCoachCrmWorkspaceQuery(auth.user, {
-              _id: activeCrmRecordId
+              _id: recordId
             })
           )
         : null;
@@ -31416,7 +31433,7 @@ app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
       generatedByUserId: ownership.generatedByUserId,
       generatedByName: ownership.generatedByName || "",
       generatedByAccountType: ownership.generatedByAccountType,
-      linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
+      linkedCrmRecordId: automaticSurvey ? surveyDoc.linkedCrmRecordId : linkedCrmRecordDoc?._id || null,
       fullName,
       phone,
       secondName,
@@ -31453,27 +31470,20 @@ app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
 
     surveyPayload.summary = construirCoachHealthSurveySummary(surveyPayload);
 
-    let surveyDoc = null;
-    let created = false;
-
-    if (surveyId) {
-      surveyDoc = await CoachHealthSurvey.findOne(construirCoachWorkspaceQuery(auth.user, { _id: surveyId }));
-
-      if (!surveyDoc) {
-        return responderCoachError(res, 404, "No encontre esa encuesta.");
-      }
-
+    const created = !surveyDoc;
+    if (surveyDoc) {
       Object.assign(surveyDoc, surveyPayload);
       await surveyDoc.save();
     } else {
-      created = true;
       surveyDoc = await CoachHealthSurvey.create({
         ...surveyPayload,
         createdAt: now
       });
     }
 
-    if (linkedCrmRecordDoc) {
+    if (linkedCrmRecordDoc && automaticSurvey) {
+      await invalidarCoachWorkspaceCaches(auth.user,linkedCrmRecordDoc.ownerUserId);
+    } else if (linkedCrmRecordDoc) {
       await vincularCoachCrmConEncuesta(linkedCrmRecordDoc, surveyDoc, auth.user);
     }
 
@@ -31906,6 +31916,9 @@ const autoDemoCalendar = createCoachCalendarConnections({ config: personalConnec
 const autoDemoSheets = createCoachSheetsConnections({ config: personalConnectionsConfig }).service;
 const autoDemoClose = createAutoDemoClose({ calendar: autoDemoCalendar, sheets: autoDemoSheets, followups: personalFollowups,
   transfer: createSheetsTransfer({ key: personalConnectionsConfig.key }), active: demoAutoCloseActive });
+const saveDemoAutoSurvey = createDemoSurveyWriter({ surveys:CoachHealthSurvey, crm:CoachCrmRecord,
+  transaction:run=>mongoose.connection.transaction(run), summarize:construirCoachHealthSurveySummary,
+  normalizePhone, active:demoAutoCloseActive });
 
 async function demoAutoCloseActive(doc) {
   if (!COACH_DEMO_AUTO_CLOSE || !COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(doc.ownerEmail)) || !doc.localProcessing?.lease) return false;
@@ -31924,9 +31937,25 @@ async function finishLocalCoachDemo(doc, options) {
     const source = await CoachCrmRecord.findOne({ _id:doc.closeCrmId, ownerUserId:doc.autoClose.crmOwner }).select('leadName phone').lean();
     if (source) contact = { name:String(source.leadName || '').replace(/[\p{Cc}]/gu,'').trim().slice(0,100), phone:sheetsPhoneKey(source.phone) };
   }
-  result.autoCloseReceipt = await autoDemoClose(doc, facts, contact, {
+  const productSummary = (facts.products || []).map(product => product.name + (product.prices.length ? ' · ' + product.prices.join(' · ') : '')).join('\n').slice(0,1800);
+  const answers = { ...facts.survey };
+  if (facts.products?.length) answers.topProducts = facts.products.slice(0,3).map(product=>product.name);
+  const survey = async () => {
+    if (!Object.keys(answers).length) return null;
+    const seller = await CoachUser.findById(doc.ownerUserId).lean();
+    if (!seller || !await coachTieneAccesoOperativo(seller)) return { state:'stopped' };
+    const ownership = await construirCoachOwnershipSnapshot(seller);
+    const saved = await saveDemoAutoSurvey(doc, answers, ownership);
+    if (saved?.state === 'saved') await invalidarCoachWorkspaceCaches(seller,ownership.ownerUserId).catch(() => null);
+    return saved;
+  };
+  const [receipt, surveyState] = await Promise.all([autoDemoClose(doc, facts, contact, {
     partial: Boolean(options.partial || options.rawGaps?.length), followUpMentioned: Boolean(result.report.closeFacts?.followUp || result.report.closeFacts?.outcome === 'follow_up')
-  });
+  }), survey().catch(error => {
+    console.error('No se pudo guardar la encuesta automática',{ name:error.name });
+    return { state:'error' };
+  })]);
+  result.autoCloseReceipt = { ...receipt, survey:surveyState, productSummary };
   return result;
 }
 

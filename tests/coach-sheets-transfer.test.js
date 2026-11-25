@@ -142,3 +142,22 @@ test('custom personal sheets detect columns by heading instead of assuming Chica
   assert.equal(state.tickets.cols.fullName,2);assert.equal(state.referrals.cols.host,1);assert.equal(state.referrals.cols.phone,2);
   await assert.rejects(provider([[['Monto','Ubicación']],[['Nombre','Anfitrión','Teléfono']]]).google.read('token',book), e=>e.status===422);
 });
+
+test('las notas de cada referido ocupan su columna de observaciones y el historial queda aparte',async()=>{
+  const f=provider(), result=await f.google.read('token',book);
+  const input={kind:'referrals',hostName:'Anfitriona Ejemplo',referrals:[{...contact(),note:'=Casada y renta'},
+    {...contact('Segunda Prueba','3125550102'),note:'Trabaja de noche'}]};
+  await f.google.append('token',book,result.referrals,input,[0,1],'TEC:notes:0,1');
+  const rows=f.requests.at(-1).body.requests[0].appendCells.rows;
+  assert.deepEqual(rows[0].values[8],{userEnteredValue:{stringValue:'=Casada y renta'}});
+  assert.deepEqual(rows[1].values[8],{userEnteredValue:{stringValue:'Trabaja de noche'}});
+  assert.equal(rows[0].values[10],undefined);
+  const simple=provider([[['Nombre','Teléfono']],[['Nombre','Anfitrión','Teléfono']]]);
+  const legacy=await simple.google.read('token',book);
+  await simple.google.append('token',book,legacy.referrals,input,[0],'TEC:note:0');
+  assert.equal(simple.requests.at(-1).body.requests[0].appendCells.rows[0].values[2].note,'=Casada y renta');
+  const transfer=fixture();
+  const pending=await transfer.service.preview(alice,input);
+  await transfer.service.confirm(alice,{previewId:pending.previewId,selected:[0,1]});
+  assert.equal(transfer.state.contacts[1].note,'Trabaja de noche');
+});

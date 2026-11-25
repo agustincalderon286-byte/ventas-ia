@@ -2,7 +2,7 @@ const limits = Object.freeze({
   outcome: 12, reason: 180, followUp: 180, cooksForCount: 2, foodSpendWeekly: 60,
   mealPrepTime: 80, drinkingWaterType: 80, cookingWaterType: 80, waterSpendWeekly: 60,
   familyPriority: 24, productInterest: 120, waterReading: 120, calcProduct: 120,
-  calcPrice: 15, calcDown: 15, quotedMonthly: 35, saleAmount: 15, sellerNote: 240
+  calcPrice: 15, calcDown: 15, quotedMonthly: 35, saleAmount: 15, sellerNote: 240, productDiscussion: 1800
 });
 const labels = {
   outcome:'Resultado', reason:'Motivo', followUp:'Seguimiento acordado', cooksForCount:'Personas para quienes cocina',
@@ -10,7 +10,7 @@ const labels = {
   cookingWaterType:'Agua para cocinar', waterSpendWeekly:'Gasto semanal en agua', familyPriority:'Prioridad familiar',
   productInterest:'Producto de interés', waterReading:'Lectura de agua en la visita', calcProduct:'Producto cotizado',
   calcPrice:'Precio cotizado', calcDown:'Anticipo cotizado', quotedMonthly:'Mensualidad mencionada',
-  saleAmount:'Total de venta indicado', sellerNote:'Nota del vendedor'
+  saleAmount:'Total de venta indicado', sellerNote:'Nota del vendedor', productDiscussion:'Productos y precios comentados'
 };
 const outcomeLabels = {venta:'Venta', follow_up:'Seguimiento', no_venta:'No venta'};
 const pilotEmails = ['agustincalderon286@gmail.com','calderonrigoberto51@gmail.com'];
@@ -22,21 +22,23 @@ export function inDemoClosePilot(auth, switched, allowed = pilotEmails) {
   return !switched && !!auth?.session?.tokenHash && pilotEmails.includes(email) && (allowed.includes(email) || allowed.includes('*')) &&
     (auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat'));
 }
-const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state';
+const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state autoCloseReceipt.survey.state autoCloseReceipt.productSummary';
 function shape(doc) {
   const suggested = Object.fromEntries(Object.entries(doc.report?.closeFacts || {}).filter(([key,val]) => Object.hasOwn(limits,key) && key !== 'sellerNote' && typeof val === 'string' && val));
+  if (doc.autoCloseReceipt?.productSummary) suggested.productDiscussion = doc.autoCloseReceipt.productSummary;
   const declaredOutcome = {sale:'venta',follow_up:'follow_up',no_sale:'no_venta'}[doc.knownOutcome];
   return {visitId:doc.closeVisitId,crmId:String(doc.closeCrmId || ''),version:doc.closeVersion || 0,
     fields:{...suggested,...doc.closeDraft}, sellerFields:Object.keys(doc.closeDraft || {}), confirmed:doc.closeConfirmed || {}, declaredOutcome:declaredOutcome || '', answered:!!doc.closeAnswered,
     partial:Boolean(doc.report?.partial || doc.report?.recordingGaps?.length),
-    ...(doc.autoCloseReceipt?.appointment?.state === 'saved' && { appointmentSaved:true })};
+    ...(doc.autoCloseReceipt?.appointment?.state === 'saved' && { appointmentSaved:true }),
+    ...(doc.autoCloseReceipt?.survey?.state === 'saved' && { surveySaved:true })};
 }
 function chosenFields(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Object.keys(raw).length) throw fail(422,'Elige los datos que quieres guardar.');
   const fields = {};
   for (const [key,value] of Object.entries(raw)) {
     if (!Object.hasOwn(limits,key) || typeof value !== 'string' || !value.trim() ||
-        value.length > limits[key] || /[\u0000-\u001f]/u.test(value))
+        value.length > limits[key] || /[\u0000-\u001f]/u.test(key === 'productDiscussion' ? value.replace(/\r?\n/g,'') : value))
       throw fail(422,'Revisa el campo '+(labels[key] || 'seleccionado')+'.');
     const val = value.trim();
     if (key === 'outcome' && !Object.hasOwn(outcomeLabels,val)) throw fail(422,'Elige un resultado válido.');

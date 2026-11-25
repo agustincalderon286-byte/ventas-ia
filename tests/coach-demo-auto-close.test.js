@@ -26,6 +26,29 @@ test('solo salen datos literales, con el teléfono completo junto al referido y 
   assert.deepEqual(verifyAutoDemoClose({ followUp:{ ...followUp, quote:accepted } }, [{ index:0, text:accepted }]).followUp, facts.followUp);
 });
 
+test('las observaciones se quedan con el referido correcto y los precios con el producto que interesó', () => {
+  const observation = 'Julia Ríos es soltera, renta y no trabaja. Para Julia Ríos, llamar después de las seis.';
+  const interest = '¿Te interesa el Filtro Premium? Sí, me sirve.';
+  const reject = 'No me interesa el Sartén de Hierro.';
+  const price = 'El Filtro Premium cuesta $799 dólares. El Filtro Premium queda con $49 al mes.';
+  const text = [ref.quote, observation, interest, reject, price].join('. ');
+  const verified = verifyAutoDemoClose({ referrals:[{ ...ref, notes:[
+    { segment:1, quote:'Julia Ríos es soltera, renta y no trabaja', text:'es soltera, renta y no trabaja' },
+    { segment:1, quote:'Para Julia Ríos, llamar después de las seis', text:'llamar después de las seis' },
+    { segment:1, quote:'Julia Ríos es soltera, renta y no trabaja', text:'trabaja' },
+    { segment:1, quote:'El Filtro Premium cuesta $799 dólares', text:'cuesta $799 dólares' }
+  ] }], products:[
+    { name:'Filtro Premium', segment:1, quote:interest, prices:[
+      { segment:1, quote:'El Filtro Premium cuesta $799 dólares', text:'cuesta $799 dólares' },
+      { segment:1, quote:'El Filtro Premium queda con $49 al mes', text:'$49 al mes' },
+      { segment:1, quote:'El Filtro Premium queda con $49 al mes', text:'$99 al mes' }
+    ] },
+    { name:'Sartén de Hierro', segment:1, quote:'me interesa el Sartén de Hierro', prices:[] }
+  ] }, [{ index:0, text }]);
+  assert.equal(verified.referrals[0].note, 'es soltera, renta y no trabaja · llamar después de las seis');
+  assert.deepEqual(verified.products, [{name:'Filtro Premium',prices:['cuesta $799 dólares','$49 al mes']}]);
+});
+
 function fixture(opts = {}) {
   const writes = [], indexes = [];
   const file = '1qwertyuiopasdfghjklzxcvbnm12345';

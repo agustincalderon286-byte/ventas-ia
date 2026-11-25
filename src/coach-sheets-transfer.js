@@ -35,6 +35,7 @@ function cleanInput(input, sellerName) {
     for (const [field, limit] of Object.entries({ fullName:120, phone:40, address:240, city:100, relationship:80 })) {
       clean[field] = textField(row?.[field], limit);
     }
+    if (input.kind === 'referrals' && row?.note) clean.note = textField(row.note, 640);
     if (!keyForName(clean.fullName) || !sheetsPhoneKey(clean.phone)) throw fail(422, 'Cada contacto necesita nombre y teléfono completo.');
     return clean;
   });
