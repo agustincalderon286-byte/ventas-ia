@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261125-boton1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261125-boton1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261125-boton2";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261125-boton2";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -13,7 +13,7 @@ const TEC_CORE_ASSETS = [
   "/coach/analytics.css?v=20261104-analytics1",
   "/coach/analytics.js?v=20261104-analytics1",
   "/coach/app.js?v=20261117-audit1",
-  "/coach/app.js?v=20261125-boton1",
+  "/coach/app.js?v=20261125-boton2",
   "/coach/audiobook-reader.js?v=20261103-readalong1",
   "/coach/audiobooks.css?v=20261103-readalong1",
   "/coach/audiobooks.js?v=20261112-editorial1",
@@ -27,10 +27,10 @@ const TEC_CORE_ASSETS = [
   "/coach/coach-public.css?v=20261117-audit1",
   "/coach/coach-tutorial.css?v=20261117-help-chapters2",
   "/coach/coach-tutorial.js?v=20261117-help-chapters2",
-  "/coach/coach-voice.css?v=20261125-boton1",
-  "/coach/coach-voice.js?v=20261125-boton1",
+  "/coach/coach-voice.css?v=20261125-boton2",
+  "/coach/coach-voice.js?v=20261125-boton2",
   "/coach/compact-header.js?v=20261102-audiobooks1",
-  "/coach/demo-close-chat.js?v=20261125-boton1",
+  "/coach/demo-close-chat.js?v=20261125-boton2",
   "/coach/demo-close-review.js?v=20261124-cierre-detalles2",
   "/coach/demo-close-tools.js?v=20261123-midia1",
   "/coach/demo-recorder-panel.js?v=20261028-floating-tools1",
@@ -40,9 +40,9 @@ const TEC_CORE_ASSETS = [
   "/coach/message-center.css?v=20261117-push1",
   "/coach/my-day-push-worker.js?v=20261123-midia1",
   "/coach/my-day.css?v=20261123-midia2",
-  "/coach/my-day.js?v=20261125-boton1",
+  "/coach/my-day.js?v=20261125-boton2",
   "/coach/offline-forms.js?v=20261121-cierredemo2",
-  "/coach/one-button.js?v=20261125-boton1",
+  "/coach/one-button.js?v=20261125-boton2",
   "/coach/order-calculator.js?v=20261025-native-offline2",
   "/coach/password-visibility.js?v=20261117-signup1",
   "/coach/product-image-viewer.js?v=20261117-visor1",
@@ -71,7 +71,7 @@ const TEC_CORE_ASSETS = [
   "/coach/signup-ux.css?v=20261117-signup1",
   "/coach/signup-ux.js?v=20261117-signup1",
   "/coach/styles.css?v=20261117-visor1",
-  "/coach/styles.css?v=20261125-boton1",
+  "/coach/styles.css?v=20261125-boton2",
   "/coach/team-chat-media.js?v=20261117-push1",
   "/coach/team-chat-push-worker.js?v=20261117-push1",
   "/coach/team-chat-push.js?v=20261117-push1",
@@ -80,7 +80,7 @@ const TEC_CORE_ASSETS = [
   "/coach/ui-coherence.js?v=20261025-native-offline2",
   "/coach/vendor/leaflet/leaflet.css",
   "/coach/vendor/leaflet/leaflet.js",
-  "/coach/visit-questions.js?v=20261125-boton1",
+  "/coach/visit-questions.js?v=20261125-boton2",
   "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
   "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
   "/coach/",

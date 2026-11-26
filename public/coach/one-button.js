@@ -45,7 +45,7 @@
       const texts = {
         idle: ["Toca y habla", "Cuéntale a Jorge qué necesitas, o dile que empiezas una visita. Mantén presionado para grabar una visita de una vez."],
         listening: ["Te escucho", "Toca otra vez cuando termines."],
-        thinking: ["Un momento…", "Jorge está entendiendo lo que dijiste."],
+        thinking: ["Un momento…", "Estoy oyendo lo que dijiste."],
         visit: ["Grabando la visita" + (host ? " con " + host : ""), "Avisa que estás grabando. Puedes apagar la pantalla. Toca para terminar."],
         stopping: ["Guardando la visita…", "No cierres TEC todavía."]
       }[phase];
@@ -125,8 +125,11 @@
         // Jorge decides: is a visit starting, or is this a message for him?
         const intent = await request("/api/coach/boton/intent", { method: "POST", body: { text } }).catch(() => ({ kind: "mensaje" }));
         if (intent.kind === "visita") return await startVisit(intent.host || "");
+        note = "Jorge está pensando su respuesta…";
+        render();
         const result = await window.tecCoachTalk.send(text);
-        say(result.reply || (result.ok ? "Listo." : "No pude completar la respuesta. Inténtalo otra vez."));
+        note = "";
+        say(result.reply || (result.ok ? "Jorge contestó en el chat. Toca «Abrir TEC completo» para verlo." : "No pude completar la respuesta. Inténtalo otra vez."));
       } catch (error) {
         note = error.message || "Algo falló. Inténtalo otra vez.";
       }
@@ -162,6 +165,8 @@
     }
 
     function tap() {
+      // Inside the tap: lets Jorge's spoken answer play when it arrives.
+      try { window.tecCoachTalk?.prepareVoice?.(); } catch {}
       if (phase === "idle") void startMessage();
       else if (phase === "listening") void finishMessage();
       else if (phase === "visit") void stopVisit();

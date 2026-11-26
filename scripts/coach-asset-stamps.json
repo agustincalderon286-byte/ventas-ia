@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261125-boton1",
+  "cache": "tec-coach-shell-20261125-boton2",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
-      "sha": "6175d1629a8e6c49"
+      "sha": "598ecfa7115a6afb"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -118,15 +118,15 @@
     },
     "/coach/coach-voice.css": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
       "sha": "4ca37400d6867f80"
     },
     "/coach/coach-voice.js": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
-      "sha": "6fb1f1118a941a97"
+      "sha": "c3792fe093f02db7"
     },
     "/coach/compact-header.js": {
       "versions": [
@@ -136,7 +136,7 @@
     },
     "/coach/demo-close-chat.js": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
       "sha": "1e033fab59dc3f89"
     },
@@ -196,7 +196,7 @@
     },
     "/coach/my-day.js": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
       "sha": "6e84cfe08412f763"
     },
@@ -208,9 +208,9 @@
     },
     "/coach/one-button.js": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
-      "sha": "bcfcb55ec81f620d"
+      "sha": "3f66133659314ce9"
     },
     "/coach/order-calculator.js": {
       "versions": [
@@ -372,7 +372,7 @@
     "/coach/styles.css": {
       "versions": [
         "v=20261117-visor1",
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
       "sha": "97431fade74e3000"
     },
@@ -414,7 +414,7 @@
     },
     "/coach/visit-questions.js": {
       "versions": [
-        "v=20261125-boton1"
+        "v=20261125-boton2"
       ],
       "sha": "1c54c4f68f7d3a6a"
     }

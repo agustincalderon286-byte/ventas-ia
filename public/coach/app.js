@@ -19057,11 +19057,14 @@ async function loadCoachAppPage() {
   // The single button talks to Jorge through the same chat: it sends the text and reads back his answer.
   window.tecCoachTalk = Object.freeze({
     async send(text) {
-      const before = chatMessages?.querySelectorAll(".coach-message.assistant").length || 0;
+      // The chat may live only in the floating panel: read Jorge's answer from wherever it is drawn.
+      const surface = getCoachMessageTargets(chatMessages)[0];
+      const before = surface?.querySelectorAll(".coach-message.assistant").length || 0;
       const result = await sendCoachMessage(text, { replyMode: "audio" });
-      const replies = Array.from(chatMessages?.querySelectorAll(".coach-message.assistant") || []).slice(before);
+      const replies = Array.from(surface?.querySelectorAll(".coach-message.assistant") || []).slice(before);
       return { ok: Boolean(result?.ok), reply: replies.map(node => node.querySelector("p")?.textContent?.trim() || "").filter(Boolean).join(" ") };
     },
+    prepareVoice: () => coachVoice?.unlock?.(),
     openChat: () => syncFloatingCoachDock("open")
   });
   coachVoice = window.TecCoachVoice?.init({

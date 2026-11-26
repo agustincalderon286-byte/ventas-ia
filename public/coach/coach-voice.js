@@ -583,6 +583,8 @@
     render();
     // El envío pendiente sale en una microtarea para que quien liberó el chat termine antes de volver a ocuparlo.
     return { setChatBusy(value){chatBusy=Boolean(value);render();if(!chatBusy && pendingSend)Promise.resolve().then(flushPending);}, pausePlayback, speak,
+      // Called inside a tap, so Jorge's spoken answer is allowed to play when it arrives.
+      unlock: unlockAudio,
       reset() {
         pausePlayback();
         cancel('');
