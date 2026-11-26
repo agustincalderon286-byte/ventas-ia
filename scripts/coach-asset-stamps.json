@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261125-visita1",
+  "cache": "tec-coach-shell-20261125-boton1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
-      "sha": "5422b014406b431a"
+      "sha": "6175d1629a8e6c49"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -118,13 +118,13 @@
     },
     "/coach/coach-voice.css": {
       "versions": [
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
       "sha": "4ca37400d6867f80"
     },
     "/coach/coach-voice.js": {
       "versions": [
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
       "sha": "6fb1f1118a941a97"
     },
@@ -136,7 +136,7 @@
     },
     "/coach/demo-close-chat.js": {
       "versions": [
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
       "sha": "1e033fab59dc3f89"
     },
@@ -196,7 +196,7 @@
     },
     "/coach/my-day.js": {
       "versions": [
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
       "sha": "6e84cfe08412f763"
     },
@@ -205,6 +205,12 @@
         "v=20261121-cierredemo2"
       ],
       "sha": "955edf5206b3747e"
+    },
+    "/coach/one-button.js": {
+      "versions": [
+        "v=20261125-boton1"
+      ],
+      "sha": "bcfcb55ec81f620d"
     },
     "/coach/order-calculator.js": {
       "versions": [
@@ -366,9 +372,9 @@
     "/coach/styles.css": {
       "versions": [
         "v=20261117-visor1",
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
-      "sha": "4c1e767af0d11bf2"
+      "sha": "97431fade74e3000"
     },
     "/coach/team-chat-media.js": {
       "versions": [
@@ -408,9 +414,9 @@
     },
     "/coach/visit-questions.js": {
       "versions": [
-        "v=20261125-visita1"
+        "v=20261125-boton1"
       ],
-      "sha": "76624063ce9f4460"
+      "sha": "1c54c4f68f7d3a6a"
     }
   }
 }

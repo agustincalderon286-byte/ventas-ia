@@ -18000,6 +18000,24 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   // whether everyone accepted the recording, and only a «sí» reaches this page. The app retries
   // while the answer is "waiting".
   let voiceChecked = false; // Until the page has looked for a recording the app kept going.
+  // The one-button screen drives this same recorder: start a visit, stop it and read its clock.
+  window.TecDemoRecorder = Object.freeze({
+    recording: () => Boolean(state.recording),
+    busy: () => Boolean(state.processing) || !emergency.hidden,
+    seconds: () => state.recording ? Math.max(0, Math.floor(((state.capturePaused ? state.pausedAt : Date.now()) - state.startedAt - (state.pausedMs || 0)) / 1000)) : 0,
+    async start() {
+      if (state.recording) return true;
+      if (state.processing || !emergency.hidden) return false;
+      consent.checked = true;
+      await startRecording();
+      return Boolean(state.recording);
+    },
+    async stop() {
+      if (!state.recording || state.processing) return false;
+      await finishRecording(false);
+      return true;
+    }
+  });
   if (nativeRecorder) window.TecVoiceDemo = Object.freeze({
     start() {
       if (!voiceChecked) return "waiting";
@@ -19033,6 +19051,19 @@ async function loadCoachAppPage() {
     accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
     openChat:()=>syncFloatingCoachDock("open"), forms:[chatForm, floatingChatForm]
   }) : null;
+  if (me.demoClosePilot && new URLSearchParams(window.location.search).get("boton") === "1") {
+    window.TecOneButton?.init({ name: String(me.user.name || "").split(" ")[0], accountId: String(me.user.id), request: apiRequest });
+  }
+  // The single button talks to Jorge through the same chat: it sends the text and reads back his answer.
+  window.tecCoachTalk = Object.freeze({
+    async send(text) {
+      const before = chatMessages?.querySelectorAll(".coach-message.assistant").length || 0;
+      const result = await sendCoachMessage(text, { replyMode: "audio" });
+      const replies = Array.from(chatMessages?.querySelectorAll(".coach-message.assistant") || []).slice(before);
+      return { ok: Boolean(result?.ok), reply: replies.map(node => node.querySelector("p")?.textContent?.trim() || "").filter(Boolean).join(" ") };
+    },
+    openChat: () => syncFloatingCoachDock("open")
+  });
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })

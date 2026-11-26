@@ -42,6 +42,7 @@
         }
         if (count) card.append(el("p", "Contéstame con un audio o escríbelo aquí abajo. Puedes contestar varias de una vez.", "visit-questions-hint"));
       }
+      window.dispatchEvent(new CustomEvent("tec:visit-questions", { detail: { count } }));
     }
 
     // A short account of what the demo left saved, once per visit.
@@ -53,7 +54,9 @@
         const saved = item.lines.length ? " Ya guardé: " + item.lines.join(" ") : "";
         const missing = item.questions ? " Me " + (item.questions === 1 ? "falta 1 dato" : "faltan " + item.questions + " datos") +
           "; " + (item.questions === 1 ? "está" : "están") + " arriba de donde escribes." : " No me falta nada.";
+        const text = "Listo, revisé tu demo" + who + "." + saved + (item.questions ? " Me " + (item.questions === 1 ? "falta 1 dato." : "faltan " + item.questions + " datos.") : " No me falta nada.");
         addMessage("Listo, revisé tu demo" + who + "." + saved + missing);
+        window.dispatchEvent(new CustomEvent("tec:visit-news", { detail: { text } }));
         void request("/api/coach/visits/" + encodeURIComponent(item.id) + "/seen", { method: "POST", body: {} }).catch(() => null);
       }
     }
@@ -97,7 +100,7 @@
     window.addEventListener("tec:coach-session-change", () => { items = []; render(); });
     document.addEventListener("visibilitychange", () => { if (!document.hidden) void refresh(); });
     void refresh();
-    return { answer, refresh, hasPending: () => total() > 0 };
+    return { answer, refresh, hasPending: () => total() > 0, list: () => items.map(item => ({ host: item.host, questions: item.questions.map(q => q.ask), waiting: [...item.waiting] })) };
   }
   window.TecVisitQuestions = { init };
 })();

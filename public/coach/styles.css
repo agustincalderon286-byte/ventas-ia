@@ -9647,3 +9647,53 @@ body:has(.coach-demo-recording-dock:not([hidden])) .tec-offline-status {
 .visit-questions-host { font-weight: 700; }
 .visit-questions-waiting { color: #7a4b00; }
 .visit-questions-hint { font-size: 0.85rem; color: #4a5672; }
+
+/* TEC · one-button concept: a single button over the whole screen. */
+body.tec-one-open { overflow: hidden; }
+.tec-one {
+  position: fixed; inset: 0; z-index: 2147483000;
+  display: flex; flex-direction: column; align-items: center;
+  padding: max(28px, env(safe-area-inset-top, 0px)) 22px max(18px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: #f3f6fa; color: #102b4e;
+  font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  transition: background 240ms ease, color 240ms ease;
+}
+.tec-one[data-phase="visit"], .tec-one[data-phase="stopping"] { background: linear-gradient(170deg, #12305a, #071326); color: #fff; }
+.tec-one__hello { margin: 26px 0 0; font-size: 1rem; color: #5b6b85; }
+.tec-one__name { margin: 2px 0 0; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+.tec-one__clock { margin: 22px 0 0; min-height: 2.9rem; font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tec-one__button {
+  flex: 0 0 auto; margin-top: 14px; width: min(58vw, 230px); height: min(58vw, 230px); border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: linear-gradient(160deg, #ee3d5c, #8c1128); box-shadow: 0 0 0 22px rgba(215, 38, 69, 0.12), 0 22px 36px rgba(215, 38, 69, 0.36);
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: transform 140ms ease, box-shadow 240ms ease, opacity 200ms ease;
+}
+.tec-one__button:active { transform: scale(0.96); }
+.tec-one__button:disabled { opacity: 0.55; cursor: default; }
+.tec-one__button:focus-visible { outline: 4px solid #102b4e; outline-offset: 6px; }
+.tec-one[data-phase="listening"] .tec-one__button, .tec-one[data-phase="visit"] .tec-one__button { animation: tec-one-pulse 1.8s ease-in-out infinite; }
+@keyframes tec-one-pulse { 50% { box-shadow: 0 0 0 38px rgba(215, 38, 69, 0.07), 0 22px 36px rgba(215, 38, 69, 0.36); } }
+@media (prefers-reduced-motion: reduce) { .tec-one__button { animation: none !important; transition: none; } }
+/* Microphone while idle or thinking; a square (stop) while listening or recording a visit. */
+.tec-one__icon { width: 34%; height: 34%; background: #fff;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3'/%3E%3C/svg%3E") center / contain no-repeat; }
+.tec-one[data-phase="listening"] .tec-one__icon, .tec-one[data-phase="visit"] .tec-one__icon { width: 26%; height: 26%; border-radius: 18%; -webkit-mask: none; mask: none; }
+.tec-one__title { margin: 44px 0 0; font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; text-align: center; }
+.tec-one__hint { margin: 8px 0 0; max-width: 30ch; font-size: 1rem; line-height: 1.4; text-align: center; color: #5b6b85; }
+.tec-one[data-phase="visit"] .tec-one__hint, .tec-one[data-phase="stopping"] .tec-one__hint { color: #c4cfde; }
+.tec-one__reply, .tec-one__asks { width: min(100%, 460px); }
+.tec-one__reply p { margin: 22px 0 0; padding: 14px 16px; border-radius: 20px 20px 20px 6px; background: #fff; border: 1px solid #dbe4f0; font-size: 1rem; line-height: 1.45; color: #102b4e; }
+.tec-one__asks:not(:empty) { margin-top: 16px; padding: 14px 16px; border-radius: 16px; background: #fff4d6; border: 1px solid #f0c36d; border-left: 5px solid #d72645; color: #102b4e; font-size: 0.97rem; line-height: 1.4; }
+.tec-one__asks h4 { margin: 0 0 6px; font-size: 1.05rem; }
+.tec-one__asks ol { margin: 0; padding-left: 1.3em; }
+.tec-one__asks li + li { margin-top: 6px; }
+.tec-one__asks p { margin: 6px 0 0; }
+.tec-one__asks-host { font-weight: 700; }
+.tec-one__asks-hint { font-size: 0.88rem; color: #4a5672; }
+.tec-one[data-phase="visit"] .tec-one__reply, .tec-one[data-phase="visit"] .tec-one__asks,
+.tec-one[data-phase="listening"] .tec-one__asks-hint { display: none; }
+.tec-one__full { margin-top: auto; padding: 18px 12px 6px; border: 0; background: none; font: inherit; font-size: 0.92rem; color: #5b6b85; text-decoration: underline; cursor: pointer; }
+.tec-one[data-phase="visit"] .tec-one__full, .tec-one[data-phase="stopping"] .tec-one__full, .tec-one[data-phase="listening"] .tec-one__full { visibility: hidden; }
