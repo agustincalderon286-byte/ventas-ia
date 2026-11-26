@@ -52,7 +52,7 @@ test("actual pause and resume keep one recording, persist gaps, and only manual 
   const saved=[];
   const snippet=app.slice(app.indexOf('  const attachCaptureMonitor = () =>'),app.indexOf('  const uploadSegment = async'));
   const methods=vm.runInNewContext(snippet+'\n({pauseCapture,resumeCapture});',{
-    state,Date:{now:()=>now},window:{TecPwaSafety:{watchAudioCapture:()=>({dispose(){},pause(){}})}},
+    state,MAX_SEGMENTS:30,Date:{now:()=>now},window:{TecPwaSafety:{watchAudioCapture:()=>({dispose(){},pause(){}})}},
     navigator:{mediaDevices:{async getUserMedia(){acquisitions++;return {getAudioTracks:()=>[track]};}}},
     updateControls(){},setRecorderMessage(){},rotateSegment:async()=>{stopped++;},beginSegment(){segments++;},
     stopMediaTracks(){},saveTecOfflineRecording:async row=>saved.push(structuredClone(row))
@@ -294,7 +294,7 @@ test("en la app de iPhone la grabación pasa al grabador nativo solo con consent
   const nativeRecorder = { async start(options) { nativeCalls.push(options); return { active: true }; } };
   const start = vm.runInNewContext(app.slice(startAt, endAt) + '\nstartRecording;', {
     state, consent, outcome, emergency: { hidden: true }, nativeRecorder, closePilot: false, autoClosePilot: false,
-    SEGMENT_MS: 240000, MAX_RECORDING_MS: 5400000, Date, Intl, Number, String, Boolean,
+    SEGMENT_MS: 240000, MAX_RECORDING_MS: 5400000, MAX_SEGMENTS: 30, Date, Intl, Number, String, Boolean,
     window: {}, navigator: { onLine: false, mediaDevices: { async getUserMedia() { webMicrophone++; } } },
     createTecOfflineId: () => 'recording-qa-5550101', holdTecRecordingLock: async () => async () => {},
     tecActiveRecordingIds: new Set(), saveTecOfflineRecording: async row => { rows.push(row); return row; },
@@ -355,7 +355,8 @@ test("Coach Jorge avisa en la barra de grabación y Siri empieza la demo solo co
   assert.equal(voice.start(), 'ready');
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(starts, [true], 'Siri\'s yes is the consent for this demo');
-  assert.match(chunkStatus.textContent, /sin cliente abierto/);
+  // No client record is needed any more: Jorge works out whose house it is.
+  assert.match(chunkStatus.textContent, /Di el nombre del anfitrión durante la visita/);
   assert.equal(voice.start(), 'ready', 'a second «graba la demo» does not start another one');
   assert.equal(starts.length, 1);
   assert.equal(voice.stop(), 'ready');

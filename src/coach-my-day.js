@@ -96,7 +96,7 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
 
   // Citas de hoy: las de «Seguimientos TEC», los bloques ocupados del calendario principal y las de la Agenda de la Hoja TEC.
   async function appointmentsToday(actor, cal) {
-    const result = { events: [], busy: 0, agenda: [], calendarConnected: false, notes: [] };
+    const result = { events: [], upcoming: [], busy: 0, agenda: [], calendarConnected: false, notes: [] };
     if (calendar && inList(config.pilot, actor.email)) {
       try {
         const connection = await calendar.getConnection(actor.owner);
@@ -108,6 +108,13 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
             .map(e => ({ title: text(e.title, 120), time: hhmm(e.start, actor.zone), at: new Date(e.start).getTime() })).sort((a, b) => a.at - b.at).slice(0, 12);
           else result.notes.push('No pude leer las citas de «Seguimientos TEC».');
           if (read.busy?.status === 'fulfilled') result.busy = (read.busy.value || []).length;
+          // What comes next: the appointments of the following two weeks (those the demos and the Coach booked).
+          const next = await calendar.readAgenda({ owner: actor.owner, grant: connection.grant, zone: actor.zone, includeEvents: true, includePrimary: false,
+            start: new Date(cal.todayEnd).toISOString(), end: new Date(cal.todayEnd + 14 * DAY).toISOString() }).catch(() => null);
+          if (next?.events?.status === 'fulfilled') result.upcoming = (next.events.value || []).filter(e => !e.allDay && e.attendance !== 'declined')
+            .map(e => ({ title: text(e.title, 120), at: new Date(e.start).getTime(), when: new Intl.DateTimeFormat('es-US', { timeZone: actor.zone,
+              weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(e.start)) }))
+            .sort((a, b) => a.at - b.at).slice(0, 12);
         }
       } catch { result.notes.push('No pude leer tu calendario.'); }
     }

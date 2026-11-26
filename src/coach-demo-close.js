@@ -22,7 +22,7 @@ export function inDemoClosePilot(auth, switched, allowed = pilotEmails) {
   return !switched && !!auth?.session?.tokenHash && pilotEmails.includes(email) && (allowed.includes(email) || allowed.includes('*')) &&
     (auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat'));
 }
-const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state autoCloseReceipt.survey.state autoCloseReceipt.productSummary autoCloseReceipt.review';
+const select = 'closeVisitId closeCrmId closeVersion closeConfirmed closeDraft closeAnswered knownOutcome report.closeFacts report.partial report.recordingGaps autoCloseReceipt.appointment.state autoCloseReceipt.survey.state autoCloseReceipt.productSummary autoCloseReceipt.review autoClose.zone';
 const cleanText = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u001f<>]/gu, ' ').trim().slice(0, max) : '';
 
 // Figures the automatic close did not save because the recording left them in doubt. Each one maps to
@@ -62,6 +62,8 @@ function shape(doc) {
     partial:Boolean(doc.report?.partial || doc.report?.recordingGaps?.length),
     ...(doc.autoCloseReceipt?.appointment?.state === 'saved' && { appointmentSaved:true }),
     ...(doc.autoCloseReceipt?.survey?.state === 'saved' && { surveySaved:true }),
+    // With the automatic close, Jorge asks through the visit's own questions and saves the answers himself.
+    ...(doc.autoClose && { visitManaged:true }),
     doubts:closeDoubts(doc.autoCloseReceipt?.review)};
 }
 function chosenFields(raw) {
@@ -146,6 +148,7 @@ export function createDemoCloseService(analyses) {
   };
 }
 export function demoCloseQuestions(close) {
+  if (close.visitManaged) return [];
   const f={...close.fields,...close.confirmed};
   const questions=[];
   // First the figures the recording left in doubt, until the seller answers them.

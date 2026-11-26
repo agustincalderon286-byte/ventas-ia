@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAutoDemoClose, verifyAutoDemoClose } from '../src/coach-demo-auto-close.js';
+import { followUpDetails, createAutoDemoClose, verifyAutoDemoClose } from '../src/coach-demo-auto-close.js';
 
 const ref = { fullName: 'Julia Ríos', phone: '3125550147', segment: 1,
   quote: 'Como referencia anota a Julia Ríos con el número 312-555-0147' };
@@ -12,7 +12,7 @@ const withoutReview = ({ review, ...rest }) => rest;
 
 test('solo salen datos literales, con el teléfono completo junto al referido y un seguimiento acordado', () => {
   assert.deepEqual(facts, { referrals: [{ fullName: 'Julia Ríos', phone: '3125550147' }], pendingReferrals: 0,
-    followUp: { segment: 1, when: followUp.when } });
+    followUp: { segment: 1, when: followUp.when, agreed: followUp.quote } });
   // A recording without second readings (older worker) still saves, marked as unchecked.
   assert.deepEqual(factsReview.map(({ field, state, verified }) => [field, state, verified]),
     [['referral', 'guardar', false], ['followUp', 'guardar', false]]);
@@ -27,7 +27,7 @@ test('solo salen datos literales, con el teléfono completo junto al referido y 
   const asked = '¿Te llamo mañana a las tres de la tarde?';
   assert.equal(verifyAutoDemoClose({ followUp:{ ...followUp, quote:asked } }, [{ index:0, text:asked }]).followUp, null);
   const accepted = `${asked} Sí, está bien.`;
-  assert.deepEqual(verifyAutoDemoClose({ followUp:{ ...followUp, quote:accepted } }, [{ index:0, text:accepted }]).followUp, facts.followUp);
+  assert.deepEqual(verifyAutoDemoClose({ followUp:{ ...followUp, quote:accepted } }, [{ index:0, text:accepted }]).followUp, { ...facts.followUp, agreed:accepted });
 });
 
 test('las observaciones se quedan con el referido correcto y los precios con el producto que interesó', () => {
@@ -76,7 +76,10 @@ function fixture(opts = {}) {
     async preview(ctx, draft) {
       assert.equal(await ctx.isCurrent(), true);
       assert.equal(draft.hostName, 'Silvia Prueba');
+      // «Fecha del 4 en 14» is the day of the demo in Chicago (23:30 UTC is still Monday the 23rd there).
+      assert.equal(draft.startDate, '2026-11-23');
       assert.equal(draft.kind, 'referrals');
+      writes.push(['draft',draft]);
       return { sheetTitle:'4 en 14', previewId:'test-preview', rows:draft.referrals.map((_, index) => ({ index,
         status:['new','duplicate','possible'][index] })) };
     },
@@ -97,7 +100,9 @@ test('guarda de forma independiente la cita en la zona de la demo y solo los ref
   const first = await run(analysis, report, contact);
   assert.equal(first.appointment.state, 'saved');
   assert.equal(first.appointment.start, '2026-11-24T21:00:00.000Z'); // «mañana» relative to capture, not processing.
-  assert.deepEqual(first.referrals, { state:'checked', saved:1, pending:1, duplicates:1, sheetTitle:'4 en 14', file:'1qwertyuiopasdfghjklzxcvbnm12345' });
+  // Only the referral that was new in the sheet is reported back for the seller's weekly count.
+  assert.deepEqual(first.referrals, { state:'checked', saved:1, pending:1, duplicates:1, sheetTitle:'4 en 14', file:'1qwertyuiopasdfghjklzxcvbnm12345',
+    savedPhones:[facts.referrals[0].phone] });
   const booking = writes.find(([provider]) => provider==='calendar')[1];
   assert.equal(booking.checkAvailability, true);
   assert.equal(booking.retryGoogle, true);
@@ -147,7 +152,7 @@ test('un referido dictado para el 4 en 14 sin decir «referido» se guarda y un 
     [{ index:0, text:mentioned }]).referrals, []);
   for (const quote of ['Sí, agéndame la cita mañana viernes a las 6pm', 'Ok, nos vemos mañana viernes a las 6 de la tarde para la demo']) {
     const when = quote.match(/mañana viernes a las (?:6pm|6 de la tarde)/)[0];
-    assert.deepEqual(verifyAutoDemoClose({ followUp:{ when, segment:1, quote } }, [{ index:0, text:quote }]).followUp, { when, segment:1 }, quote);
+    assert.deepEqual(verifyAutoDemoClose({ followUp:{ when, segment:1, quote } }, [{ index:0, text:quote }]).followUp, { when, segment:1, agreed:quote }, quote);
   }
   const doubtful = 'Tal vez nos vemos mañana a las 6 de la tarde';
   assert.equal(verifyAutoDemoClose({ followUp:{ when:'mañana a las 6 de la tarde', segment:1, quote:doubtful } }, [{ index:0, text:doubtful }]).followUp, null);
@@ -192,7 +197,7 @@ test('una cita instantánea del 4 en 14 se agenda en Calendar, queda en la nota 
       { fullName: 'Persona Inventada', when: 'el sábado a las diez', segment: 1, quote: 'Persona Inventada, ¿el sábado a las diez para la demo? Sí, está bien' }
     ]
   }, [{ index: 0, durationSeconds: 180, text }]);
-  assert.deepEqual(instant.referralAppointments, [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'el viernes a las seis de la tarde', segment: 1 }],
+  assert.deepEqual(instant.referralAppointments, [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'el viernes a las seis de la tarde', segment: 1, agreed: call }],
     'only a referral saved in this visit, with an explicit yes');
   assert.match(instant.referrals[0].note, /Cita instantánea: el viernes a las seis de la tarde/);
   // A proposal without a yes is not an appointment.
@@ -209,10 +214,56 @@ test('una cita instantánea del 4 en 14 se agenda en Calendar, queda en la nota 
   const events = writes.filter(([provider]) => provider === 'calendar').map(([, event]) => event);
   assert.deepEqual(events.map(event => event.summary).sort(), ['Demo · Julia Ríos (4 en 14 de Silvia Prueba)', 'Seguimiento · Silvia Prueba']);
   assert.notEqual(events[1].eventId, events[0].eventId);
+  // In the sheet the referral goes in as «Cita» with the day of the demo, so telemarketing does not call to book again.
+  const [, draft] = writes.find(([kind]) => kind === 'draft');
+  assert.deepEqual([draft.referrals[0].status, draft.referrals[0].followupDate], ['Cita', '2026-11-27']);
+  // Opening the appointment in Calendar shows who, how to call, what was agreed and who referred them.
+  const demo = events.find(event => event.summary.startsWith('Demo'));
+  assert.match(demo.description, /Referido: Julia Ríos\nTeléfono: \(312\) 555-0147\nLo refirió: Silvia Prueba/);
+  assert.match(demo.description, /Lo que quedaron: «Julia, ¿te parece si paso el viernes a las seis de la tarde para la demo\? Sí, está bien»/);
 
   const doubtful = { ...facts, review: [], referralAppointments: [{ fullName: 'Julia Ríos', phone: '3125550147', when: 'mañana viernes a las seis de la tarde', segment: 1 }] };
   const asksJorge = await run(analysis, doubtful, contact);
   assert.equal(asksJorge.referralAppointments[0].state, 'time');
   assert.deepEqual(doubtful.review.map(({ field, state, label }) => [field, state, label]), [['referralAppointment', 'preguntar', 'Julia Ríos']]);
   assert.match(doubtful.review[0].reason, /Dijiste viernes, pero esa fecha cae en martes 24 de noviembre/);
+});
+
+test('el seguimiento en Calendar dice quién, su teléfono, dónde, lo acordado, lo que le interesó y sus referidos', () => {
+  const details = followUpDetails({
+    followUp: { when: 'el sábado a las 10', agreed: 'Quedamos el sábado a las 10 para regresar con el sartén' },
+    products: [{ name: 'Sartén Premium', prices: ['$79 al mes'] }, { name: 'Extractor de jugos', prices: [] }],
+    referrals: [{ fullName: 'Julia Ríos', phone: '3125550147' }, { fullName: 'Ana Soto', phone: '7735550109' }]
+  }, { name: 'Silvia Prueba', phone: '7735550101', address: '123 Calle Falsa, Chicago' });
+  assert.equal(details, [
+    'Anfitrión: Silvia Prueba', 'Teléfono: (773) 555-0101', 'Dirección: 123 Calle Falsa, Chicago',
+    'Lo que quedaron: «Quedamos el sábado a las 10 para regresar con el sartén»', '',
+    'Le interesó:', '• Sartén Premium — $79 al mes', '• Extractor de jugos', '',
+    'Referidos del 4 en 14 (2):', '• Julia Ríos · (312) 555-0147', '• Ana Soto · (773) 555-0109', '',
+    'Creada por Coach TEC al terminar la grabación de la demo. El reporte completo está en TEC › Mis demostraciones.'
+  ].join('\n'));
+  // Without a known host, only what the recording gave.
+  assert.doesNotMatch(followUpDetails({ followUp: { when: 'mañana', agreed: '' } }, {}), /Anfitrión|Teléfono|Dirección/);
+});
+
+test('la relación y la ciudad del referido van a sus columnas solo si se dijeron para ese referido', () => {
+  const quote = 'Como referencia anota a mi prima Juana Prueba, vive en Cicero, su teléfono es 773-555-0123';
+  const chunks = [{ index: 0, durationSeconds: 120, text: quote + '. Ella trabaja en Berwyn por la mañana.' }];
+  const base = { fullName: 'Juana Prueba', phone: '7735550123', segment: 1, quote, notes: [] };
+  const [kept] = verifyAutoDemoClose({ referrals: [{ ...base, relationship: 'prima', city: 'Cicero' }] }, chunks).referrals;
+  assert.equal(kept.relationship, 'prima');
+  assert.equal(kept.city, 'Cicero');
+  // Something the recording does not say for her, or a word that is not a relationship, stays empty.
+  const [invented] = verifyAutoDemoClose({ referrals: [{ ...base, relationship: 'hermana', city: 'Chicago' }] }, chunks).referrals;
+  assert.equal(invented.relationship, undefined);
+  assert.equal(invented.city, undefined);
+  const [notRelation] = verifyAutoDemoClose({ referrals: [{ ...base, relationship: 'referencia', city: '' }] }, chunks).referrals;
+  assert.equal(notRelation.relationship, undefined);
+  // A city said in one of her verified notes counts; where she works is not where she lives.
+  const text = quote + '. Ella trabaja en Berwyn. Juana Prueba es de Oak Park.';
+  const noted = city => verifyAutoDemoClose({ referrals: [{ ...base, relationship: '', city, notes: [
+    { text: 'trabaja en Berwyn', segment: 1, quote: 'Ella trabaja en Berwyn' },
+    { text: 'es de Oak Park', segment: 1, quote: 'Juana Prueba es de Oak Park' }] }] }, [{ index: 0, text }]).referrals[0];
+  assert.equal(noted('Oak Park').city, 'Oak Park');
+  assert.equal(noted('Berwyn').city, undefined);
 });

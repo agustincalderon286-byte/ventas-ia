@@ -50,7 +50,8 @@ test('caso 799: con audio claro se guarda el precio y con la cifra tapada queda 
   assert.match(price.reason, /voz sin transcribir/);
   // The referral, its three notes, the follow-up and the survey are still saved.
   assert.deepEqual(covered.referrals.map(row => row.note), ['es soltera · renta su casa · trabaja por la mañana']);
-  assert.deepEqual(covered.followUp, { when: 'mañana a las 4 de la tarde', segment: 1 });
+  assert.deepEqual({ ...covered.followUp, agreed: undefined }, { when: 'mañana a las 4 de la tarde', segment: 1, agreed: undefined });
+  assert.match(covered.followUp.agreed, /mañana a las 4 de la tarde/);
   assert.deepEqual(covered.survey, { drinkingWaterType: 'Botella' });
   assert.deepEqual(table(covered.review), [
     'note:guardar:es soltera', 'note:guardar:renta su casa', 'note:guardar:trabaja por la mañana', 'referral:guardar:Julia Ríos',

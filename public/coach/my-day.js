@@ -129,6 +129,8 @@
       return [
         el('h3', { text: 'Tus citas de hoy' }),
         rows.length ? el('ul', { class: 'tec-my-day__list' }, rows) : el('p', { text: s.citas.calendarConnected ? 'No veo citas para hoy en tu calendario ni en la Agenda.' : 'Conecta Google Calendar en Mis conexiones para ver tus citas aquí.' }),
+        s.citas.upcoming?.length ? el('h3', { text: 'Tus próximas citas' }) : null,
+        s.citas.upcoming?.length ? el('ul', { class: 'tec-my-day__list' }, s.citas.upcoming.map(e => el('li', {}, el('strong', { text: e.when }), ' ', e.title))) : null,
         s.citas.busy ? el('p', { class: 'tec-my-day__muted', text: 'Tu calendario principal tiene ' + plural(s.citas.busy, 'bloque ocupado', 'bloques ocupados') + ' hoy.' }) : null,
         ...s.citas.notes.map(n => el('p', { class: 'tec-my-day__muted', text: n })),
         el('div', { class: 'tec-my-day__options' }, button('Abrir Cierre', () => openWorkspace?.('cierre'), 'primary')),

@@ -72,7 +72,8 @@
       d.addEventListener('close',()=>{view.destroy();d.remove();if(dialog===d){dialog=null;openedId='';review=null;}},{once:true});
     }
     function announce(id,r) {
-      if (!id || seen.has(id) || !r.close || deferred(id)) return;
+      // A visit Jorge manages by himself asks through the pinned questions, not through this form.
+      if (!id || seen.has(id) || !r.close || deferred(id) || r.close.visitManaged) return;
       seen.add(id);
       const questions=reviewQuestions(r), active=current(r.close);
       const date=r.startedAt && new Date(r.startedAt).toLocaleString('es-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
@@ -107,8 +108,8 @@
         if (/^(?:no s[eé]|no (?:lo |la )?(?:acordamos|recuerdo|s[eé])|qued[oó] pendiente)[.! ]*$/i.test(text.trim())) {
           later(target.id);return {id:target.id,text:'Dejé ese dato pendiente. Puedes revisar los demás campos.'};
         }
-        if (!target.explicit) { pending=null;return null; }
-        return {id:target.id,text:'No identifiqué un dato nuevo para el cierre. Puedes decirme el resultado o el seguimiento, o decir «ahora no».'};
+        // Not an answer about the visit: the normal chat takes the message. No dead end.
+        pending=null;return null;
       }
       const next=reviewQuestions(r).filter(item=>!Object.hasOwn(r.changed,item.field));
       pending=next.length?{...target,explicit:true,version:r.close.version,conflictField:next.find(q=>q.conflict)?.field}:null;

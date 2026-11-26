@@ -1,6 +1,9 @@
 (() => {
   'use strict';
-  const MAX_BYTES = 8 * 1024 * 1024, MAX_SECONDS = 90;
+  // Un mensaje de voz dura hasta 3 minutos. Un servicio de voz propio (el Chef público) conserva
+  // su tope anterior de 90 segundos, que es el que valida su servidor, salvo que pida otro.
+  const MAX_BYTES = 8 * 1024 * 1024, MAX_SECONDS = 180, CUSTOM_API_SECONDS = 90, MIN_MS = 500;
+  const formatClock = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
   function microphoneSettings() {
     const ua = navigator.userAgent || '';
     if (/\bTEC-iOS\//i.test(ua) || window.webkit?.messageHandlers?.tecCapture) {
@@ -14,6 +17,13 @@
   }
   function recordingMime(Recorder = window.MediaRecorder) {
     return ['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(type => Recorder?.isTypeSupported?.(type)) || '';
+  }
+  // Sin una tasa fija cada navegador elige la suya (hasta unos 256 kbps). Para voz basta Opus a 32 kbps
+  // o AAC a 48 kbps: tres minutos pesan cerca de 1 MB y caben de sobra en el tope de subida.
+  function recordingOptions(mime = recordingMime()) {
+    const options = { audioBitsPerSecond: /webm|opus/.test(mime) ? 32000 : 48000 };
+    if (mime) options.mimeType = mime;
+    return options;
   }
   async function readSpeech(response, onChunk) {
     if(!response.headers.get('Content-Type')?.includes('application/x-ndjson'))return response.blob();
@@ -83,20 +93,27 @@
   }
 
   function init({ userId, forms = [], sendMessage, voiceApi, speaker = 'Coach',
-    maxBytes = MAX_BYTES, toolbarSelector = '', hasExtraInput = () => false, onBusyChange = () => {} }) {
+    maxBytes = MAX_BYTES, maxSeconds, toolbarSelector = '', hasExtraInput = () => false, onBusyChange = () => {} }) {
     if ((!userId && !voiceApi) || !forms.length) return null;
+    const limit = Math.max(1, Math.floor(Number(maxSeconds)) || (voiceApi ? CUSTOM_API_SECONDS : MAX_SECONDS));
+    const limitText = limit % 60 ? `${limit} segundos` : limit === 60 ? '1 minuto' : `${limit / 60} minutos`;
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
-    let draft = null, draftText = '', draftUrl = '', draftDuration = 0, previewUrl = '', active = null, gesture = null, seconds = 0, finishAction = 'hold';
+    let draft = null, draftText = '', draftUrl = '', draftDuration = 0, previewUrl = '', active = null, seconds = 0;
+    // finishAction: qué hacer con lo grabado cuando el grabador se detiene ('send' lo envía, 'keep' lo deja pendiente).
+    // pendingSend: hay un audio guardado que se enviará solo en cuanto la pantalla sea visible y el chat esté libre.
+    let startedAt = 0, endedAt = 0, finishAction = 'send', pendingSend = false;
     const controls = [], players = new Set(), urls = new Set();
     let micPermission, micRequest;
     // The browser owns this permission. Reading its live state never opens a prompt.
     navigator.permissions?.query?.({name:'microphone'}).then(status => { micPermission = status; }, () => {});
-    const HOLD_LABEL = 'Mantén presionado para grabar. Suelta para enviar. Desliza a la izquierda para borrar.';
-    const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
+    const RECORD_LABEL = 'Grabar mensaje de voz';
+    const IDLE_HINT = `Toca el micrófono y habla hasta ${limitText}.`;
+    const RECORDING_HINT = 'Toca ■ otra vez para enviar. «Cancelar» borra el audio.';
+    const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><g class="mic"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></g><rect class="stop" x="7" y="7" width="10" height="10" rx="2"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null, liveFinished = null, playbackEpoch = 0;
     // En iPhone, mientras el micrófono captura, el sistema pone el audio en modo de llamada, que suena más bajo.
-    // Al soltar el micrófono se pide el modo de reproducción para la respuesta hablada y, cuando termina,
+    // Al cerrar el micrófono se pide el modo de reproducción para la respuesta hablada y, cuando termina,
     // se vuelve al automático para no estorbar a otras grabaciones de la página.
     let sessionTimer = null;
     function audioSession(type) {
@@ -173,8 +190,18 @@
         update();
       } catch { stopMeter(); }
     }
+    // Al hablar de uno a tres minutos sin tocar la pantalla, el teléfono la apagaría y cortaría la grabación.
+    // Donde el navegador lo permite, se le pide mantenerla encendida solo mientras graba.
+    let wakeLock = null;
+    function keepAwake(stillRecording) {
+      navigator.wakeLock?.request?.('screen').then(lock => {
+        if (stillRecording()) wakeLock = lock; else lock.release().catch(() => {});
+      }, () => {});
+    }
     const stopTracks = () => {
       stopMeter();
+      wakeLock?.release().catch(() => {});
+      wakeLock = null;
       if (!stream) return;
       stream.getTracks().forEach(track => track.stop());
       stream = null;
@@ -182,24 +209,28 @@
     };
     const clearTimer = () => { window.clearInterval(timer); timer = null; };
     const notify = text => { if(active) active.status.textContent = text; };
-    const capturing = () => ['requesting','recording','finishing','ready'].includes(phase);
+    const capturing = () => ['requesting','recording','finishing'].includes(phase);
     function render() {
-      const locked = chatBusy || phase !== 'idle';
+      const locked = chatBusy || phase !== 'idle', left = limit - seconds;
       for(const item of controls) {
-        const current = item === active, recording = current && capturing(), cancelled = recording && gesture?.cancelled;
+        const current = item === active, recording = current && capturing();
         const hasText = Boolean(item.form.querySelector('textarea')?.value.trim()) || hasExtraInput(item.form);
-        item.record.disabled = chatBusy || (!recording && phase !== 'idle') || (Boolean(draft) && !recording);
-        item.record.setAttribute('aria-label', recording ? 'Grabando. Suelta para enviar; desliza a la izquierda o pulsa Escape para borrar.' : HOLD_LABEL);
+        // Mientras graba, el botón nunca se bloquea: siempre se puede detener y conservar el audio.
+        item.record.disabled = !recording && (chatBusy || phase !== 'idle' || Boolean(draft));
         item.record.setAttribute('aria-pressed', recording ? 'true' : 'false');
+        item.record.title = recording ? 'Detener y enviar' : RECORD_LABEL;
         item.record.classList.toggle('is-recording',recording);
-        item.record.classList.toggle('is-cancelling',Boolean(cancelled));
+        item.form.classList.toggle('is-voice-recording',recording);
         item.tools.hidden = (!recording && (hasText || Boolean(draft)) && phase === 'idle') || (Boolean(draft) && phase === 'sending');
         item.activity.hidden = !recording;
+        item.activity.classList.toggle('is-ending',recording && phase === 'recording' && left <= 30);
         item.status.classList.toggle('sr-only',recording);
-        item.activity.classList.toggle('is-cancelling',Boolean(cancelled));
-        item.elapsed.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
-        item.slide.textContent = cancelled ? 'Suelta para borrar' : phase === 'requesting' ? 'Preparando micrófono…' : phase === 'ready' ? 'Suelta para enviar' : '← Desliza para borrar';
-        item.hint.hidden = hasText || phase !== 'idle' || (Boolean(draft) && !recording);
+        item.elapsed.textContent = formatClock(seconds);
+        item.elapsed.hidden = phase === 'requesting';
+        item.total.hidden = phase !== 'recording' || left <= 30;
+        item.note.textContent = phase === 'requesting' ? 'Preparando micrófono…' : phase === 'finishing' ? 'Guardando…' : left <= 30 ? `Quedan ${left} s` : '';
+        item.hint.textContent = recording ? RECORDING_HINT : IDLE_HINT;
+        item.hint.hidden = hasText || (!recording && (phase !== 'idle' || Boolean(draft)));
         item.preview.hidden = !draft || !current || phase !== 'idle';
         item.send.disabled = locked || !draft; item.cancel.disabled = locked;
         item.form.querySelectorAll('textarea, button[type="submit"]').forEach(node => {
@@ -209,64 +240,99 @@
       }
       onBusyChange(capturing() || phase === 'sending' || Boolean(draft));
     }
-    function clearDraft() { draft = null; draftText = ''; draftUrl = ''; draftDuration = 0; release(previewUrl); previewUrl = ''; controls.forEach(item => item.player.setSource('')); }
+    function clearDraft() { draft = null; draftText = ''; draftUrl = ''; draftDuration = 0; pendingSend = false; release(previewUrl); previewUrl = ''; controls.forEach(item => item.player.setSource('')); }
     function setDraft(blob, duration) {
       clearDraft();
-      if(blob.size < 64 || blob.size > maxBytes) { notify(blob.size > maxBytes ? `El audio supera ${maxBytes / 1024 / 1024} MB. Graba uno más corto.` : 'Mantén presionado un poco más para grabar.'); render(); return false; }
+      // Último recurso: la tasa fija y el corte por tamaño de start() evitan llegar aquí.
+      if(blob.size > maxBytes) { notify(`El audio supera ${maxBytes / 1024 / 1024} MB. Graba uno más corto.`); render(); return false; }
       draft = blob; draftDuration = duration; previewUrl = makeUrl(blob); active.player.setSource(previewUrl, duration);return true;
     }
-    function stopRecording(action = 'hold') {
-      finishAction = action;clearTimer();
+    function stopRecording(action) {
+      finishAction = action;clearTimer();endedAt ||= Date.now();
       if(recorder?.state === 'recording') {phase='finishing';recorder.stop();}
       stopTracks();
     }
-    function resetGesture() {
-      const previous=gesture;gesture=null;
-      if(previous?.pointerId != null){try{previous.item.record.releasePointerCapture(previous.pointerId);}catch{}}
-    }
-    function cancel(message = phase === 'requesting' ? 'Vuelve a mantener presionado para grabar.' : 'Audio borrado.') {
-      generation++; resetGesture();clearTimer();stopRecording();recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
+    // Único camino que borra lo grabado: «Cancelar», Escape dentro del compositor, la papelera del audio pendiente o reset().
+    function cancel(message = phase === 'requesting' ? 'Grabación cancelada.' : 'Audio borrado.') {
+      generation++;stopRecording('keep');recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
       audioSession('auto');
     }
-    function finish() {
-      if(!gesture)return;
-      const cancelled=gesture.cancelled;resetGesture();
-      if(cancelled){cancel();return;}
-      if(phase==='requesting'){cancel();return;}
-      unlockAudio();
-      if(phase==='recording'){stopRecording('send');refreshAudio();render();}
-      else if(phase==='finishing'){finishAction='send';refreshAudio();}
-      else if(phase==='ready'){refreshAudio();phase='idle';send();}
+    // Perder el foco (blur), un toque interrumpido o cambiar de ventana no tocan la grabación: sigue corriendo.
+    // Si la página se oculta o se cierra el chat, el navegador puede cortar el micrófono en cualquier momento,
+    // así que se detiene el grabador de inmediato y lo grabado queda guardado en memoria.
+    function suspendCapture(action) {
+      if(phase === 'requesting') cancel('Toca el micrófono para grabar.');
+      else if(phase === 'recording') { stopRecording(action); render(); }
+    }
+    // Con la página oculta el navegador puede congelar la subida y la respuesta hablada no puede sonar; con el
+    // chat ocupado el envío se rechazaría. Lo más simple y seguro: el audio espera guardado y sale solo al volver.
+    function deliver() {
+      if(document.hidden || chatBusy) {
+        pendingSend = true;
+        notify(document.hidden ? 'Guardé tu audio. Lo envío en cuanto vuelvas a esta pantalla.' : 'Guardé tu audio. Lo envío en cuanto el Coach termine.');
+        render();return;
+      }
+      send();
+    }
+    function flushPending() { if(pendingSend && draft && phase === 'idle' && !chatBusy && !document.hidden) send(); }
+    function toggleRecording(item) {
+      if(phase === 'idle') { if(!chatBusy && !draft) start(item); return; }
+      // Un doble toque accidental no corta la grabación recién iniciada.
+      if(phase !== 'recording' || item !== active || Date.now() - startedAt < MIN_MS) return;
+      unlockAudio();stopRecording('send');refreshAudio();render();
     }
     async function start(item) {
       if(chatBusy || phase !== 'idle' || draft)return;
       active=item;
-      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {resetGesture();notify('La grabación no está disponible. Puedes escribir tu pregunta.');return;}
-      if(micPermission?.state === 'denied') {resetGesture();notify('El micrófono está bloqueado. ' + microphoneSettings());return;}
-      if(micRequest) {resetGesture();notify('Preparando micrófono…');return;}
+      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {notify('La grabación no está disponible. Puedes escribir tu pregunta.');return;}
+      if(micPermission?.state === 'denied') {notify('El micrófono está bloqueado. ' + microphoneSettings());return;}
+      if(micRequest) {notify('Preparando micrófono…');return;}
       pausePlayback();unlockAudio();seconds=0;
       const token=++generation;phase='requesting';notify('Preparando micrófono…');render();
       try {
         audioSession('play-and-record');
         micRequest=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
         const captured=await micRequest;
-        if(token!==generation || document.hidden || !gesture){captured.getTracks().forEach(track=>track.stop());audioSession('auto');if(token===generation){phase='idle';render();}return;}
-        stream=captured;const mime=recordingMime(),chunks=[];
-        const recording=new MediaRecorder(captured,mime?{mimeType:mime}:{});recorder=recording;const started=Date.now();
-        recording.addEventListener('dataavailable',event=>{if(event.data.size && token===generation)chunks.push(event.data);});
-        recording.addEventListener('stop',()=>{
-          if(token!==generation)return;clearTimer();stopTracks();recorder=null;
-          if(Date.now()-started<350){phase='idle';resetGesture();notify('Mantén presionado para grabar tu pregunta.');render();return;}
-          const blob=new Blob(chunks,{type:recording.mimeType || mime || 'audio/webm'});
-          phase='idle';if(!setDraft(blob, Math.min(MAX_SECONDS, (Date.now() - started) / 1000))){resetGesture();render();return;}
-          if(finishAction==='send'){send();}
-          else {phase='ready';notify('Llegaste a 90 segundos. Suelta para enviar o desliza para borrar.');render();}
+        // Se canceló o se ocultó la página mientras el navegador pedía el micrófono: todavía no hay nada grabado.
+        if(token!==generation || document.hidden){captured.getTracks().forEach(track=>track.stop());audioSession('auto');if(token===generation){phase='idle';notify('Toca el micrófono para grabar.');render();}return;}
+        stream=captured;const mime=recordingMime(),chunks=[];let bytes=0,warned=0,recording;
+        try { recording=new MediaRecorder(captured,recordingOptions(mime)); }
+        catch { recording=new MediaRecorder(captured,mime?{mimeType:mime}:{}); }
+        recorder=recording;startedAt=Date.now();endedAt=0;finishAction='send';
+        recording.addEventListener('dataavailable',event=>{
+          if(!event.data.size || token!==generation)return;
+          chunks.push(event.data);bytes+=event.data.size;
+          // Nunca se descarta por tamaño: antes de rebasar el tope de subida se detiene y se envía lo grabado.
+          if(bytes>maxBytes*0.9 && phase==='recording'){notify('Tu audio llegó al tamaño máximo. Lo envío ahora.');stopRecording('send');refreshAudio();render();}
         });
-        recording.addEventListener('error',()=>{if(token===generation)cancel('No pude completar la grabación. Vuelve a intentarlo.');});
-        recording.start(500);monitorVolume(item, captured);phase='recording';notify('Grabando. Suelta para enviar o desliza a la izquierda para borrar.');render();
-        timer=window.setInterval(()=>{seconds++;render();if(seconds>=MAX_SECONDS)stopRecording();},1000);
+        // También llega aquí si el sistema corta el micrófono (una llamada, por ejemplo): se conserva lo grabado.
+        recording.addEventListener('stop',()=>{
+          if(token!==generation)return;clearTimer();stopTracks();recorder=null;phase='idle';
+          const length=(endedAt || Date.now())-startedAt,blob=new Blob(chunks,{type:recording.mimeType || mime || 'audio/webm'});
+          if(length<MIN_MS || blob.size<64){seconds=0;notify('No alcancé a grabar nada. Toca el micrófono para intentarlo otra vez.');render();return;}
+          if(!setDraft(blob, Math.min(limit, length / 1000)))return;
+          if(finishAction==='send')deliver();
+          else {notify('Guardé tu audio. Puedes enviarlo o borrarlo.');render();}
+        });
+        recording.addEventListener('error',()=>{
+          if(token!==generation)return;
+          if(recording.state==='recording')stopRecording('keep');else finishAction='keep';
+        });
+        recording.start(500);monitorVolume(item, captured);phase='recording';
+        keepAwake(()=>token===generation && phase==='recording');
+        notify(`Grabando. Toca el micrófono otra vez para enviar o «Cancelar» para borrar. Máximo ${limitText}.`);render();
+        timer=window.setInterval(()=>{
+          const now=Math.min(limit,Math.floor((Date.now()-startedAt)/1000));
+          if(now===seconds)return;
+          seconds=now;const left=limit-seconds;
+          // Al llegar al máximo se detiene y se envía solo; nunca se descarta.
+          if(left<=0){notify(`Llegaste a ${limitText}. Envío tu audio.`);stopRecording('send');refreshAudio();}
+          else if(left<=10 && warned<2){warned=2;notify('Quedan 10 segundos.');}
+          else if(left<=30 && warned<1){warned=1;notify('Quedan 30 segundos.');}
+          render();
+        },250);
       } catch(error) {
-        if(token!==generation)return;stopTracks();audioSession('auto');resetGesture();phase='idle';
+        if(token!==generation)return;stopTracks();audioSession('auto');recorder=null;phase='idle';
         notify(error.name==='NotAllowedError' ? 'El micrófono está bloqueado. ' + microphoneSettings() : 'No pude abrir el micrófono. Revisa que esté disponible.');render();
       } finally {
         micRequest=null;
@@ -283,6 +349,7 @@
     }
     async function send() {
       if(!draft || phase !== 'idle' || chatBusy)return;
+      pendingSend = false;
       // Keep the AudioContext unlocked by the microphone gesture while awaiting the reply.
       pausePlayback(null, true);unlockAudio();
       const audio = draft; phase='sending'; notify('Transcribiendo tu audio…'); render();
@@ -330,7 +397,6 @@
       play.className = 'coach-voice-play';
       play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="play" d="M9 5.5v13l10-6.5z"/><path class="pause" d="M8 6h3v12H8zm6 0h3v12h-3z"/></svg>';
       card.append(play, label, time, track, audio);
-      const formatTime = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
       function update() {
         const playing = streamToggle ? streamPlaying : !audio.paused && !audio.ended;
         const duration = Number.isFinite(audio.duration) ? audio.duration : recordedDuration;
@@ -341,7 +407,7 @@
         card.classList.toggle('is-playing', playing);
         card.classList.toggle('is-streaming', Boolean(streamToggle));
         time.textContent = streamToggle ? (playing ? 'En curso' : 'En pausa')
-          : knownDuration ? formatTime(playing ? elapsed : duration) : (elapsed ? formatTime(elapsed) : '');
+          : knownDuration ? formatClock(playing ? elapsed : duration) : (elapsed ? formatClock(elapsed) : '');
         fill.setAttribute('style', `width:${knownDuration ? Math.min(100, elapsed / duration * 100) : 0}%`);
       }
       for (const event of ['loadedmetadata', 'durationchange', 'play', 'pause', 'ended', 'timeupdate', 'emptied']) {
@@ -364,47 +430,35 @@
       form.classList.add('coach-voice-composer');
       const tools=document.createElement('div');tools.className='coach-voice-tools';
       const item={form,tools};
-      item.record=button('');item.record.innerHTML=MIC_ICON;item.record.className='coach-voice-hold';item.record.title=HOLD_LABEL;
+      const toolbar = (toolbarSelector && form.querySelector(toolbarSelector)) || form;
+      // Con el campo de texto como hijo directo, la barra de grabación ocupa su misma celda y el compositor no cambia de alto.
+      if(toolbar === form) form.classList.add('coach-voice-inline');
+      item.record=button('');item.record.innerHTML=MIC_ICON;item.record.className='coach-voice-hold';
+      item.record.setAttribute('aria-label',RECORD_LABEL);
       item.record.addEventListener('contextmenu',event=>event.preventDefault());
-      item.record.addEventListener('pointerdown',event=>{
-        if(event.button!==0 || event.isPrimary===false || gesture || chatBusy || phase!=='idle' || draft)return;
-        event.preventDefault();gesture={item,pointerId:event.pointerId,startX:event.clientX,cancelled:false};
-        try{item.record.setPointerCapture(event.pointerId);}catch{}start(item);
-      });
-      item.record.addEventListener('pointermove',event=>{
-        if(gesture?.item!==item || gesture.pointerId!==event.pointerId)return;
-        gesture.cancelled=event.clientX-gesture.startX<=-64;render();
-      });
-      item.record.addEventListener('pointerup',event=>{if(gesture?.item===item && gesture.pointerId===event.pointerId){event.preventDefault();finish();}});
-      for(const type of ['pointercancel','lostpointercapture'])item.record.addEventListener(type,event=>{if(gesture?.item===item && gesture.pointerId===event.pointerId)cancel();});
-      item.record.addEventListener('keydown',event=>{
-        if(event.key==='Escape' && capturing()){event.preventDefault();cancel();return;}
-        if(![' ','Enter'].includes(event.key))return;event.preventDefault();
-        if(!event.repeat && !gesture && phase==='idle' && !chatBusy && !draft){gesture={item,key:event.key,cancelled:false};start(item);}
-      });
-      item.record.addEventListener('keyup',event=>{if(gesture?.item===item && gesture.key===event.key){event.preventDefault();finish();}});
-      // Assistive technologies may activate a button without pointer or key events.
-      item.record.addEventListener('click',event=>{
-        event.preventDefault();if(event.detail!==0)return;
-        if(gesture?.assistive && gesture.item===item)finish();
-        else if(!gesture && phase==='idle' && !chatBusy && !draft){gesture={item,assistive:true,cancelled:false};start(item);}
-      });
+      // Un toque empieza y otro toque envía. `click` cubre por igual dedo, ratón, Espacio/Enter y lectores de pantalla.
+      item.record.addEventListener('click',event=>{event.preventDefault();toggleRecording(item);});
       item.status=document.createElement('p');item.status.className='coach-voice-status';item.status.setAttribute('role','status');item.status.setAttribute('aria-live','polite');
-      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent='Mantén presionado para hablar. Suelta para enviar.';
-      item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;item.activity.setAttribute('aria-hidden','true');
-      const bin=document.createElement('span');bin.className='coach-voice-bin';bin.innerHTML=BIN_ICON;
-      const meter=document.createElement('span');meter.className='coach-voice-meter';item.meter=meter;meter.hidden=true;meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
-      item.elapsed=document.createElement('span');item.elapsed.className='coach-voice-elapsed';
-      item.slide=document.createElement('span');item.slide.className='coach-voice-slide';item.activity.append(bin,meter,item.elapsed,item.slide);
+      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent=IDLE_HINT;
+      // Barra de grabación: vive dentro del compositor, en flujo normal, para no tapar el chat ni lo que esté encima.
+      item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;
+      const meter=document.createElement('span');meter.className='coach-voice-meter';item.meter=meter;meter.hidden=true;meter.setAttribute('aria-hidden','true');meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
+      // El reloj cambia cada segundo; los avisos para lectores de pantalla salen por el estado (aria-live), no por aquí.
+      item.elapsed=document.createElement('span');item.elapsed.className='coach-voice-elapsed';item.elapsed.setAttribute('aria-hidden','true');
+      item.total=document.createElement('span');item.total.className='coach-voice-limit';item.total.setAttribute('aria-hidden','true');item.total.textContent='/ '+formatClock(limit);
+      item.note=document.createElement('span');item.note.className='coach-voice-note';item.note.setAttribute('aria-hidden','true');
+      item.discard=button('Cancelar',()=>{cancel();item.record.focus();});item.discard.className='coach-voice-discard';
+      item.discard.setAttribute('aria-label','Cancelar y borrar la grabación');
+      item.activity.append(meter,item.elapsed,item.total,item.note,item.discard);
       item.preview=document.createElement('div');item.preview.className='coach-voice-preview';item.preview.hidden=true;
       item.player = createPlayer('Audio pendiente', 'Escuchar el audio pendiente');
-      item.send=button('Reintentar audio',send);item.cancel=button('',()=>cancel());item.cancel.innerHTML=BIN_ICON;item.cancel.setAttribute('aria-label','Borrar audio pendiente');
+      item.send=button('Enviar audio',send);item.cancel=button('',()=>cancel());item.cancel.innerHTML=BIN_ICON;item.cancel.setAttribute('aria-label','Borrar audio pendiente');
       item.preview.append(item.player.card,item.send,item.cancel);tools.append(item.record);
-      const toolbar = (toolbarSelector && form.querySelector(toolbarSelector)) || form;
       toolbar.append(tools);
       form.append(item.hint,item.activity,item.preview,item.status);controls.push(item);
       form.querySelector('textarea')?.addEventListener('input',render);
-      form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(capturing())cancel();});
+      // Cerrar el chat a media grabación no la borra: queda como audio pendiente para enviarlo o borrarlo al volver.
+      form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();suspendCapture('keep');});
     }
     window.addEventListener('tec:coach-session-change', () => pausePlayback());
     async function speak(text, handles, reference, { isCurrent = () => true, verbatim = false } = {}) {
@@ -512,12 +566,23 @@
       }
       return generate();
     }
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){if(capturing())cancel();pausePlayback();}});
-    window.addEventListener('blur',()=>{if(capturing())cancel();});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape' && capturing())cancel();});
-    window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden){suspendCapture('send');pausePlayback();}
+      else flushPending();
+    });
+    // Escape equivale a «Cancelar» solo con el foco dentro del compositor, para no borrar un audio largo por accidente.
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape' && capturing() && active?.form.contains(event.target)){event.preventDefault();cancel();active.record.focus();}
+    });
+    window.addEventListener('pagehide',event=>{
+      pausePlayback();
+      // Si el navegador guarda la página para volver atrás, el audio sigue en memoria y se envía al regresar.
+      if(event.persisted){suspendCapture('send');return;}
+      generation++;stopRecording('keep');urls.forEach(release);
+    });
     render();
-    return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
+    // El envío pendiente sale en una microtarea para que quien liberó el chat termine antes de volver a ocuparlo.
+    return { setChatBusy(value){chatBusy=Boolean(value);render();if(!chatBusy && pendingSend)Promise.resolve().then(flushPending);}, pausePlayback, speak,
       reset() {
         pausePlayback();
         cancel('');
@@ -535,5 +600,5 @@
         }
       } };
   }
-  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech,createSpeechBuffer,microphoneSettings});
+  window.TecCoachVoice=Object.freeze({init,recordingMime,recordingOptions,formatClock,readSpeech,createSpeechBuffer,microphoneSettings});
 })();

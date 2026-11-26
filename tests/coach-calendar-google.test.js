@@ -101,6 +101,9 @@ test('eventos personales son idempotentes, se mueven en el mismo calendario y no
   assert.equal(writes[0].attendees,undefined);
   assert.deepEqual(writes[0].reminders.overrides,[{method:'popup',minutes:30}]);
   assert.equal(writes[1].start.timeZone,'America/Chicago');
+  // Without notes or address the event carries none, and a move does not erase what the seller wrote.
+  assert.equal(writes[0].description,undefined);
+  assert.equal(writes[1].description,undefined);
   await assert.rejects(google.saveEvent('seller-token',calendarId,{...moved,operationId:'outdated'}),/cambió/);
   await assert.rejects(google.saveEvent('seller-token',calendarId,{...moved,owner:'another',operationId:'tampered'}),/cambió/);
   const manual = records.get(calendarId+'/'+event.eventId);
@@ -141,4 +144,18 @@ test('rechaza campos o fechas inválidos antes de acceder al proveedor',async()=
   for (const bad of [{operationId:'a\nb'}, {reminderMinutes:50000}, {start:'2026-12-01'}, {eventId:'../otro'}, {timeZone:'Fake/Zone'}]) {
     await assert.rejects(google.saveEvent('token',calendarId,{...event,...bad}));
   }
+});
+
+test('una cita de la demo lleva notas de varias líneas y la dirección, sin caracteres de control', async () => {
+  const sent = [];
+  const google = calendarGoogleClient(config, async (input, init) => {
+    if (init.method === 'POST') { sent.push(JSON.parse(init.body)); return json(200, { id: JSON.parse(init.body).id, etag: 'e', htmlLink: '' }); }
+    return json(404, {});
+  });
+  const eventId = 'b'.repeat(32);
+  await google.saveEvent('seller-token', calendarId, { owner: 'seller', eventId, operationId: 'demo-' + eventId, mode: 'create',
+    summary: 'Seguimiento · María Prueba', start: '2026-12-05T16:00:00Z', end: '2026-12-05T16:30:00Z', timeZone: 'America/Chicago',
+    reminderMinutes: 10, description: 'Anfitrión: María Prueba\nTeléfono: (773) 555-0101\u0007', location: '123 Calle Falsa,\nChicago' });
+  assert.equal(sent[0].description, 'Anfitrión: María Prueba\nTeléfono: (773) 555-0101');
+  assert.equal(sent[0].location, '123 Calle Falsa, Chicago');
 });

@@ -9621,3 +9621,29 @@ body:has(.coach-demo-recording-dock:not([hidden])) .tec-offline-status {
   opacity: 0.85;
   cursor: progress;
 }
+
+/* Coach Jorge's questions about a recorded visit: pinned above the chat box, readable while answering by voice. */
+.visit-questions-card {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  max-height: 34vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  border: 1px solid #f0c36d;
+  border-left: 4px solid #c8102e;
+  border-radius: 12px;
+  background: #fff8e6;
+  color: #1b2a4a;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+.visit-questions-card[hidden] { display: none; }
+.visit-questions-card h4 { margin: 0 0 6px; font-size: 1rem; }
+.visit-questions-card ol { margin: 0; padding-left: 1.3em; }
+.visit-questions-card li + li { margin-top: 6px; }
+.visit-questions-card p { margin: 6px 0 0; }
+.visit-questions-host { font-weight: 700; }
+.visit-questions-waiting { color: #7a4b00; }
+.visit-questions-hint { font-size: 0.85rem; color: #4a5672; }

@@ -208,17 +208,17 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
           if (intent.kind==='capabilities') return reply(describeAgentConnections(context.connections),client,[{type:'connections',label:'Mis conexiones'}]);
           if (intent.kind==='unsupported') {
             if (args.legacyFocus && !client) return null;
-            return reply('No encontré una herramienta para completar ese pedido tal como lo planteaste. Estas son las conexiones de tu cuenta:\n'+describeAgentConnections(context.connections),client);
+            return reply('Eso todavía no lo puedo hacer tal como me lo pides. Esto es lo que tengo conectado en tu cuenta:\n'+describeAgentConnections(context.connections)+'\n¿Con cuál de estas te ayudo?',client);
           }
           if (intent.kind==='unavailable' && (client || /\b(?:hoja|referidos|pendientes|boletas|calendario|agenda|gmail|correos?|ventas)\b/i.test(text)) && !args.legacyFocus) {
-            return reply('No pude interpretar la petición en este momento. Vuelve a intentarlo.'+(client?' Tu propuesta sigue disponible.':''),client);
+            return reply('Algo falló de mi lado y no alcancé a revisar lo que me pediste.'+(client?' Tu propuesta sigue guardada.':'')+' ¿Me lo dices otra vez?',client);
           }
           if (['plan','revise','select'].includes(intent.kind)) await verifyBindings();
         } else intent=await interpret(text,{context});
         if (args.legacyFocus && !client && !['plan','capabilities','unsupported'].includes(intent.kind)) return null;
-        if (intent.kind==='none' || intent.kind==='unavailable') return client && intent.kind==='unavailable'?reply('No pude interpretar ese cambio. Tu propuesta sigue disponible.',client):null;
+        if (intent.kind==='none' || intent.kind==='unavailable') return client && intent.kind==='unavailable'?reply('Algo falló de mi lado y no alcancé a hacer ese cambio. Tu propuesta sigue como estaba. ¿Me dices otra vez qué le cambio?',client):null;
         if (intent.kind==='capabilities') return reply('Con tus conexiones del piloto puedo buscar un referido por nombre o anfitrión, priorizar llamadas, revisar tu postventa de Hy Cite, comprobar trayectos entre visitas, buscar o preparar cambios en tus Contactos de Google, preparar un alta o una nota, consultar horarios, agendar una cita personal y redactar un correo. Puedes combinarlo y elegir qué guardar. También puedes corregirme antes de confirmar.',client);
-        if (intent.kind==='unsupported' || intent.kind==='clarify') return reply(intent.question || 'Esa petición incluye una operación que aún no tengo. Puedo preparar una nota, un alta, una cita personal o un correo individual.',client);
+        if (intent.kind==='unsupported' || intent.kind==='clarify') return reply(intent.question || 'Eso no lo puedo hacer tal cual. Lo más cercano que sí hago es dejarte lista una nota, el alta de un prospecto, una cita en tu calendario o un correo para una persona. ¿Cuál te sirve?',client);
       }
       if (!zone) return reply('Necesito la zona horaria de tu dispositivo para preparar el seguimiento.',client);
       if (intent.kind==='select') {

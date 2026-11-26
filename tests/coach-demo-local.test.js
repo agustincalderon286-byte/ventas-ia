@@ -52,7 +52,7 @@ function model() {
 function fixture(finish) {
   const analyses = model(), audio = model();
   let time = Date.UTC(2026, 10, 24);
-  const queue = createLocalDemoQueue({ analyses, audio, finish, now: () => time });
+  const queue = createLocalDemoQueue({ analyses, audio, finish, now: () => time, wait: async () => {} });
   const analysis = {
     _id: String(new mongoose.Types.ObjectId()), ownerUserId: String(new mongoose.Types.ObjectId()),
     status: 'recording', chunks: [{ index: 0, status: 'staged' }, { index: 1, status: 'staged' }],
@@ -123,19 +123,41 @@ test('la cola guarda las frases con tiempos y la segunda lectura, rechaza lectur
   assert.equal(received.checks, undefined);
 });
 
-test('la cola recupera una concesión perdida una vez y conserva el audio al agotar sus intentos', async () => {
+test('la cola recupera una concesión perdida y conserva el audio al agotar sus tres intentos', async () => {
   const { analyses, audio, queue, enqueue, moveTime } = fixture(() => assert.fail('No se envió diálogo'));
   await enqueue();
   const first = await queue.claim();
+  // Three hours of demo fit in one lease: after 31 minutes the job is still the first worker's.
   moveTime(31 * 60_000);
+  await queue.expire();
+  assert.equal(await queue.claim(), null);
+  moveTime(60 * 60_000);
   await queue.expire();
   const second = await queue.claim();
   assert.notEqual(first.lease, second.lease);
   assert.equal(await queue.submit(first.id, first.lease, { failed: true }), 409);
   assert.equal(await queue.submit(second.id, second.lease, { failed: true }), 204);
+  moveTime(60_000);
+  const third = await queue.claim();
+  assert.equal(await queue.submit(third.id, third.lease, { failed: true }), 204);
+  moveTime(60_000);
   assert.equal(await queue.claim(), null);
   assert.equal(analyses.rows[0].status, 'error');
+  assert.match(analyses.rows[0].error, /Tu audio sigue guardado en el teléfono/);
   assert.equal(audio.rows.length, 2);
+});
+
+test('un fallo pasajero del análisis se reintenta solo y el vendedor recibe su reporte', async () => {
+  let calls = 0;
+  const { analyses, queue, enqueue } = fixture(async () => {
+    if (++calls < 3) throw new Error('modelo ocupado');
+    return { status: 'completed', report: { summary: 'ok' } };
+  });
+  await enqueue();
+  const job = await queue.claim();
+  assert.equal(await queue.submit(job.id, job.lease, { chunks: [{ index: 0, text: 'Diálogo ficticio de la demostración.', language: 'es' }] }), 204);
+  assert.equal(calls, 3);
+  assert.equal(analyses.rows[0].status, 'completed');
 });
 
 test('el puerto del worker no reclama trabajos sin la credencial de la Mac', async t => {

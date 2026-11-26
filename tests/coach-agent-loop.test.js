@@ -103,6 +103,29 @@ test('los argumentos deben coincidir exactamente con el esquema y los resultados
   assert.ok(requests[1].input.at(-1).output.length<=6200);
 });
 
+test('un monto con type number pasa la validación del ciclo: preparar_resultado_cita llega a ejecutarse',async()=>{
+  const outcome=agentTools.find(t=>t.name==='preparar_resultado_cita');
+  const good={ref:'a1b2c3',resultado:'Venta',venta:2499,referidos:6,nota:''};
+  assert.deepEqual(readArguments(outcome,JSON.stringify(good)),good);
+  for (const venta of [0,2499.5,100000]) assert.equal(readArguments(outcome,JSON.stringify({...good,venta})).venta,venta);
+  for (const bad of [{...good,venta:'2499'},{...good,venta:null},{...good,venta:true},{...good,venta:-1},{...good,venta:100001},{...good,venta:[2499]},
+    {...good,referidos:6.5},{...good,referidos:'6'},{...good,resultado:'Vendido'},{...good,nota:7}]) {
+    assert.equal(readArguments(outcome,JSON.stringify(bad)),null,JSON.stringify(bad));
+  }
+  // JSON.parse convierte 1e999 en Infinity: no es un monto.
+  assert.equal(readArguments(outcome,JSON.stringify(good).replace('2499','1e999')),null);
+  // El validador conoce todos los tipos que declara el catálogo.
+  const kinds=new Set(agentTools.flatMap(t=>Object.values(t.parameters.properties)).flatMap(rule=>[rule.type,rule.items?.type]).filter(Boolean));
+  assert.deepEqual([...kinds].filter(kind=>!['string','integer','number','boolean','array'].includes(kind)),[]);
+  // De punta a punta: el modelo pide la herramienta y el ciclo la ejecuta con el monto.
+  const seen=[];
+  const {fetchImpl,requests}=model(turn(call('preparar_resultado_cita',good)),turn(say('Revisa y guarda con el botón.')));
+  const result=await runAgentLoop({...base,tools:[outcome],fetchImpl,execute:async(name,args)=>{seen.push([name,args]);return {estado:'preparado'};}});
+  assert.deepEqual(seen,[['preparar_resultado_cita',good]]);
+  assert.deepEqual(result.trace.map(step=>step.estado),['preparado']);
+  assert.equal(JSON.parse(requests[1].input.at(-1).output).estado,'preparado');
+});
+
 // --- Herramientas -----------------------------------------------------------
 const ZONE='America/Chicago', NOW=Date.parse('2026-11-23T15:00:00Z');
 const owner='000000000000000000000411';

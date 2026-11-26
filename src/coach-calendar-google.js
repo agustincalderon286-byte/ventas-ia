@@ -243,7 +243,7 @@ function matchesConfirmedFields(row, payload) {
       reminders[0].minutes === expectedReminder.minutes : reminders.length === 0);
 }
 
-function eventBody({ owner, calendarId, eventId, operationId, mode, summary, start, end, timeZone, reminderMinutes }) {
+function eventBody({ owner, calendarId, eventId, operationId, mode, summary, start, end, timeZone, reminderMinutes, description, location }) {
   if (!owner || !/^[a-f0-9]{16,64}$/.test(eventId) || typeof operationId !== 'string' ||
       !/^[a-z0-9_-]{1,128}$/i.test(operationId) || !['create','move','cancel'].includes(mode)) {
     throw fail('La referencia de la cita no es válida.', 400);
@@ -259,9 +259,13 @@ function eventBody({ owner, calendarId, eventId, operationId, mode, summary, sta
   if (reminderMinutes != null && (!Number.isInteger(reminderMinutes) || reminderMinutes < 0 || reminderMinutes > 40320)) {
     throw fail('Revisa el recordatorio de la cita.', 400);
   }
+  // Optional details the seller reads when opening the appointment: notes and the address (tap to open maps).
+  const text = (value, max) => typeof value === 'string' ? value.replace(/[\p{Cc}\p{Cf}]/gu, ch => ch === '\n' ? '\n' : ' ').trim().slice(0, max) : '';
+  const notes = text(description, 6000), place = text(location, 300).replace(/\n/g, ' ');
   const fingerprint = createHash('sha256').update([owner,calendarId,eventId].join(':')).digest('hex');
   return {
-    summary:summary.trim(), start:{dateTime:start,timeZone}, end:{dateTime:end,timeZone},
+    summary:summary.trim(), ...(notes && { description:notes }), ...(place && { location:place }),
+    start:{dateTime:start,timeZone}, end:{dateTime:end,timeZone},
     reminders:{useDefault:false, overrides:reminderMinutes == null ? [] : [{method:'popup',minutes:reminderMinutes}]},
     extendedProperties:{private:{tecEvent:fingerprint, tecOperation:operationId}}
   };

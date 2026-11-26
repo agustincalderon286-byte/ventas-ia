@@ -332,6 +332,10 @@ export function createSheetsGoogle(fetcher = fetch) {
           }
           if (cols.number != null) cells[cols.number] = {userEnteredValue:{numberValue:order+1}};
           set(cols.relationship,person.relationship); set(cols.startDate,input.startDate);
+          set(cols.status,person.status);
+          // Sheets stores a date as the number of days since 1899-12-30.
+          if (cols.followupDate != null && person.followupDate) cells[cols.followupDate] = {userEnteredValue:{numberValue:
+            Math.round((Date.parse(person.followupDate+'T00:00:00Z') - Date.UTC(1899,11,30)) / 86400000)}};
           if (person.note) {
             if (cols.sellerNotes != null) set(cols.sellerNotes, person.note);
             else cells[cols.phone].note = person.note;

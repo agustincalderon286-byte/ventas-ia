@@ -9,21 +9,24 @@ const evidenceShape = { segment: { type: 'integer' }, quote: { type: 'string' } 
 const strict = properties => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
 const notesSchema = { type:'array', items: strict({ ...strings('text'), ...evidenceShape }) };
 export const autoDemoCloseSchema = strict({
-  referrals: { type: 'array', items: strict({ ...strings('fullName', 'phone'), ...evidenceShape, notes:notesSchema }) },
+  referrals: { type: 'array', items: strict({ ...strings('fullName', 'phone', 'city', 'relationship'), ...evidenceShape, notes:notesSchema }) },
   incompleteReferrals: { type: 'array', items: strict(evidenceShape) },
   survey: { type:'array', items:strict({ ...evidenceShape, field:{type:'string',enum:autoSurveyFields}, values:{type:'array',items:{type:'string'}} }) },
   products: { type:'array', items:strict({ ...strings('name'), ...evidenceShape, prices:notesSchema }) },
   followUp: { anyOf: [strict({ ...strings('when'), ...evidenceShape }), { type: 'null' }] },
-  referralAppointments: { type: 'array', items: strict({ ...strings('fullName', 'when'), ...evidenceShape }) }
+  referralAppointments: { type: 'array', items: strict({ ...strings('fullName', 'when'), ...evidenceShape }) },
+  host: { anyOf: [strict({ ...strings('fullName', 'phone'), ...evidenceShape }), { type: 'null' }] }
 });
 export const autoDemoCloseInstructions = [
   'En autoClose prepara candidatos a guardado automático. Transcribe literalmente y deja fuera cualquier dato dudoso, incompleto, contradictorio o solo sugerido.',
   'Cada referido requiere nombre completo y teléfono completo dictado para ESE referido del 4 en 14. Ambos deben figurar juntos, con el contexto explícito de referencia (por ejemplo «referido», «te recomiendo», «anota a…», «apunta a…» o «su número es…»), en la misma cita literal continua. Excluye al anfitrión, al vendedor, nombres hipotéticos y ejemplos. Devuelve hasta 11.',
   'En incompleteReferrals cita las referencias de esta visita que sí mencionaron pero quedaron incompletas o dudosas. Incluye una sola cita por referido y no repitas los que ya devolviste completos.',
   'En notes conserva TODAS las observaciones claras de ESE referido, una por elemento: estado civil (casado, soltero), vivienda (renta, es dueño), trabajo y horario, cuándo lo pueden llamar, la relación con el anfitrión, intereses u otras notas de contacto. Si una frase dice varias cosas («es soltera, renta y trabaja por la mañana») devuelve un elemento por cada una, con el mismo quote. En text copia el fragmento literal mínimo, incluyendo el no cuando corresponda. En quote copia la frase literal continua; puede ser la frase que sigue inmediatamente a la mención del referido aunque no repita su nombre, siempre que nadie más haya sido mencionado entre ambas. No guardes contraseñas, documentos, diagnósticos ni datos de cuentas en notas de referidos.',
+  'En relationship copia la palabra literal de su relación con el anfitrión si se dijo (por ejemplo «prima», «vecina», «compañera de trabajo»); en city la ciudad o zona donde vive si se dijo (por ejemplo «Cicero»). Ambas deben estar en el quote del referido o en el quote de una de sus notas. Si no se dijeron, deja \'\'.',
   'En products incluye únicamente los productos por los que el cliente mostró interés. En quote cita literalmente ese interés con el nombre del producto. En prices copia los precios, anticipos o cuotas que discutieron para ese mismo producto, con monto y moneda o periodo si se dijo. Cada quote de precio debe identificar el producto y respaldar la cifra. Una cotización no prueba una compra.',
   'En followUp devuelve únicamente un seguimiento aceptado expresamente (por ejemplo «quedamos», «de acuerdo», «agéndame», «nos vemos» o un «sí» a la propuesta): una cita literal continua con el acuerdo, el día y la hora. En when copia la frase exacta con el día y la hora, aunque diga a la vez «mañana» y un día de la semana; TEC comprueba si coinciden. No conviertas fechas ni inventes horas. Si luego cambiaron o retiraron el acuerdo, usa el último acuerdo claro o devuelve null.',
   'En referralAppointments devuelve las citas instantáneas del 4 en 14: una cita (demo o visita) que un REFERIDO aceptó expresamente durante la visita, casi siempre por teléfono desde la casa del anfitrión. En fullName copia el nombre completo de ese referido tal como lo devolviste en referrals; en when la frase exacta con el día y la hora; en quote la frase literal continua con la propuesta y el sí. No incluyas aquí el seguimiento con el anfitrión. Devuelve hasta 3.',
+  'En host identifica al anfitrión: la persona dueña de la casa donde ocurre la visita, a quien el vendedor le hace la demostración, la que recibe el regalo o llena el 4 en 14 con sus referidos. En fullName copia su nombre como se oyó, con apellido si lo dijeron; en phone su teléfono solo si lo dictaron completo, si no deja \'\'; en quote una frase literal continua donde se le nombra como anfitrión o se le habla por su nombre. Nunca es el vendedor, un referido ni alguien mencionado de paso. Si no queda claro quién es, devuelve null.',
   autoSurveyInstructions,
   'Las citas de evidencia pertenecen al segmento que indicas. Mantén nombres y teléfonos de referidos únicamente en autoClose. El resumen de entrenamiento nunca los incluye.'
 ].join('\n');
@@ -89,6 +92,27 @@ const kindsOf = text => Object.keys(noteKinds).filter(kind => noteKinds[kind].te
 // and never when it speaks in first or second person (then it is about the host or the seller).
 const otherPerson = /\b(?:yo|me|mi|mis|nosotr[oa]s|nuestr[oa]s?|usted|ustedes|tu|tus|te|conmigo|contigo|(?:llam|marc|escrib|mand|avis|busc)\w*(?:me|nos))\b/;
 const NEIGHBOR_CHARS = 320;
+
+// Relationship and city for their own columns of the 4 en 14: literal words, said in this referral's quote or notes.
+const placeCue = /\b(?:(?:vive|viven|vivia|vivian) (?:en|por|cerca de)|(?:es|son) de) (?:el |la |los )?$/;
+function referralColumns(row, evidenceTexts) {
+  const out = {};
+  const relationship = typeof row?.relationship === 'string' ? row.relationship.trim() : '';
+  const folded = fold(relationship);
+  if (folded && relationship.length <= 40 && noteKinds.relacion.test(folded) && evidenceTexts.some(text => wordAt(text, folded))) {
+    out.relationship = relationship;
+  }
+  const city = typeof row?.city === 'string' ? row.city.trim() : '';
+  const place = fold(city);
+  if (place && city.length <= 60 && /^[\p{L} .'-]+$/u.test(city) && evidenceTexts.some(text => {
+    for (let at = text.indexOf(place); at >= 0; at = text.indexOf(place, at + 1)) {
+      if (/[\p{L}\d]/u.test(text[at + place.length] || '') || /[\p{L}\d]/u.test(text[at - 1] || '')) continue;
+      if (placeCue.test(text.slice(Math.max(0, at - 30), at))) return true;
+    }
+    return false;
+  })) out.city = city;
+  return out;
+}
 
 export function verifyAutoDemoClose(raw, chunks) {
   const segments = new Map(chunks.map(chunk => [chunk.index + 1, fold(chunk.text)]));
@@ -157,7 +181,7 @@ export function verifyAutoDemoClose(raw, chunks) {
       note({ field:'referral', label:fullName, state:'preguntar', reason:'Teléfono: ' + phoneCheck.reason, minute:minute(row) });
       return null;
     }
-    const notes = new Map();
+    const notes = new Map(), acceptedDetails = [];
     for (const item of Array.isArray(row.notes) ? row.notes.slice(0,8) : []) {
       const detail = evidence(item), detailPhones = [...detail.matchAll(visiblePhones)].map(hit => sheetsPhoneKey(hit[0])).filter(Boolean);
       if (!detail || detailPhones.some(value=>value!==phone) || referralNames.some(other=>other!==names && wordAt(detail,other))) continue;
@@ -165,13 +189,16 @@ export function verifyAutoDemoClose(raw, chunks) {
       const text = literalNote(item?.text, detail, 100);
       if (text && !lostNegation(detail,fold(text)) && !referralNames.some(name=>wordAt(fold(text),name))) {
         notes.set(fold(text), { text, minute:minute(item) });
+        acceptedDetails.push(detail);
       }
     }
     const saved = [...notes.values()];
+    // The columns of the 4 en 14 the telemarketing team works: relationship and city, only when said for this referral.
+    const details = referralColumns(row, [quote, ...acceptedDetails]);
     for (const item of saved) note({ field:'note', label:fullName, state:'guardar', text:item.text, kinds:kindsOf(item.text), minute:item.minute });
     note({ field:'referral', label:fullName, state:'guardar', minute:minute(row) }, phoneCheck);
     const joined = saved.map(item => item.text).join(' · ').slice(0,640);
-    return { fullName, phone, ...(joined && { note: joined }) };
+    return { fullName, phone, ...details, ...(joined && { note: joined }) };
   });
 
   // Measure what the notes may have missed: observations right after a saved referral that no
@@ -206,7 +233,7 @@ export function verifyAutoDemoClose(raw, chunks) {
   }
   const quote = evidence(raw?.followUp), when = typeof raw?.followUp?.when === 'string' ? raw.followUp.when.trim() : '';
   let followUp = quote && when && when.length <= 120 && confirmsFollowUp(quote) && followUpAction.test(quote) &&
-    quote.includes(fold(when)) ? { when, segment: raw.followUp.segment } : null;
+    quote.includes(fold(when)) ? { when, segment: raw.followUp.segment, agreed: agreedText(raw.followUp.quote) } : null;
   if (followUp) {
     const check = figures('time', raw.followUp, when);
     if (check.state === 'doubt') {
@@ -264,14 +291,65 @@ export function verifyAutoDemoClose(raw, chunks) {
       continue;
     }
     note({ field:'referralAppointment', label:row.fullName, state:'guardar', text:whenText, minute:minute(item) }, check);
-    referralAppointments.push({ fullName:row.fullName, phone:row.phone, when:whenText, segment:item.segment });
+    referralAppointments.push({ fullName:row.fullName, phone:row.phone, when:whenText, segment:item.segment, agreed:agreedText(item.quote) });
     // The 4 en 14 row keeps the appointment in its notes too.
     row.note = [row.note, 'Cita instantánea: ' + whenText].filter(Boolean).join(' · ').slice(0, 640);
   }
-  return { referrals: unique, pendingReferrals: supplied.length - unique.length + incomplete.size, followUp,
+  // The host is only a lead for TEC to cross with the CRM and the calendar: the name must be in the quote.
+  const hostQuote = evidence(raw?.host, true), hostName = typeof raw?.host?.fullName === 'string' ? raw.host.fullName.trim() : '';
+  const hostWords = fold(hostName).split(' ').filter(word => word.length >= 2);
+  const hostPhones = [...hostQuote.matchAll(visiblePhones)].map(hit => sheetsPhoneKey(hit[0])).filter(Boolean);
+  const hostPhone = sheetsPhoneKey(raw?.host?.phone);
+  const host = hostQuote && personName.test(hostName) && hostWords.length && hostWords.length <= 5 && wordAt(hostQuote, hostWords[0]) &&
+    !unique.some(row => fold(row.fullName) === fold(hostName))
+    ? { name: hostName.slice(0, 100), phone: hostPhone && hostPhones.includes(hostPhone) && !unique.some(row => row.phone === hostPhone) ? hostPhone : '' } : null;
+  return { referrals: unique, pendingReferrals: supplied.length - unique.length + incomplete.size, followUp, ...(host && { host }),
     ...(referralAppointments.length && { referralAppointments }),
     ...(Object.keys(survey).length && { survey }), ...(products.size && { products:[...products.values()] }),
     ...(review.length && { review: review.slice(0, 60) }) };
+}
+
+// «Fecha del 4 en 14»: the day of the demo where the seller works.
+function demoDay(analysis) {
+  const zone = validTimeZone(analysis.autoClose?.zone), started = new Date(analysis.startedAt);
+  if (!zone || !Number.isFinite(Number(started))) return '';
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(started);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '';
+}
+
+// The agreement as it was said, for the notes of the calendar appointment.
+const agreedText = quote => String(quote || '').replace(/[\p{Cc}\p{Cf}]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 240);
+const prettyPhone = key => /^\d{10}$/.test(key || '') ? `(${key.slice(0, 3)}) ${key.slice(3, 6)}-${key.slice(6)}` : '';
+const signature = 'Creada por Coach TEC al terminar la grabación de la demo. El reporte completo está en TEC › Mis demostraciones.';
+const lines = list => list.filter(Boolean).join('\n');
+
+// What the seller needs when opening the follow-up: who, how to call, where, what was agreed, what they liked.
+export function followUpDetails(facts, contact = {}) {
+  const products = (facts.products || []).slice(0, 6).map(product => '• ' + product.name +
+    (product.prices?.length ? ' — ' + product.prices.join(' · ') : ''));
+  const referrals = (facts.referrals || []).map(row => '• ' + row.fullName + (prettyPhone(row.phone) ? ' · ' + prettyPhone(row.phone) : ''));
+  return lines([
+    contact.name && 'Anfitrión: ' + contact.name,
+    prettyPhone(contact.phone) && 'Teléfono: ' + prettyPhone(contact.phone),
+    contact.address && 'Dirección: ' + contact.address,
+    facts.followUp?.agreed && 'Lo que quedaron: «' + facts.followUp.agreed + '»',
+    products.length && '\nLe interesó:\n' + lines(products),
+    referrals.length && '\nReferidos del 4 en 14 (' + referrals.length + '):\n' + lines(referrals),
+    '\n' + signature
+  ]);
+}
+
+// What the seller needs for an instant appointment with a referral of the 4 en 14.
+export function referralAppointmentDetails(appointment, facts, contact = {}) {
+  const row = [...(facts.referrals || []), ...(facts.knownReferrals || [])].find(found => found.phone === appointment.phone);
+  return lines([
+    'Referido: ' + appointment.fullName,
+    prettyPhone(appointment.phone) && 'Teléfono: ' + prettyPhone(appointment.phone),
+    contact.name && 'Lo refirió: ' + contact.name + (prettyPhone(contact.phone) ? ' · ' + prettyPhone(contact.phone) : '') + ' (4 en 14)',
+    row?.note && 'Notas: ' + row.note,
+    appointment.agreed && 'Lo que quedaron: «' + appointment.agreed + '»',
+    '\n' + signature
+  ]);
 }
 
 function whenFor(analysis, candidate, now) {
@@ -279,7 +357,8 @@ function whenFor(analysis, candidate, now) {
   if (!zone || !candidate?.when || !Number.isFinite(Number(new Date(analysis.startedAt)))) return null;
   const offsets = analysis.chunks.filter(chunk => chunk.index < candidate.segment - 1)
     .reduce((sum, chunk) => sum + Number(chunk.durationSeconds || 0), 0);
-  const anchor = Number(new Date(analysis.startedAt)) + offsets * 1000;
+  // An answer the seller gave later is read from the moment of that answer, not from the recording.
+  const anchor = Number.isFinite(candidate.anchor) ? candidate.anchor : Number(new Date(analysis.startedAt)) + offsets * 1000;
   const phrase = fold(candidate.when);
   if (/\b(?:antes de|despues de|entre|alrededor|cerca de|aproximadamente|la semana que viene|el otro|o|u)\b/.test(phrase)) return null;
   const parsed = readFollowup(candidate.when, {}, { timeZone: zone, now: anchor });
@@ -309,6 +388,7 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
     const operationId = 'demo-' + eventId;
     const name = contact.name || 'Visita TEC';
     const event = { owner, grant: connection.grant, eventId, operationId, ...when, summary: 'Seguimiento · ' + name,
+      description: followUpDetails(facts, contact), ...(contact.address && { location: contact.address }),
       mode: 'create', checkAvailability: true, retryGoogle: true };
     if (!await active(analysis)) return { state: 'stopped' };
     const saved = await calendar.saveEvent(event);
@@ -336,6 +416,7 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
       const summary = ('Demo · ' + appointment.fullName + (contact.name ? ' (4 en 14 de ' + contact.name + ')' : '')).slice(0, 180);
       try {
         const saved = await calendar.saveEvent({ owner, grant: connection.grant, eventId, operationId: 'demo-' + eventId, ...when, summary,
+          description: referralAppointmentDetails(appointment, facts, contact),
           mode: 'create', checkAvailability: true, retryGoogle: true });
         await followups.rememberEvent({ owner, calendarId: connection.calendarId }, { ...when, name: appointment.fullName, summary,
           action: 'demo', operationId: 'demo-' + eventId, eventId, htmlLink: saved.htmlLink || '', etag: saved.etag || '' })
@@ -361,14 +442,25 @@ export function createAutoDemoClose({ calendar, followups, sheets, transfer, act
     if (book.grant !== destination.grant || book.spreadsheetId !== destination.spreadsheetId) return { state: 'connection', saved: 0, pending: total };
     const ctx = { owner, session: 'demo:' + String(analysis._id), grant: book.grant, workbook: book, access: token,
       sellerName: analysis.ownerName || '', isCurrent: async () => await active(analysis) && await sheets.current(owner, book.grant) };
-    const draft = await transfer.preview(ctx, { kind: 'referrals', hostName: contact.name, hostPhone: contact.phone || '', referrals: facts.referrals });
+    // A referral with an instant appointment goes in as «Cita» with its day in «Próxima llamada».
+    const rows = facts.referrals.map(row => {
+      const appointment = (facts.referralAppointments || []).find(item => item.phone === row.phone);
+      const when = appointment && whenFor(analysis, appointment, now());
+      if (!when?.start) return row;
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: when.timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(when.start));
+      return { ...row, status: 'Cita', followupDate: day };
+    });
+    const draft = await transfer.preview(ctx, { kind: 'referrals', hostName: contact.name, hostPhone: contact.phone || '', referrals: rows,
+      ...(demoDay(analysis) && { startDate: demoDay(analysis) }) });
     const selected = draft.rows.filter(row => row.status === 'new').map(row => row.index);
     const duplicates = draft.rows.filter(row => row.status === 'duplicate').length;
     const review = pending + draft.rows.length - selected.length - duplicates;
     const result = selected.length ? await transfer.confirm(ctx, { previewId: draft.previewId, selected }) : { written: 0, sheetTitle: draft.sheetTitle };
     const notesToReview = draft.rows.filter(row => row.status !== 'new' && facts.referrals[row.index]?.note)
       .map(row => ({ name:facts.referrals[row.index].fullName, note:facts.referrals[row.index].note }));
+    // savedPhones is for the caller only (weekly lead count); it must be removed before the receipt is stored.
     return { state: 'checked', saved: result.written, pending: review, duplicates, sheetTitle: result.sheetTitle, file: book.spreadsheetId,
+      ...(result.written > 0 && { savedPhones: selected.map(index => facts.referrals[index].phone) }),
       ...(notesToReview.length && { notesToReview }) };
   }
 

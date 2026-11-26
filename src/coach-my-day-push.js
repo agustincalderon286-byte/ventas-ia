@@ -85,7 +85,8 @@ export function createCoachDayPush({ devices, configs, requireActive, message, a
         if (action === 'inbox') {
           // Solo un aviso reciente de este mismo teléfono y sesión; el texto se calcula ahora con los números del vendedor.
           if (!active || !current.lastSlot || !current.lastSentAt || now() - new Date(current.lastSentAt).getTime() > 3600000) return res.json({ notify: false });
-          const slot = Number(current.lastSlot.split(':')[1]);
+          // A word («demo», «espera») is an extra notice outside the schedule; a number is an hour of the day.
+          const name = current.lastSlot.split(':')[1], slot = /^[a-z]+$/.test(name) ? name : Number(name);
           const text = await message({ owner: ctx.auth.user._id, user: ctx.auth.user, zone: current.zone, slot, now: now() });
           return res.json({ notify: true, title: text.title, body: text.body, url: '/coach/app/?miDia=1' });
         }
@@ -135,6 +136,26 @@ export function createCoachDayPush({ devices, configs, requireActive, message, a
     return false;
   }
 
+  // A notice outside the schedule («tu demo está lista») for every phone of one account. Like the others, the
+  // provider only carries a generic signal; the phone asks TEC for the text with the seller's session.
+  async function notifyNow(accountId, kind) {
+    if (!keys || !/^[a-z]{2,12}$/.test(kind)) return 0;
+    const at = new Date(now());
+    const list = await devices.find({ accountId, enabled: true, expiresAt: { $gt: at } }).select('+push').limit(5).lean();
+    let sent = 0;
+    for (const device of list) {
+      if (device.vapidKey !== keys.publicKey) continue;
+      try {
+        await devices.updateOne({ _id: device._id }, { $set: { lastSlot: localClock(at, validZone(device.zone) || 'America/Chicago').day + ':' + kind, lastSentAt: at } });
+        await send(normalizeChatPushSubscription(device.push), DAY_PUSH_SIGNAL, { vapidDetails: keys, TTL: 3600, urgency: 'high', topic: 'tec-' + kind, timeout: 8000 });
+        sent++;
+      } catch (error) {
+        if ([404, 410].includes(error.statusCode)) await devices.updateOne({ _id: device._id }, { $set: { enabled: false } }).catch(() => null);
+      }
+    }
+    return sent;
+  }
+
   async function run() {
     if (running || stopped || !keys) return;
     running = true;
@@ -143,7 +164,7 @@ export function createCoachDayPush({ devices, configs, requireActive, message, a
     finally { running = false; }
   }
 
-  return { register, run, deliverOne, async initialize() { keys = await loadChatPushKeys(configs); },
+  return { register, run, deliverOne, notifyNow, async initialize() { keys = await loadChatPushKeys(configs); },
     start() { stopped = false; void run(); timer = setInterval(() => void run(), 60000); timer.unref?.(); },
     stop() { stopped = true; clearInterval(timer); } };
 }

@@ -64,7 +64,7 @@ export function createSheetsChatAgent({config,sheets,google,switched,readSession
     const own = identity => identity?.session?.accessMode==='direct' || (identity?.session && !identity.session.accessMode && identity.user?.accountType!=='seat');
     if (!user?._id || !session?.tokenHash || req.body?.accountId!==String(user._id) || switched(req) || !own(auth)) return reply('Abre tu propia sesión directa del Coach para revisar Google Sheets.');
     if (!config.sheetsPilot?.some(value=>value==='*' || value===fold(user.email))) return reply('Tu cuenta todavía no participa en el piloto de Google Sheets.');
-    if (intent.kind==='unsupported') return reply('Puedo consultar los seguimientos de hoy, los vencidos y los pendientes sin fecha de tus dos pestañas.');
+    if (intent.kind==='unsupported') return reply('De tus boletas y tus referidos te puedo enseñar los seguimientos de hoy, los vencidos y los que no tienen fecha; de otras fechas todavía no. ¿Cuál de esos quieres ver?');
     const zone=validTimeZone(req.body?.coachTimeZone);
     if (!zone) return reply('Abre el chat con la zona horaria de tu dispositivo para identificar qué seguimientos corresponden a hoy.');
     try {

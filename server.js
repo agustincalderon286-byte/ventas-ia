@@ -4,6 +4,8 @@ import { createLocalDemoAudioModel, createLocalDemoQueue, registerLocalDemoWorke
 import { autoDemoCloseInstructions, autoDemoCloseSchema, createAutoDemoClose, verifyAutoDemoClose } from "./src/coach-demo-auto-close.js";
 import { createDemoSurveyWriter } from "./src/coach-demo-survey.js";
 import { createLiveDemo, registerLiveDemo } from "./src/coach-demo-live.js";
+import { DEMO_HOST_AFTER_MS, DEMO_HOST_BEFORE_MS, resolveDemoHost } from "./src/coach-demo-host.js";
+import { createVisit, registerVisit } from "./src/coach-visit.js";
 import { demoFigureGuard } from "./src/coach-demo-figures.js";
 import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
 import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
@@ -146,9 +148,10 @@ const COACH_DEMO_TRANSCRIPTION_MODEL = String(
   process.env.COACH_DEMO_TRANSCRIPTION_MODEL || "gpt-transcribe"
 ).trim();
 const COACH_DEMO_ANALYSIS_MODEL = String(process.env.COACH_DEMO_ANALYSIS_MODEL || "gpt-6-luna").trim();
-const COACH_DEMO_MAX_SECONDS = 90 * 60;
+// A demo transcribed on the Mac may last three hours; one transcribed in the cloud keeps the 90-minute limit.
+const COACH_DEMO_MAX_SECONDS = 180 * 60;
 const COACH_DEMO_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
-const COACH_DEMO_MAX_CHUNKS = 30;
+const COACH_DEMO_MAX_CHUNKS = 45;
 const COACH_DEMO_LOCAL_EMAILS = String(process.env.COACH_DEMO_LOCAL_EMAILS || "").toLowerCase().split(",").map(email => email.trim()).filter(Boolean);
 const COACH_DEMO_AUTO_CLOSE = process.env.COACH_DEMO_AUTO_CLOSE === '1';
 
@@ -1324,6 +1327,14 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
   closeAnswered: Boolean,
   autoClose: mongoose.Schema.Types.Mixed,
   autoCloseReceipt: mongoose.Schema.Types.Mixed,
+  // The visit: what the demo left waiting or in doubt, sealed for 14 days, and how many questions Jorge still has.
+  visit: mongoose.Schema.Types.Mixed,
+  visitQuestions: Number,
+  visitWaiting: Boolean,
+  visitRetriedAt: Date,
+  visitSnoozedUntil: Date,
+  visitNews: mongoose.Schema.Types.Mixed,
+  visitNewsSeen: Boolean,
   // Coach Jorge during the demo: pieces transcribed while recording and the notices sent to the seller.
   live: mongoose.Schema.Types.Mixed,
   status: { type: String, default: "recording", index: true },
@@ -1354,6 +1365,8 @@ coachDemoAnalysisSchema.index(
 );
 
 const coachDemoOutcomeSchema = new mongoose.Schema({
+  // Set when the result came from a recorded demo, so the same recording never reports twice.
+  demoAnalysisId: { type: mongoose.Schema.Types.ObjectId, index: true, sparse: true },
   teamChatPending: Boolean,
   teamChatRoomId: String,
   ownerUserId: {
@@ -2480,8 +2493,18 @@ const coachDayPush = createCoachDayPush({
     const direct = auth.session?.accessMode === "direct" || (!auth.session?.accessMode && auth.user.accountType !== "seat");
     return direct && Boolean(personalConnectionsConfig.planPilot?.some(value => value === "*" || value === String(auth.user.email || "").toLowerCase()));
   },
-  message: args => runCoachConnectedAgent.myDay.pushMessage(args)
+  message: args => args.slot === 'demo' ? demoReadyPushMessage(args)
+    : args.slot === 'espera' ? { title:'Coach Jorge', body:'Tu demo está en espera: la computadora que la transcribe no responde. No se pierde nada; la reviso en cuanto vuelva.' }
+      : runCoachConnectedAgent.myDay.pushMessage(args)
 });
+// The notice a seller gets when a recorded demo is ready. No names or figures: it shows on a locked screen.
+async function demoReadyPushMessage({ owner }) {
+  const doc = await CoachDemoAnalysis.findOne({ ownerUserId:owner, status:'completed', visitNews:{ $ne:null } })
+    .sort({ startedAt:-1 }).select('visitQuestions').lean();
+  const missing = Number(doc?.visitQuestions) || 0;
+  return { title:'Coach Jorge', body:'Tu demo está lista. ' + (missing ? 'Necesito ' + missing + (missing === 1 ? ' dato' : ' datos') + ' para terminar de guardarla.'
+    : 'Ya guardé lo que quedó claro.') };
+}
 const teamChatWorker = createTeamChatWorker({ ...coachTeamChatModels, outcomes: CoachDemoOutcome, transcribe: (buffer,mime) => createCoachVoiceProvider().transcribe(buffer,mime,{ prompt: "Transcribe fielmente este mensaje de voz del equipo TEC en español. Royal Prestige, ventas, productos, horarios y acuerdos. No inventes palabras cuando no haya voz." }) });
 const CoachCrmRecord =
   mongoose.models.CoachCrmRecord || mongoose.model("CoachCrmRecord", coachCrmRecordSchema);
@@ -31926,6 +31949,22 @@ const autoDemoClose = createAutoDemoClose({ calendar: autoDemoCalendar, sheets: 
 const saveDemoAutoSurvey = createDemoSurveyWriter({ surveys:CoachHealthSurvey, crm:CoachCrmRecord,
   transaction:run=>mongoose.connection.transaction(run), summarize:construirCoachHealthSurveySummary,
   normalizePhone, active:demoAutoCloseActive });
+// The same writers for a finished demo: retries and the seller's answers to Coach Jorge.
+const saveDemoVisitSurveyWriter = createDemoSurveyWriter({ surveys:CoachHealthSurvey, crm:CoachCrmRecord,
+  transaction:run=>mongoose.connection.transaction(run), summarize:construirCoachHealthSurveySummary,
+  normalizePhone, active:demoVisitActive });
+const autoDemoReapply = createAutoDemoClose({ calendar: autoDemoCalendar, sheets: autoDemoSheets, followups: personalFollowups,
+  transfer: createSheetsTransfer({ key: personalConnectionsConfig.key }), active: demoVisitActive });
+const demoVisit = createVisit({ analyses: CoachDemoAnalysis, key: personalConnectionsConfig.key,
+  save: async (doc, facts, contact, options) => {
+    const receipt = await autoDemoReapply(doc, facts, contact, options);
+    await syncDemoHostFollowUp(doc, contact, receipt.appointment).catch(() => null);
+    await countDemoReferrals(doc, contact, facts, receipt);
+    return receipt;
+  },
+  saveOutcome: saveDemoVisitOutcome, saveSurvey: saveDemoVisitSurvey, connections: demoVisitConnections, active: demoVisitActive,
+  findHost: (doc, heard) => findDemoHost(doc, heard, { active: demoVisitActive }) });
+registerVisit(app, { active: requireCoachActivo, allowed: canUseDemoClose, visit: demoVisit });
 
 async function demoAutoCloseActive(doc) {
   if (!COACH_DEMO_AUTO_CLOSE || !COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(doc.ownerEmail)) || !doc.localProcessing?.lease) return false;
@@ -31941,31 +31980,211 @@ async function finishLocalCoachDemo(doc, options) {
   if (!result.report?.autoClose) return result;
   const facts = result.report.autoClose;
   delete result.report.autoClose;
-  let contact = {};
+  let contact = {}, host = null;
   if (doc.closeCrmId && doc.autoClose.crmOwner) {
-    const source = await CoachCrmRecord.findOne({ _id:doc.closeCrmId, ownerUserId:doc.autoClose.crmOwner }).select('leadName phone').lean();
-    if (source) contact = { name:String(source.leadName || '').replace(/[\p{Cc}]/gu,'').trim().slice(0,100), phone:sheetsPhoneKey(source.phone) };
+    const source = await CoachCrmRecord.findOne({ _id:doc.closeCrmId, ownerUserId:doc.autoClose.crmOwner }).select('leadName phone address city').lean();
+    if (source) contact = { name:String(source.leadName || '').replace(/[\p{Cc}]/gu,'').trim().slice(0,100), phone:sheetsPhoneKey(source.phone),
+      address:demoHostAddress(source), crmId:String(doc.closeCrmId), source:'ficha' };
+    if (contact.name) host = { name:contact.name, source:'ficha' };
+  } else {
+    // Recorded without opening the client's record: TEC works out whose house it was.
+    host = await findDemoHost(doc, facts.host || null, { active:demoAutoCloseActive, referralNames:(facts.referrals || []).map(row => row.fullName) }).catch(error => {
+      console.error('No se pudo reconocer al anfitrión de la demo', { name:error.name });
+      return null;
+    });
+    if (host) contact = { name:host.name, phone:host.phone || '', address:host.address || '', crmId:host.crmId || '', source:host.source };
   }
+  delete facts.host;
+  // A Google connection made after the recording started is used; a changed one never replaces the original.
+  const liveGrants = await demoVisitConnections(doc.ownerUserId);
+  const autoClose = { ...doc.autoClose, calendarGrant:doc.autoClose.calendarGrant || liveGrants.calendarGrant, sheetsGrant:doc.autoClose.sheetsGrant || liveGrants.sheetsGrant };
+  const seller = await CoachUser.findById(doc.ownerUserId).lean();
+  const ownership = seller && await coachTieneAccesoOperativo(seller) ? await construirCoachOwnershipSnapshot(seller) : null;
+  // The recording is tied to the client TEC recognised, so the survey and the result reach that client.
+  if (contact.crmId && !doc.closeCrmId && ownership) autoClose.crmOwner = String(ownership.ownerUserId);
+  const linked = { ...doc, autoClose, closeCrmId:doc.closeCrmId || (ownership && contact.crmId) || '' };
+  Object.assign(result, { autoClose, ...(linked.closeCrmId && !doc.closeCrmId && { closeCrmId:linked.closeCrmId }) });
   const productSummary = (facts.products || []).map(product => product.name + (product.prices.length ? ' · ' + product.prices.join(' · ') : '')).join('\n').slice(0,1800);
   const answers = { ...facts.survey };
   if (facts.products?.length) answers.topProducts = facts.products.slice(0,3).map(product=>product.name);
   const survey = async () => {
     if (!Object.keys(answers).length) return null;
-    const seller = await CoachUser.findById(doc.ownerUserId).lean();
-    if (!seller || !await coachTieneAccesoOperativo(seller)) return { state:'stopped' };
-    const ownership = await construirCoachOwnershipSnapshot(seller);
-    const saved = await saveDemoAutoSurvey(doc, answers, ownership);
+    if (!ownership) return { state:'stopped' };
+    const saved = await saveDemoAutoSurvey(linked, answers, ownership);
     if (saved?.state === 'saved') await invalidarCoachWorkspaceCaches(seller,ownership.ownerUserId).catch(() => null);
     return saved;
   };
-  const [receipt, surveyState] = await Promise.all([autoDemoClose(doc, facts, contact, {
+  const [receipt, surveyState] = await Promise.all([autoDemoClose(linked, facts, contact, {
     partial: Boolean(options.partial || options.rawGaps?.length), followUpMentioned: Boolean(result.report.closeFacts?.followUp || result.report.closeFacts?.outcome === 'follow_up')
   }), survey().catch(error => {
     console.error('No se pudo guardar la encuesta automática',{ name:error.name });
     return { state:'error' };
   })]);
-  result.autoCloseReceipt = { ...receipt, survey:surveyState, productSummary, ...(facts.review && { review:facts.review }) };
+  await syncDemoHostFollowUp(linked, contact, receipt.appointment).catch(() => null);
+  await countDemoReferrals(linked, contact, facts, receipt);
+  // What is still in doubt or waiting is kept sealed: Jorge asks for it and TEC retries it alone.
+  const visit = await demoVisit.begin(linked, { facts, contact, receipt, closeFacts:result.report.closeFacts || {},
+    survey:surveyState?.state === 'saved' ? facts.survey : {}, surveySaved:surveyState?.state === 'saved' }).catch(error => {
+    console.error('No se pudieron preparar los pendientes de la visita', { name:error.name });
+    return {};
+  });
+  const { outcome:visitOutcome, ...visitFields } = visit;
+  Object.assign(result, visitFields);
+  result.autoCloseReceipt = { ...receipt, survey:surveyState, productSummary, ...(facts.review && { review:facts.review }),
+    ...(host && { host:{ name:host.name, source:host.source, ...(host.created && { created:true }) } }),
+    ...(visitOutcome && { outcome:visitOutcome }) };
+  // «Tu demo está lista» on the seller's phone, once the report has been stored.
+  setTimeout(() => void coachDayPush.notifyNow(String(doc.ownerUserId), 'demo').catch(() => null), 5000).unref?.();
   return result;
+}
+
+// The visit after the report: answers to Jorge and retries run for a finished demo of a seller still in the pilot.
+async function demoVisitActive(doc) {
+  if (!COACH_DEMO_AUTO_CLOSE || !COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(doc.ownerEmail))) return false;
+  return Boolean(await CoachDemoAnalysis.exists({ _id:doc._id, ownerUserId:doc.ownerUserId, status:'completed' }));
+}
+
+async function demoVisitConnections(owner) {
+  const [calendar, sheets] = await Promise.allSettled([autoDemoCalendar.getConnection(owner), autoDemoSheets.getConnection(owner)]);
+  return { calendarGrant:calendar.value?.grant || '', sheetsGrant:sheets.value?.grant || '' };
+}
+
+// The referrals the demo added to the seller's Google Sheet also count in TEC as a 4 en 14 of that host,
+// so «Mi día» and the weekly goal see them. The phones never stay in the stored receipt.
+async function countDemoReferrals(doc, contact, facts, receipt) {
+  const phones = receipt?.referrals?.savedPhones || [];
+  if (receipt?.referrals) delete receipt.referrals.savedPhones;
+  if (!phones.length || !contact?.name) return;
+  try {
+    const seller = await CoachUser.findById(doc.ownerUserId);
+    if (!seller) return;
+    const referrals = (facts.referrals || []).filter(row => phones.includes(row.phone))
+      .map(row => ({ fullName:row.fullName, phone:row.phone, ...(row.note && { notes:row.note }) }));
+    if (!referrals.length) return;
+    await guardarHoja414Personal(seller, { hostName:contact.name, hostPhone:contact.phone || '', referrals,
+      notes:'Referidos tomados de la grabación de la demo.' }, 'demo:' + String(doc._id) + ':' + hashTokenSeguro([...phones].sort().join(',')).slice(0, 24));
+  } catch (error) {
+    console.error('No se pudieron contar los referidos de la demo', { name:error.name });
+  }
+}
+
+// The follow-up agreed in the demo is also the client's next action in the CRM.
+async function syncDemoHostFollowUp(doc, contact, appointment) {
+  if (!contact?.crmId || appointment?.state !== 'saved' || !appointment.start) return;
+  const seller = await CoachUser.findById(doc.ownerUserId).lean();
+  if (!seller) return;
+  const changed = await CoachCrmRecord.updateOne(construirCoachCrmWorkspaceQuery(seller, { _id:contact.crmId }),
+    { $set:{ nextAction:'seguimiento', nextActionAt:new Date(appointment.start), updatedAt:new Date() } });
+  if (changed.modifiedCount) await invalidarCoachWorkspaceCaches(seller, resolverCoachOwnerUserId(seller)).catch(() => null);
+}
+
+// The result of the visit (sale, follow-up or no sale) saved as the «Cierre» form would, once per recording.
+async function saveDemoVisitOutcome(doc, { type, amount, products, note, crmId }) {
+  const resultType = normalizarCoachDemoOutcomeType(type);
+  const saleAmount = resultType === 'venta' ? limpiarCoachDemoOutcomeAmount(amount) : 0;
+  if (resultType !== type || (resultType === 'venta' && saleAmount <= 0)) return null;
+  const existing = await CoachDemoOutcome.findOne({ demoAnalysisId:doc._id }).select('_id').lean();
+  if (existing) return { id:String(existing._id) };
+  const seller = await CoachUser.findById(doc.ownerUserId);
+  if (!seller || !await coachTieneAccesoOperativo(seller)) return null;
+  const now = new Date();
+  const ownership = await construirCoachOwnershipSnapshot(seller);
+  const sponsor = await construirCoachSponsorSnapshot(seller);
+  const record = crmId && mongoose.Types.ObjectId.isValid(crmId)
+    ? await CoachCrmRecord.findOne(construirCoachCrmWorkspaceQuery(seller, { _id:crmId })) : null;
+  const cleanProducts = limpiarCoachDemoOutcomeProducts(products || []);
+  const privateReason = limpiarCoachDemoOutcomeReason(note || 'Resultado tomado de la grabación de la demo.');
+  const sponsorCommissionRate = limpiarCoachCommissionRate(sponsor.sponsorCommissionRate || 0);
+  const saleTeamKey = resultType === 'venta' ? await getCoachTeamChatKey(seller) : '';
+  const outcome = await CoachDemoOutcome.create({
+    ...(saleTeamKey ? { teamChatPending:true, teamChatRoomId:teamChatRoomId(saleTeamKey) } : {}),
+    demoAnalysisId:doc._id,
+    ownerUserId:ownership.ownerUserId, ownerEmail:ownership.ownerEmail || '', ownerName:ownership.ownerName || '',
+    generatedByUserId:ownership.generatedByUserId || null, generatedByName:ownership.generatedByName || '',
+    generatedByAccountType:ownership.generatedByAccountType || 'owner',
+    linkedCrmRecordId:record?._id || null,
+    sponsorUserId:sponsor.sponsorUserId || null, sponsorName:sponsor.sponsorName || '', sponsorCommissionRate,
+    sponsorCommissionAmount:resultType === 'venta' && sponsor.sponsorUserId ? limpiarCoachDemoOutcomeAmount(saleAmount * sponsorCommissionRate) : 0,
+    reportedByUserId:seller._id, reportedByName:seller.name || seller.email || '',
+    resultType, saleAmount, products:cleanProducts, privateReason,
+    summary:construirResumenCoachDemoOutcome({ resultType, saleAmount, products:cleanProducts, privateReason, activeDemoStageLabel:'Grabación de la demo' }),
+    activeWorkspace:'cierre', activeDemoStage:'', activeDemoStageLabel:'Grabación de la demo',
+    surveyId:null, surveyName:'', programSheetId:null, programHostName:'', programReferralName:'', programReferralIndex:-1,
+    demoEvents:[], updatedAt:now, createdAt:now
+  });
+  if (outcome.teamChatPending) {
+    try { await publishSaleAnnouncement({ outcome, messages:coachTeamChatModels.messages, outcomes:CoachDemoOutcome }); }
+    catch { console.warn('Team chat: sale saved; announcement will retry'); }
+  }
+  if (record) await vincularCoachCrmConResultadoDemo(record, outcome, seller);
+  else await invalidarCoachWorkspaceCaches(seller, ownership.ownerUserId).catch(() => null);
+  return { id:String(outcome._id) };
+}
+
+// A survey answer the seller gave to Jorge after the demo.
+async function saveDemoVisitSurvey(doc, answers) {
+  const seller = await CoachUser.findById(doc.ownerUserId).lean();
+  if (!seller || !await coachTieneAccesoOperativo(seller)) return { state:'stopped' };
+  const ownership = await construirCoachOwnershipSnapshot(seller);
+  // The visit id differs from the automatic pass so the writer does not take it as already done.
+  const saved = await saveDemoVisitSurveyWriter({ ...doc, closeVisitId:doc.closeVisitId + ':jorge:' + Object.keys(answers).sort().join(',') }, answers, ownership);
+  if (saved?.state === 'saved') await invalidarCoachWorkspaceCaches(seller, ownership.ownerUserId).catch(() => null);
+  return saved;
+}
+
+// The client's address for the calendar appointment: street and city, once.
+function demoHostAddress(record) {
+  const clean = value => String(value || '').replace(/[\p{Cc}]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const street = clean(record?.address), city = clean(record?.city);
+  return (city && !street.toLowerCase().includes(city.toLowerCase()) ? [street, city].filter(Boolean).join(', ') : street).slice(0, 240);
+}
+
+// A name heard with or without accents («Maria» or «María») finds the same CRM record.
+const looseDemoHostWord = word => escapeRegex(word).replace(/[aeioun]/g, letter => ({ a:'[aáàâä]', e:'[eéèêë]', i:'[iíìîï]',
+  o:'[oóòôö]', u:'[uúùûü]', n:'[nñ]' })[letter]);
+
+// heard: the host named in the recording or by the seller ({ name, phone }), or null.
+async function findDemoHost(doc, heard, { active, referralNames = [] }) {
+  const startedAt = new Date(doc.startedAt);
+  if (!Number.isFinite(Number(startedAt)) || !await active(doc)) return null;
+  const seller = await CoachUser.findById(doc.ownerUserId).lean();
+  if (!seller || !await coachTieneAccesoOperativo(seller)) return null;
+  const from = new Date(Number(startedAt) - DEMO_HOST_BEFORE_MS), to = new Date(Number(startedAt) + DEMO_HOST_AFTER_MS);
+  const near = [{ appointmentAt:{ $gte:from, $lte:to } }];
+  if (heard?.phone) near.push({ phone:normalizePhone(heard.phone) });
+  const first = String(heard?.name || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().split(/\s+/).find(word => word.length >= 3);
+  if (first) near.push({ leadName:new RegExp(looseDemoHostWord(first), 'i') });
+  const records = (await CoachCrmRecord.find(construirCoachCrmWorkspaceQuery(seller, { $or:near }))
+    .select('leadName phone address city appointmentAt').sort({ updatedAt:-1 }).limit(60).lean())
+    .map(row => ({ id:String(row._id), name:String(row.leadName || '').replace(/[\p{Cc}]/gu, '').trim(), phone:row.phone || '',
+      address:demoHostAddress(row), appointmentAt:row.appointmentAt }));
+  // The appointments of the TEC calendar around the time the recording started.
+  let events = [];
+  const connection = await autoDemoCalendar.getConnection(doc.ownerUserId).catch(() => null);
+  if (connection?.grant && connection.grant === doc.autoClose.calendarGrant) {
+    const agenda = await autoDemoCalendar.readAgenda({ owner:doc.ownerUserId, grant:connection.grant, start:from.toISOString(), end:to.toISOString(),
+      zone:doc.autoClose.zone || 'America/Chicago', includeEvents:true, includePrimary:false }).catch(() => null);
+    if (agenda?.events?.status === 'fulfilled' && Array.isArray(agenda.events.value)) {
+      events = agenda.events.value.filter(event => !event.allDay).map(event => ({ title:event.title, start:event.start }));
+    }
+  }
+  const transcript = (doc.chunks || []).map(chunk => chunk.text || '').join(' ');
+  const host = resolveDemoHost({ heard, transcript, startedAt, records, events, sellerName:seller.name || doc.ownerName || '', referralNames });
+  // A new host whose phone was dictated becomes a client of the CRM, like «Nuevo cliente».
+  if (host?.source === 'grabacion' && host.phone && await active(doc)) {
+    const saved = await guardarCoachInboxLead({ userDoc:seller, payload:{ fullName:host.name, phone:host.phone, source:'demo',
+      notes:'Anfitrión reconocido en la grabación de la demo.' }, sendDestination:false }).catch(error => {
+      console.error('No se pudo agregar al anfitrión de la demo al CRM', { name:error.name });
+      return null;
+    });
+    if (saved && !saved.duplicate) host.created = true;
+    if (saved) {
+      const record = await CoachCrmRecord.findOne(construirCoachCrmWorkspaceQuery(seller, { phone:normalizePhone(host.phone) }))
+        .select('_id').sort({ updatedAt:-1 }).lean();
+      if (record) host.crmId = String(record._id);
+    }
+  }
+  return host;
 }
 
 // The live check sees only what is already transcribed, while the visit goes on. It saves nothing.
@@ -31995,7 +32214,22 @@ async function analizarCoachDemoEnVivo({ chunks }) {
 }
 
 const localDemoQueue = createLocalDemoQueue({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), finish: finishLocalCoachDemo });
-registerLocalDemoWorker(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', queue: localDemoQueue });
+// Watching the Mac that transcribes: if it stops asking for work while demos wait, the sellers who are
+// waiting are told once (nothing is lost; their demo is processed when the Mac is back).
+let demoWorkerSeenAt = Date.now(), demoWorkerAlertAt = 0;
+registerLocalDemoWorker(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', queue: localDemoQueue,
+  onSeen: () => { demoWorkerSeenAt = Date.now(); } });
+async function vigilarMacDeDemos() {
+  const quiet = Date.now() - demoWorkerSeenAt;
+  if (localDemoWorkerKey.length < 32 || quiet < 15 * 60_000 || Date.now() - demoWorkerAlertAt < 3 * 3600_000) return;
+  const waiting = await CoachDemoAnalysis.find({ status:'queued_local', updatedAt:{ $lt:new Date(Date.now() - 15 * 60_000) } })
+    .select('ownerUserId').limit(20).lean();
+  if (!waiting.length) return;
+  demoWorkerAlertAt = Date.now();
+  console.error('La Mac de las demos no responde', { minutos:Math.round(quiet / 60_000), enEspera:waiting.length });
+  for (const owner of new Set(waiting.map(doc => String(doc.ownerUserId)))) await coachDayPush.notifyNow(owner, 'espera').catch(() => null);
+}
+if (process.env.NODE_ENV !== 'test') setInterval(() => void vigilarMacDeDemos().catch(() => null), 5 * 60_000).unref?.();
 const liveDemo = createLiveDemo({ analyses: CoachDemoAnalysis, audio: createLocalDemoAudioModel(mongoose), analyze: analizarCoachDemoEnVivo });
 registerLiveDemo(app, { key: localDemoWorkerKey.length >= 32 ? localDemoWorkerKey : '', live: liveDemo, active: (req, res) => requireCoachActivo(req, res) });
 
@@ -32276,8 +32510,10 @@ app.post(
       const otherDuration = doc.chunks
         .filter(chunk => Number(chunk.index) !== index)
         .reduce((total, chunk) => total + Math.max(0, Number(chunk.durationSeconds || 0)), 0);
-      if (otherDuration + durationSeconds > COACH_DEMO_MAX_SECONDS + 15) {
-        return responderCoachError(res, 400, "La demostracion llego al limite de 90 minutos.");
+      // Transcribed in the cloud, a demo keeps the 90-minute limit; on the Mac it may last three hours.
+      const maxSeconds = doc.transcriptionModel === 'whisper-local' ? COACH_DEMO_MAX_SECONDS : Math.min(COACH_DEMO_MAX_SECONDS, 90 * 60);
+      if (otherDuration + durationSeconds > maxSeconds + 15) {
+        return responderCoachError(res, 400, `La demostración llegó al límite de ${maxSeconds / 60} minutos.`);
       }
 
       const now = new Date();

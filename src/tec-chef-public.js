@@ -255,7 +255,7 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
   app.post('/api/chef/public/voice/transcribe',requireVoiceVisitor,
     express.raw({type:['audio/*','video/webm'],limit:CHAT_MEDIA_MAX_BYTES,inflate:false}),wrap(async(req,res)=>{
       if (!Buffer.isBuffer(req.body) || req.body.length < 64) {
-        return res.status(400).json({error:'Mantén presionado el micrófono un poco más para grabar.'});
+        return res.status(400).json({error:'El audio quedó muy corto. Toca el micrófono, habla y vuelve a tocarlo para enviar.'});
       }
       const mime = (req.get('Content-Type') || '').split(';')[0].toLowerCase();
       await withVoiceLimit(req,res,'transcribe',async()=>{

@@ -1,12 +1,15 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 const hour = 60 * 60 * 1000;
-const retention = 48 * hour;
-const queueLifetime = 24 * hour;
-const leaseTime = 30 * 60 * 1000;
-const maxAttempts = 2;
+// A demo may wait a weekend for the Mac: the queue lives 3 days and the audio one more.
+const retention = 96 * hour;
+const queueLifetime = 72 * hour;
+// Three hours of demo, read twice by the Mac, must fit in one lease.
+const leaseTime = 90 * 60 * 1000;
+const maxAttempts = 3;
+const analysisTries = 3;
 const maxChunkText = 16_000;
-const stoppedMessage = 'La Mac no pudo terminar esta grabación. Puedes volver a enviarla desde Revisar audio.';
+const stoppedMessage = 'TEC no pudo terminar esta grabación después de varios intentos. Tu audio sigue guardado en el teléfono: vuelve a enviarla desde Revisar audio.';
 const queued = 'queued_local';
 
 export function createLocalDemoAudioModel(mongoose) {
@@ -41,7 +44,7 @@ function timedReadings(chunk) {
   };
 }
 
-export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }) {
+export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now, wait = ms => new Promise(resolve => setTimeout(resolve, ms)) }) {
   const audioKey = (analysis, index) => `${analysis._id}:${index}`;
   const audioOwner = analysis => ({ analysisId: analysis._id, ownerUserId: analysis.ownerUserId });
   const kept = analysis => ({ ...audioOwner(analysis), expiresAt: { $gt: new Date(now()) } });
@@ -120,14 +123,14 @@ export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }
           new Set(inputs.map(chunk => chunk?.index)).size !== indexes.length || inputs.some(chunk =>
             !indexes.includes(chunk?.index) || typeof chunk.text !== 'string' || chunk.text.length > maxChunkText ||
             (chunk.language !== '' && !/^[a-z]{2,3}$/.test(chunk.language || ''))) ||
-          inputs.reduce((length, chunk) => length + chunk.text.length, 0) > 140_000) return 422;
+          inputs.reduce((length, chunk) => length + chunk.text.length, 0) > 300_000) return 422;
 
       const readings = new Map(inputs.map(chunk => [chunk.index, timedReadings(chunk)]));
       if ([...readings.values()].includes(false)) return 422;
 
       // A repeated POST with the same lease cannot start another Luna request.
       const active = await analyses.updateOne({ ...query, 'localProcessing.analyzing': false }, { $set: {
-        'localProcessing.analyzing': true, 'localProcessing.leaseUntil': new Date(now() + 5 * 60 * 1000)
+        'localProcessing.analyzing': true, 'localProcessing.leaseUntil': new Date(now() + 12 * 60 * 1000)
       } });
       if (!active.modifiedCount) return 409;
       const chunks = job.chunks.map(chunk => {
@@ -139,12 +142,16 @@ export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }
         return { ...base, status: 'transcribed', text: input.text.trim(), languages: input.language ? [input.language] : [],
           transcribedAt: new Date(now()), error: '', ...(voice && { voice, checks }) };
       });
+      // The analysis is retried on its own: a passing failure of the model must not cost the seller the demo.
       let completion;
-      try {
-        completion = await finish({ ...job, chunks }, { partial, included: indexes, rawGaps: gaps, knownOutcome });
-      } catch (error) {
-        console.error('No se pudo preparar el reporte local', { name: error.name });
-        return fail(job, lease, false, true);
+      for (let attempt = 1; !completion; attempt++) {
+        try {
+          completion = await finish({ ...job, chunks }, { partial, included: indexes, rawGaps: gaps, knownOutcome });
+        } catch (error) {
+          console.error('No se pudo preparar el reporte local', { name: error.name, attempt });
+          if (attempt >= analysisTries) return fail(job, lease, true, true);
+          await wait(attempt * 4000);
+        }
       }
       const saved = await analyses.updateOne(leased(id, lease), { $set: { ...release, ...completion, chunks } });
       if (!saved.modifiedCount) return 409;
@@ -155,13 +162,15 @@ export function createLocalDemoQueue({ analyses, audio, finish, now = Date.now }
   };
 }
 
-export function registerLocalDemoWorker(app, { key, queue }) {
+export function registerLocalDemoWorker(app, { key, queue, onSeen = () => {} }) {
   if (!key) return;
   const prefix = '/api/coach/demo-worker';
   const digest = value => createHash('sha256').update(value).digest();
   const expected = digest(`Bearer ${key}`);
   app.use(prefix, (req, res, next) => {
     if (!timingSafeEqual(digest(req.get('Authorization') || ''), expected)) return res.sendStatus(404);
+    // The Mac is alive: it asks for work every few seconds.
+    onSeen();
     next();
   });
   app.post(`${prefix}/claim`, async (req, res) => {

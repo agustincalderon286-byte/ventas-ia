@@ -8,7 +8,7 @@ const connections = {type:'connections',label:'Mis conexiones'};
 const reply = (respuesta,actions=[],pending='') => ({
   mode:'coach',coachMailAgent:true,coachCalendarAgent:true,respuesta,coachHelpActions:actions,coachCalendarPending:pending
 });
-const help = 'Puedo buscar dos horarios libres para una demo, agendar o mover un seguimiento y mostrarte tus próximos seguimientos de TEC. Prueba «Agenda una llamada con María mañana a las 6 pm» o «Muestra mis seguimientos».';
+const help = 'Con tu calendario puedo buscarte dos horarios libres para una demo, agendar o mover un seguimiento y enseñarte tus próximos seguimientos de TEC. ¿Qué necesitas: agendar algo, mover una cita o ver lo que viene?';
 const actionLabels = {llamar:'Llamada',demo:'Demo',cita:'Cita',seguimiento:'Seguimiento'};
 const format = (date,zone) => new Intl.DateTimeFormat('es-US',{timeZone:zone,weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(date))+' ('+zone+')';
 const confirmAction = id => ({type:'calendarConfirm',id,label:'Confirmar cita'});
@@ -34,7 +34,7 @@ function showReceipt(result,id) {
   if (result.status==='crmPending') return reply('La cita ya está en Google Calendar. Vuelve a confirmar para terminar de actualizar la ficha de TEC.',[confirmAction(id)]);
   if (result.status==='retry') return reply('Todavía no tengo confirmación de Google Calendar. Reintenta con el mismo botón para verificar esta cita.',[confirmAction(id)]);
   if (result.status==='reconnect') return reply('Google solicita renovar la conexión de Calendar. Abre Mis conexiones y vuelve a revisar la cita.',[connections]);
-  if (result.status==='slotBusy') return reply('Ese horario ya no está disponible. Pídeme «Busca dos horarios libres para la demo» para revisar otras opciones.');
+  if (result.status==='slotBusy') return reply('Ese horario ya no está disponible. Puedo buscarte otros dos horarios libres. ¿Para qué día los quieres?');
   if (result.status==='changed') return reply('Google no aceptó el cambio. Revisa la cita en tu calendario antes de preparar otra propuesta.',[connections]);
   if (result.status==='bookingBusy') return reply('Tu calendario está procesando otra reserva. Espera un momento y vuelve a pulsar «Confirmar cita».',[confirmAction(id)]);
   if (result.status==='expired') return reply('Venció el plazo de confirmación. Pídeme una vista previa nueva para revisar la cita.');

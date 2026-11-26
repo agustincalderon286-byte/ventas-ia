@@ -1,25 +1,35 @@
 .coach-voice-composer .coach-voice-tools{grid-column:2;grid-row:1;align-self:end;min-width:0}
 .coach-voice-composer>button[type=submit]{grid-column:2;grid-row:1}
 .coach-voice-composer [hidden],.coach-voice-reply [hidden]{display:none!important}
-.coach-voice-composer .coach-voice-hold{display:grid;place-items:center;width:48px;height:48px;padding:12px;border:0;border-radius:50%;background:#18374f;color:#fff;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.coach-voice-hold svg,.coach-voice-bin svg,.coach-voice-preview button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.coach-voice-composer .coach-voice-hold.is-recording{background:#bf253d;box-shadow:0 0 0 5px #bf253d18}
-.coach-voice-composer .coach-voice-hold.is-cancelling{background:#94162a}
+.coach-voice-composer .coach-voice-hold{display:grid;place-items:center;width:48px;height:48px;padding:12px;border:0;border-radius:50%;background:#18374f;color:#fff;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.coach-voice-hold svg,.coach-voice-preview button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+/* Un toque graba y el mismo botón, ya en rojo y con el cuadro de detener, envía. */
+.coach-voice-hold .stop{display:none;fill:currentColor;stroke:none}
+.coach-voice-hold.is-recording .mic{display:none}
+.coach-voice-hold.is-recording .stop{display:inline}
+.coach-voice-composer .coach-voice-hold.is-recording{background:#bf253d;box-shadow:inset 0 0 0 3px #ffffff59}
 .coach-voice-hold:disabled{opacity:.45;cursor:default}
 .coach-voice-composer button:focus-visible,.coach-voice-reply button:focus-visible{outline:3px solid #3385c3;outline-offset:2px}
 .coach-voice-hint,.coach-voice-status{grid-column:1/-1;margin:0;color:#667586;font-size:.72rem;line-height:1.4}
 .coach-voice-hint{text-align:right}
 .coach-voice-status:empty{display:none}
-.coach-voice-activity{grid-column:1/-1;display:flex;align-items:center;gap:10px;min-height:38px;padding:0 2px;color:#b3253b;font-size:.78rem}
-.coach-voice-bin{display:grid;place-items:center;border-radius:50%;width:34px;height:34px;background:#f4e9ec;transition:background .15s,transform .15s}
-.coach-voice-activity.is-cancelling .coach-voice-bin{background:#bf253d;color:white;transform:scale(1.12)}
-.coach-voice-slide{margin-left:auto;color:#667586;font-size:.72rem}
-.coach-voice-activity.is-cancelling .coach-voice-slide{color:#b3253b;font-weight:600}
-.coach-voice-elapsed{font-variant-numeric:tabular-nums}
-.coach-voice-meter{display:flex;align-items:center;gap:3px;height:24px}
+/* La barra de grabación va en flujo normal dentro del compositor: nada flota ni se sale de él, así que no tapa
+   los mensajes ni lo que se coloque justo encima. En el chat del Coach ocupa la celda del campo de texto (que
+   queda invisible pero conserva su tamaño), de modo que el compositor mide lo mismo al grabar. */
+.coach-voice-activity{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-width:0;min-height:48px;box-sizing:border-box;padding:2px 4px 2px 12px;border:1px solid #efc4cc;border-radius:14px;background:#fdf3f5;color:#8f1d31;font-size:.8rem}
+/* El campo también se fija en esa celda: si no, la rejilla lo mandaría a otra fila al aparecer la barra. */
+.coach-voice-inline>textarea{grid-column:1;grid-row:1}
+.coach-voice-inline>.coach-voice-activity{grid-column:1;grid-row:1;align-self:stretch}
+.coach-voice-inline.is-voice-recording>textarea{visibility:hidden}
+.coach-voice-composer:not(.coach-voice-inline)>.coach-voice-activity{margin-top:8px}
+.coach-voice-elapsed{font-size:1.15rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.coach-voice-limit{color:#7a5560;white-space:nowrap;font-variant-numeric:tabular-nums}
+.coach-voice-note{flex:1;min-width:0;overflow:hidden;color:#7a5560;white-space:nowrap;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.coach-voice-activity.is-ending .coach-voice-note{color:#8f1d31;font-weight:700}
+.coach-voice-composer .coach-voice-discard{flex:none;min-height:40px;padding:6px 14px;border:1px solid #c9d4df;border-radius:10px;background:#fff;color:#18374f;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;touch-action:manipulation}
+.coach-voice-meter{display:flex;flex:none;align-items:center;gap:3px;height:24px}
 .coach-voice-meter i{width:3px;height:12px;border-radius:3px;background:currentColor;transform:scaleY(calc(.12 + .88 * var(--voice-level,0)))}
 .coach-voice-meter i:nth-child(2n){height:18px}.coach-voice-meter i:nth-child(3){height:24px}
-@media(prefers-reduced-motion:reduce){.coach-voice-bin{transition:none}}
 .coach-voice-preview{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 .coach-voice-preview .coach-voice-card { flex-basis:100%; }
 .coach-voice-preview > button,.coach-voice-reply > button {

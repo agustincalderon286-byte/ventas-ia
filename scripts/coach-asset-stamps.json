@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261125-citas1",
+  "cache": "tec-coach-shell-20261125-visita1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261125-citas1"
+        "v=20261125-visita1"
       ],
-      "sha": "24d31fc42ba61b1d"
+      "sha": "5422b014406b431a"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -118,15 +118,15 @@
     },
     "/coach/coach-voice.css": {
       "versions": [
-        "v=20261118-voz4"
+        "v=20261125-visita1"
       ],
-      "sha": "fe312ddf5539cb79"
+      "sha": "4ca37400d6867f80"
     },
     "/coach/coach-voice.js": {
       "versions": [
-        "v=20261122-enlaces1"
+        "v=20261125-visita1"
       ],
-      "sha": "a4b48fae69ebacac"
+      "sha": "6fb1f1118a941a97"
     },
     "/coach/compact-header.js": {
       "versions": [
@@ -136,9 +136,9 @@
     },
     "/coach/demo-close-chat.js": {
       "versions": [
-        "v=20261121-cierredemo2"
+        "v=20261125-visita1"
       ],
-      "sha": "1a66bd372cde781a"
+      "sha": "1e033fab59dc3f89"
     },
     "/coach/demo-close-review.js": {
       "versions": [
@@ -196,9 +196,9 @@
     },
     "/coach/my-day.js": {
       "versions": [
-        "v=20261123-midia2"
+        "v=20261125-visita1"
       ],
-      "sha": "39f0a106950f9350"
+      "sha": "6e84cfe08412f763"
     },
     "/coach/offline-forms.js": {
       "versions": [
@@ -366,9 +366,9 @@
     "/coach/styles.css": {
       "versions": [
         "v=20261117-visor1",
-        "v=20261125-citas1"
+        "v=20261125-visita1"
       ],
-      "sha": "5643ccdfad80be91"
+      "sha": "4c1e767af0d11bf2"
     },
     "/coach/team-chat-media.js": {
       "versions": [
@@ -405,6 +405,12 @@
         "v=20261025-native-offline2"
       ],
       "sha": "7f8ebc22eb7dd488"
+    },
+    "/coach/visit-questions.js": {
+      "versions": [
+        "v=20261125-visita1"
+      ],
+      "sha": "76624063ce9f4460"
     }
   }
 }

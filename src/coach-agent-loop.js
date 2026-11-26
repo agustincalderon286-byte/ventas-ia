@@ -12,6 +12,8 @@ const unavailable = message => new AgentUnavailable(message);
 function matches(value, rule) {
   if (rule.type==='array') return Array.isArray(value) && value.length<=(rule.maxItems ?? 20) && value.every(item=>matches(item,rule.items));
   if (rule.type==='integer') return Number.isInteger(value) && value>=(rule.minimum ?? -1e9) && value<=(rule.maximum ?? 1e9);
+  // Un monto puede traer centavos: cualquier número finito dentro del rango declarado.
+  if (rule.type==='number') return typeof value==='number' && Number.isFinite(value) && value>=(rule.minimum ?? -1e9) && value<=(rule.maximum ?? 1e9);
   if (rule.type==='boolean') return typeof value==='boolean';
   return typeof value==='string' && value.length<=(rule.maxLength ?? 400) && (!rule.enum || rule.enum.includes(value));
 }

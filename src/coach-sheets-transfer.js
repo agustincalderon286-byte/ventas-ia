@@ -36,6 +36,12 @@ function cleanInput(input, sellerName) {
       clean[field] = textField(row?.[field], limit);
     }
     if (input.kind === 'referrals' && row?.note) clean.note = textField(row.note, 640);
+    // A referral who already agreed to a demo: the telemarketing columns say so, so nobody calls to book again.
+    if (input.kind === 'referrals' && row?.status) clean.status = textField(row.status, 40);
+    if (input.kind === 'referrals' && row?.followupDate) {
+      const day = textField(row.followupDate, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day) && new Date(day).toISOString().slice(0,10) === day) clean.followupDate = day;
+    }
     if (!keyForName(clean.fullName) || !sheetsPhoneKey(clean.phone)) throw fail(422, 'Cada contacto necesita nombre y teléfono completo.');
     return clean;
   });

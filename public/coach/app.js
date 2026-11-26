@@ -16963,6 +16963,17 @@ function renderDemoAutoCloseReceipt(receipt) {
   if (!receipt) return "";
   const items = [];
   const links = [];
+  // Whose house the demo was in, when TEC worked it out from the recording.
+  const host = receipt.host;
+  if (host?.name && host.source !== "ficha") {
+    const how = ({ telefono: "su teléfono ya estaba en tu CRM", nombre: "su nombre ya estaba en tu CRM",
+      cita: "tenía cita a esta hora en tu CRM", calendario: "tenía cita a esta hora en tu calendario",
+      grabacion: host.created ? "cliente nuevo, lo agregué a tu CRM" : "lo escuché en la grabación" })[host.source] || "lo escuché en la grabación";
+    items.push("Anfitrión: " + String(host.name).slice(0, 100) + " · " + how + ".");
+  }
+  const result = receipt.outcome;
+  if (result?.type) items.push("Resultado de la visita: " + ({ venta: "venta" + (result.amount ? " por $" + result.amount : ""),
+    follow_up: "quedó en seguimiento", no_venta: "no venta" })[result.type] + ".");
   const survey = receipt.survey;
   if (survey?.state === "saved") {
     items.push(survey.filled ? "Encuesta guardada · " + survey.filled + (survey.filled === 1 ? " campo completado." : " campos completados.") : "Encuesta disponible en TEC.");
@@ -16997,7 +17008,7 @@ function renderDemoAutoCloseReceipt(receipt) {
   const refs = receipt.referrals;
   if (refs?.saved) items.push(refs.saved + (refs.saved === 1 ? " referido guardado" : " referidos guardados") + " en " + refs.sheetTitle + ".");
   if (refs?.duplicates) items.push(refs.duplicates + (refs.duplicates === 1 ? " referido ya estaba en la hoja." : " referidos ya estaban en la hoja."));
-  if (refs?.pending) items.push(({ host: "Falta vincular al anfitrión de los referidos.", connection: "Revisa la hoja del 4 en 14 en Mis conexiones.",
+  if (refs?.pending) items.push(({ host: "No supe en casa de quién fue la demo. Coach Jorge te lo pregunta arriba del chat y guarda los referidos con tu respuesta.", connection: "Revisa la hoja del 4 en 14 en Mis conexiones.",
     error: "Revisa la hoja del 4 en 14 para confirmar qué se guardó." })[refs.state] || refs.pending + (refs.pending === 1 ? " referido por revisar." : " referidos por revisar."));
   if (/^[\w-]{20,120}$/.test(refs?.file || "")) links.push(["Abrir hoja del 4 en 14", "https://docs.google.com/spreadsheets/d/" + refs.file + "/edit"]);
   const products = String(receipt.productSummary || "").split("\n").filter(Boolean);
@@ -17025,7 +17036,7 @@ function renderDemoAutoCloseReceipt(receipt) {
     ${links.map(([label, url]) => `<a class="secondary-button" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">${label}</a>`).join(" ")}
     ${products.length ? `<h5>Productos y precios comentados</h5><ul>${products.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
     ${notes.length ? `<h5>Notas de referidos por revisar</h5><ul>${notes.map(item => `<li><strong>${escapeHtml(item.name)}</strong> · ${escapeHtml(item.note)}</li>`).join("")}</ul>` : ""}
-    ${asks.length ? `<h5>No lo guardé porque no quedó claro</h5><p class="mini-note">Coach Jorge te lo pregunta en el chat.</p><ul>${asks.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+    ${asks.length ? `<h5>No lo guardé porque no quedó claro</h5><p class="mini-note">Coach Jorge te lo pregunta arriba del chat. Contéstale con un audio y él lo guarda.</p><ul>${asks.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
     ${possible.length ? `<h5>Posibles notas que no se guardaron</h5><ul>${possible.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
   </section>`;
 }
@@ -17038,8 +17049,10 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
 
   const consent = root.querySelector("[data-demo-recorder-consent]");
   if (autoClosePilot) {
+    // Two taps to record: open this panel and press the button, which carries the notice itself.
     const label = consent.parentElement.querySelector("span");
     if (label) label.textContent = "Todos aceptaron la grabación. El Coach guardará los datos claros de esta visita.";
+    consent.parentElement.hidden = true;
   }
   const outcome = document.querySelector("[data-demo-recorder-outcome]");
   consent.checked = false;
@@ -17087,7 +17100,10 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     native: false
   };
   const SEGMENT_MS = 4 * 60 * 1000;
-  const MAX_RECORDING_MS = 90 * 60 * 1000;
+  // With the Mac transcribing, a demo may last three hours (45 pieces of four minutes).
+  const MAX_MINUTES = autoClosePilot ? 180 : 90;
+  const MAX_SEGMENTS = autoClosePilot ? 45 : 30;
+  const MAX_RECORDING_MS = MAX_MINUTES * 60 * 1000;
   // Inside the TEC iPhone app the recording is native, so it continues with the
   // screen locked. Safari and older app versions keep the MediaRecorder path.
   const nativeRecorder = globalThis.window?.TecNativeDemoRecorder?.available === true ? window.TecNativeDemoRecorder : null;
@@ -17109,7 +17125,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     const launcher = document.querySelector("[data-demo-panel-toggle]");
     if (launcher) { launcher.hidden = state.recording || document.documentElement?.dataset?.coachPortalMode === "telemarketing"; launcher.disabled = state.processing; }
     if (state.recording && root.open) { root.close(); launcher?.setAttribute("aria-expanded", "false"); }
-    startButton.disabled = state.recording || state.processing || !consent.checked || !emergency.hidden;
+    startButton.disabled = state.recording || state.processing || (!consent.checked && !autoClosePilot) || !emergency.hidden;
     stopButton.disabled = !state.recording || state.processing;
     consent.disabled = state.recording || state.processing;
     outcome.disabled = state.processing;
@@ -17185,7 +17201,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
     try {
       await state.pausePromise;
       if (!state.recording || state.processing) return;
-      if (state.segmentIndex >= 30) throw new Error("Llegaste al límite de segmentos de esta demo. Finaliza para guardar el reporte.");
+      if (state.segmentIndex >= MAX_SEGMENTS) throw new Error("Llegaste al límite de segmentos de esta demo. Finaliza para guardar el reporte.");
       if (manual) {
         const next = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: false });
         if (!state.recording || state.processing) { next.getTracks().forEach(track => track.stop()); return; }
@@ -17411,9 +17427,9 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       window.clearTimeout(state.rotateTimer);
       state.recorder.stop();
       await state.segmentStopped;
-      if (!finalSegment && state.recording && !state.capturePaused && !state.storageFailure && !state.interruptionReason && state.segmentIndex < 30) {
+      if (!finalSegment && state.recording && !state.capturePaused && !state.storageFailure && !state.interruptionReason && state.segmentIndex < MAX_SEGMENTS) {
         beginSegment();
-      } else if (!finalSegment && (state.storageFailure || state.segmentIndex >= 30)) {
+      } else if (!finalSegment && (state.storageFailure || state.segmentIndex >= MAX_SEGMENTS)) {
         window.setTimeout(() => finishRecording(false), 0);
       } else if (!finalSegment && state.interruptionReason) {
         window.setTimeout(() => pauseCapture(state.interruptionReason), 0);
@@ -17732,14 +17748,14 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
         return;
       }
       showAnalysisNotice({
-        title: autoStopped ? "La grabación terminó a los 90 minutos" : "Tu resumen está listo",
+        title: autoStopped ? "La grabación terminó a los " + MAX_MINUTES + " minutos" : "Tu resumen está listo",
         copy: analysis.closeAvailable ? "Tu Coach tiene el cierre listo. Puedes aclararlo con un audio." : "Guardado en Mi actividad, en Mis demostraciones.",
         analysisId: analysis?.id || state.sessionId,
         ready: true
       });
       setRecorderMessage(
         autoStopped
-          ? "Llegaste a 90 minutos. El resumen quedó guardado en Mi actividad."
+          ? "Llegaste a " + MAX_MINUTES + " minutos. El resumen quedó guardado en Mi actividad."
           : "Resumen guardado en Mi actividad.", "success"
       );
       await loadHistory();
@@ -17871,7 +17887,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
         // Consent was confirmed above and saved on the local row; the app checks it again.
         await nativeRecorder.start({
           localId: state.localSessionId, serverSessionId: state.sessionId, consentConfirmed: true,
-          startedAt: state.startedAt, segmentSeconds: SEGMENT_MS / 1000, maxSeconds: MAX_RECORDING_MS / 1000, maxChunks: 30
+          startedAt: state.startedAt, segmentSeconds: SEGMENT_MS / 1000, maxSeconds: MAX_RECORDING_MS / 1000, maxChunks: MAX_SEGMENTS
         });
         state.verifyingResume = false;
       } else {
@@ -17918,7 +17934,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   };
 
   root.addEventListener("close", () => {
-    if (!consent.checked) return;
+    if (!consent.checked || autoClosePilot) return;
     consent.checked = false;
     updateControls();
     setRecorderMessage("Confirma el consentimiento antes de iniciar la demostración.", "info");
@@ -17929,12 +17945,22 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       setRecorderMessage(
         consent.checked
           ? "Listo. Presiona Iniciar grabacion cuando comience la demostracion."
-          : "Activa el consentimiento para comenzar. Maximo 90 minutos.",
+          : "Activa el consentimiento para comenzar. Máximo " + MAX_MINUTES + " minutos.",
         "info"
       );
     }
   });
-  startButton.addEventListener("click", startRecording);
+  if (autoClosePilot) {
+    startButton.textContent = "Ya avisé que voy a grabar · Empezar";
+    const note = document.createElement("p");
+    note.className = "mini-note";
+    note.textContent = "Al empezar confirmas que todos en la casa saben que la visita se graba. Hasta 3 horas.";
+    startButton.insertAdjacentElement("afterend", note);
+  }
+  startButton.addEventListener("click", () => {
+    if (autoClosePilot) consent.checked = true;
+    startRecording();
+  });
   stopButton.addEventListener("click", () => finishRecording(false));
 
   // Coach Jorge during the demo: what the recording left unclear, a few minutes after it was said.
@@ -17983,7 +18009,7 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
       consent.dispatchEvent(new Event("change"));
       startRecording().then(() => {
         if (state.recording && !getActiveCoachCrmContext()?.id) {
-          chunkStatus.textContent = "Grabando sin cliente abierto: abre su ficha para que se guarden sus referidos.";
+          chunkStatus.textContent = "Grabando. Di el nombre del anfitrión durante la visita para que todo quede a su nombre.";
         }
       }).catch(() => null);
       return "ready";
@@ -18097,7 +18123,7 @@ function createFloatingCoachSurface(panel) {
   };
   const canScroll = (target, delta) => {
     // Windows opened from the chat (such as «Cierre de la visita») live outside the panel but must scroll too.
-    const scroller = target?.closest?.(".coach-float-messages, textarea, .demo-close-dialog");
+    const scroller = target?.closest?.(".coach-float-messages, textarea, .demo-close-dialog, .visit-questions-card");
     if (!scroller || !(panel?.contains(scroller) || scroller.matches(".demo-close-dialog"))) return false;
     return delta > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : delta < 0 && scroller.scrollTop > 1;
   };
@@ -18840,6 +18866,15 @@ async function loadCoachAppPage() {
 
     try {
       const answeringSession = getCoachChatSessionId();
+      // Jorge's questions about a recorded visit come first: the answer is saved in its place. Anything that
+      // is not an answer goes on to the normal chat.
+      const visitReply = window.tecVisitQuestions?.hasPending() ? await window.tecVisitQuestions.answer(text) : null;
+      if (visitReply) {
+        if (answeringSession !== getCoachChatSessionId()) return {ok:false};
+        assistantMessageHandles=addCoachMessage(chatMessages,"assistant",visitReply);
+        if (options.replyMode==="audio") await coachVoice?.speak(visitReply,assistantMessageHandles,undefined,{verbatim:true,isCurrent:()=>answeringSession === getCoachChatSessionId()});
+        return {ok:true};
+      }
       const answer = window.tecVisitClose?.hasPending() ? await window.tecVisitClose.answer(text) : null;
       if (answer) {
         if (answeringSession !== getCoachChatSessionId()) return {ok:false};
@@ -18993,6 +19028,10 @@ async function loadCoachAppPage() {
     accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
     openChat:()=>syncFloatingCoachDock("open"), visitId:getTecVisitId, crmId:()=>getActiveCoachCrmContext()?.id || "",
     prepareReminder:t=>sendCoachMessage(t)
+  }) : null;
+  window.tecVisitQuestions = me.demoClosePilot && window.TecVisitQuestions ? window.TecVisitQuestions.init({
+    accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
+    openChat:()=>syncFloatingCoachDock("open"), forms:[chatForm, floatingChatForm]
   }) : null;
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
