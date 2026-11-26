@@ -35,7 +35,14 @@ Guardar solo las últimas horas en el teléfono, tomar muestras cortas para sabe
 
 Fuentes: docs.omi.me (AudioStreaming, Integrations, Protocol, sdk/ReactNative, sdk/swift, hardware/OmiConsumer, apps/Submitting, info/Privacy), omi.me/pages/pendant, aboutamazon.com (Bee Frontier), techcrunch.com (Bee, 15-oct-2026), tech-insider.org (wearables y leyes de grabación).
 
-## Prototipo web (25-nov-2026, listo y sin publicar)
+## Estado: guardado para el futuro (26-nov-2026)
+Agustín decidió volver al sistema de dos botones: uno que solo graba la demo completa y otro para conversar con Jorge. Con un solo botón, TEC no sabe si lo que sigue es una pregunta corta o una demo entera a menos que el vendedor lo anuncie o mantenga presionado; si no lo hace, la demo no se graba. La solución que quedó pensada: grabar siempre desde el primer toque con la grabadora de visitas y decidir al final (corto = mensaje para Jorge, largo = visita), sin perder el audio del inicio.
+
+- El botón se quitó de la web y de la app del iPhone. `/boton` ahora abre la app de siempre.
+- Lo que sí se quedó: mientras se graba una demo, el micrófono del chat del Coach queda apagado y a Jorge solo se le escribe (`public/coach/coach-voice.js`, aviso `tec:demo-recording` desde `app.js`); en el iPhone, la vibración y el reloj de la visita en la pantalla bloqueada.
+- Para retomarlo: el código está en los commits `8f17882` y `e7050f4` de este repositorio (`public/coach/one-button.js`, `src/coach-one-button.js`, `tests/coach-one-button.test.js`, estilos `.tec-one`) y en los parches de `/Volumes/Modelos_IA/Codex/2026-11-25/TEC-concepto-un-boton/`; la app del iPhone con el botón está en `/Volumes/Modelos_IA/Codex/2026-11-25/TEC-iOS-un-boton/proyecto`.
+
+## Prototipo web (25-nov-2026; retirado el 26-nov-2026, ver arriba)
 - Dirección: `totalelitecoaching.com/boton` (abre la misma app en `/coach/app/?boton=1`; así comparte la sesión y no hace falta tocar el dominio). Solo cuentas del piloto.
 - Una pantalla con un solo botón encima de la app de siempre (`public/coach/one-button.js`).
   - **Un toque:** hablas y tocas otra vez. Jorge decide (`/api/coach/boton/intent`, `src/coach-one-button.js`): si anuncias una visita, empieza a grabarla con la grabadora de siempre; si no, es un mensaje para él y contesta en pantalla y con voz. Si hay preguntas pendientes de una visita, tu respuesta las contesta.
@@ -44,7 +51,7 @@ Fuentes: docs.omi.me (AudioStreaming, Integrations, Protocol, sdk/ReactNative, s
   - «Abrir TEC completo» quita la pantalla del botón.
 - Pruebas: `tests/coach-one-button.test.js`. Revisado en pantalla de teléfono con datos de ejemplo; sin probar con micrófono real.
 
-## iPhone: lo que la web no puede hacer (propuesto, sin construir)
+## iPhone: lo que la web no puede hacer (construido en la app 0.9.0; el botón se retiró en la 0.9.1)
 Dentro de la app TEC que ya tienes (misma firma; una app aparte exigiría una firma nueva):
 1. Abrir directo en el botón.
 2. Reloj de la visita en la pantalla bloqueada y en la isla dinámica, con «Terminar».

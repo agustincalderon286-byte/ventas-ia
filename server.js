@@ -6,7 +6,6 @@ import { createDemoSurveyWriter } from "./src/coach-demo-survey.js";
 import { createLiveDemo, registerLiveDemo } from "./src/coach-demo-live.js";
 import { DEMO_HOST_AFTER_MS, DEMO_HOST_BEFORE_MS, resolveDemoHost } from "./src/coach-demo-host.js";
 import { createVisit, registerVisit } from "./src/coach-visit.js";
-import { registerOneButton } from "./src/coach-one-button.js";
 import { demoFigureGuard } from "./src/coach-demo-figures.js";
 import { createCoachCalendarConnections } from "./src/coach-calendar-connections.js";
 import { createCoachSheetsConnections } from "./src/coach-sheets-connections.js";
@@ -31966,8 +31965,8 @@ const demoVisit = createVisit({ analyses: CoachDemoAnalysis, key: personalConnec
   saveOutcome: saveDemoVisitOutcome, saveSurvey: saveDemoVisitSurvey, connections: demoVisitConnections, active: demoVisitActive,
   findHost: (doc, heard) => findDemoHost(doc, heard, { active: demoVisitActive }) });
 registerVisit(app, { active: requireCoachActivo, allowed: canUseDemoClose, visit: demoVisit });
-// The one-button concept (pilot): /boton opens the app on a single button; Jorge decides visit or message.
-registerOneButton(app, { active: requireCoachActivo, allowed: canUseDemoClose });
+// The one-button concept was set aside (docs/concepto-un-boton): its old address opens the normal app.
+app.get(["/boton", "/boton/"], (_req, res) => res.redirect("/coach/app/"));
 
 async function demoAutoCloseActive(doc) {
   if (!COACH_DEMO_AUTO_CLOSE || !COACH_DEMO_LOCAL_EMAILS.includes(normalizarEmail(doc.ownerEmail)) || !doc.localProcessing?.lease) return false;

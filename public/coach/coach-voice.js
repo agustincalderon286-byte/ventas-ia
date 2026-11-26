@@ -109,6 +109,10 @@
     const RECORD_LABEL = 'Grabar mensaje de voz';
     const IDLE_HINT = `Toca el micrófono y habla hasta ${limitText}.`;
     const RECORDING_HINT = 'Toca ■ otra vez para enviar. «Cancelar» borra el audio.';
+    // Mientras se graba una demostración el micrófono es de la demo: al Coach solo se le escribe.
+    const DEMO_HINT = 'Estás grabando la demo. Escríbele a Jorge; el audio vuelve cuando termines.';
+    const DEMO_LABEL = 'Mientras grabas la demo, escríbele a Jorge';
+    let demoRecording = document.documentElement?.dataset?.tecDemoRecording === 'true';
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><g class="mic"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></g><rect class="stop" x="7" y="7" width="10" height="10" rx="2"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null, liveFinished = null, playbackEpoch = 0;
@@ -216,9 +220,9 @@
         const current = item === active, recording = current && capturing();
         const hasText = Boolean(item.form.querySelector('textarea')?.value.trim()) || hasExtraInput(item.form);
         // Mientras graba, el botón nunca se bloquea: siempre se puede detener y conservar el audio.
-        item.record.disabled = !recording && (chatBusy || phase !== 'idle' || Boolean(draft));
+        item.record.disabled = !recording && (chatBusy || demoRecording || phase !== 'idle' || Boolean(draft));
         item.record.setAttribute('aria-pressed', recording ? 'true' : 'false');
-        item.record.title = recording ? 'Detener y enviar' : RECORD_LABEL;
+        item.record.title = recording ? 'Detener y enviar' : demoRecording ? DEMO_LABEL : RECORD_LABEL;
         item.record.classList.toggle('is-recording',recording);
         item.form.classList.toggle('is-voice-recording',recording);
         item.tools.hidden = (!recording && (hasText || Boolean(draft)) && phase === 'idle') || (Boolean(draft) && phase === 'sending');
@@ -229,7 +233,7 @@
         item.elapsed.hidden = phase === 'requesting';
         item.total.hidden = phase !== 'recording' || left <= 30;
         item.note.textContent = phase === 'requesting' ? 'Preparando micrófono…' : phase === 'finishing' ? 'Guardando…' : left <= 30 ? `Quedan ${left} s` : '';
-        item.hint.textContent = recording ? RECORDING_HINT : IDLE_HINT;
+        item.hint.textContent = recording ? RECORDING_HINT : demoRecording ? DEMO_HINT : IDLE_HINT;
         item.hint.hidden = hasText || (!recording && (phase !== 'idle' || Boolean(draft)));
         item.preview.hidden = !draft || !current || phase !== 'idle';
         item.send.disabled = locked || !draft; item.cancel.disabled = locked;
@@ -276,13 +280,13 @@
     }
     function flushPending() { if(pendingSend && draft && phase === 'idle' && !chatBusy && !document.hidden) send(); }
     function toggleRecording(item) {
-      if(phase === 'idle') { if(!chatBusy && !draft) start(item); return; }
+      if(phase === 'idle') { if(!chatBusy && !draft && !demoRecording) start(item); return; }
       // Un doble toque accidental no corta la grabación recién iniciada.
       if(phase !== 'recording' || item !== active || Date.now() - startedAt < MIN_MS) return;
       unlockAudio();stopRecording('send');refreshAudio();render();
     }
     async function start(item) {
-      if(chatBusy || phase !== 'idle' || draft)return;
+      if(chatBusy || demoRecording || phase !== 'idle' || draft)return;
       active=item;
       if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {notify('La grabación no está disponible. Puedes escribir tu pregunta.');return;}
       if(micPermission?.state === 'denied') {notify('El micrófono está bloqueado. ' + microphoneSettings());return;}
@@ -580,11 +584,15 @@
       if(event.persisted){suspendCapture('send');return;}
       generation++;stopRecording('keep');urls.forEach(release);
     });
+    // La demo empezó o terminó. Si había un audio a medias se detiene y queda guardado: no se pierde ni estorba a la demo.
+    window.addEventListener('tec:demo-recording',event=>{
+      demoRecording = event.detail?.recording === true;
+      if(demoRecording && capturing()) suspendCapture('keep');
+      render();
+    });
     render();
     // El envío pendiente sale en una microtarea para que quien liberó el chat termine antes de volver a ocuparlo.
     return { setChatBusy(value){chatBusy=Boolean(value);render();if(!chatBusy && pendingSend)Promise.resolve().then(flushPending);}, pausePlayback, speak,
-      // Called inside a tap, so Jorge's spoken answer is allowed to play when it arrives.
-      unlock: unlockAudio,
       reset() {
         pausePlayback();
         cancel('');

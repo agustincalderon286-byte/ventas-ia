@@ -17122,6 +17122,12 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
 
   const updateControls = () => {
     root.dataset.captureBusy = state.recording || state.processing ? "true" : "false";
+    // While a demo is being recorded the microphone belongs to it: the Coach's voice message waits, text still works.
+    const page = document.documentElement?.dataset, demoOn = state.recording ? "true" : "false";
+    if (page && page.tecDemoRecording !== demoOn) {
+      page.tecDemoRecording = demoOn;
+      if (typeof CustomEvent === "function") window.dispatchEvent?.(new CustomEvent("tec:demo-recording", { detail: { recording: state.recording } }));
+    }
     const launcher = document.querySelector("[data-demo-panel-toggle]");
     if (launcher) { launcher.hidden = state.recording || document.documentElement?.dataset?.coachPortalMode === "telemarketing"; launcher.disabled = state.processing; }
     if (state.recording && root.open) { root.close(); launcher?.setAttribute("aria-expanded", "false"); }
@@ -18000,24 +18006,6 @@ function initCoachDemoRecorder(closePilot = false, autoClosePilot = false) {
   // whether everyone accepted the recording, and only a «sí» reaches this page. The app retries
   // while the answer is "waiting".
   let voiceChecked = false; // Until the page has looked for a recording the app kept going.
-  // The one-button screen drives this same recorder: start a visit, stop it and read its clock.
-  window.TecDemoRecorder = Object.freeze({
-    recording: () => Boolean(state.recording),
-    busy: () => Boolean(state.processing) || !emergency.hidden,
-    seconds: () => state.recording ? Math.max(0, Math.floor(((state.capturePaused ? state.pausedAt : Date.now()) - state.startedAt - (state.pausedMs || 0)) / 1000)) : 0,
-    async start() {
-      if (state.recording) return true;
-      if (state.processing || !emergency.hidden) return false;
-      consent.checked = true;
-      await startRecording();
-      return Boolean(state.recording);
-    },
-    async stop() {
-      if (!state.recording || state.processing) return false;
-      await finishRecording(false);
-      return true;
-    }
-  });
   if (nativeRecorder) window.TecVoiceDemo = Object.freeze({
     start() {
       if (!voiceChecked) return "waiting";
@@ -19051,22 +19039,6 @@ async function loadCoachAppPage() {
     accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
     openChat:()=>syncFloatingCoachDock("open"), forms:[chatForm, floatingChatForm]
   }) : null;
-  if (me.demoClosePilot && new URLSearchParams(window.location.search).get("boton") === "1") {
-    window.TecOneButton?.init({ name: String(me.user.name || "").split(" ")[0], accountId: String(me.user.id), request: apiRequest });
-  }
-  // The single button talks to Jorge through the same chat: it sends the text and reads back his answer.
-  window.tecCoachTalk = Object.freeze({
-    async send(text) {
-      // The chat may live only in the floating panel: read Jorge's answer from wherever it is drawn.
-      const surface = getCoachMessageTargets(chatMessages)[0];
-      const before = surface?.querySelectorAll(".coach-message.assistant").length || 0;
-      const result = await sendCoachMessage(text, { replyMode: "audio" });
-      const replies = Array.from(surface?.querySelectorAll(".coach-message.assistant") || []).slice(before);
-      return { ok: Boolean(result?.ok), reply: replies.map(node => node.querySelector("p")?.textContent?.trim() || "").filter(Boolean).join(" ") };
-    },
-    prepareVoice: () => coachVoice?.unlock?.(),
-    openChat: () => syncFloatingCoachDock("open")
-  });
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })

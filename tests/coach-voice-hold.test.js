@@ -324,3 +324,25 @@ test('en iPhone el audio pasa a modo de reproducción al cerrar el micrófono y 
  denied.tap();await turn();
  assert.equal(session.type,'auto');
 });
+test('mientras se graba una demo el micrófono del Coach queda apagado y se puede escribir; al terminar vuelve',async()=>{
+ const f=fixture();
+ f.window.fire('tec:demo-recording',{detail:{recording:true}});
+ assert.equal(f.record.disabled,true);assert.equal(f.textarea.disabled,false);
+ assert.match(f.find('coach-voice-hint').textContent,/grabando la demo.*Escríbele a Jorge/);assert.match(f.record.title,/escríbele a Jorge/);
+ f.tap();await turn();
+ assert.equal(f.micRequests,0,'the demo keeps the microphone');assert.equal(f.pressed,'false');
+ f.textarea.value='¿Qué le digo del precio?';f.textarea.fire('input');assert.equal(f.submit.hidden,false);assert.equal(f.submit.disabled,false);
+ f.textarea.value='';f.textarea.fire('input');
+ f.window.fire('tec:demo-recording',{detail:{recording:false}});
+ assert.equal(f.record.disabled,false);assert.match(f.find('coach-voice-hint').textContent,/Toca el micrófono/);
+ f.tap();await turn();f.advance(900);f.tap();await turn();
+ assert.equal(f.micRequests,1);assert.equal(f.sent.length,1,'voice works again after the demo');
+});
+test('si la demo empieza con un audio a medias, el audio se detiene y queda guardado sin enviarse',async()=>{
+ const f=fixture();f.tap();await turn();f.advance(5000);
+ f.window.fire('tec:demo-recording',{detail:{recording:true}});await turn();
+ assert.equal(f.stopped,1,'the microphone is released for the demo');assert.equal(f.pressed,'false');
+ assert.equal(f.sent.length,0);assert.equal(f.calls.length,0);
+ assert.equal(f.find('coach-voice-preview').hidden,false,'what was recorded is kept');assert.match(f.status,/Guardé tu audio/);
+ assert.equal(f.record.disabled,true);
+});

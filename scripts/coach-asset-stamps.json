@@ -1,5 +1,5 @@
 {
-  "cache": "tec-coach-shell-20261125-boton2",
+  "cache": "tec-coach-shell-20261126-dosbotones1",
   "files": {
     "/audiolibros/audio-delivery.js": {
       "versions": [
@@ -34,9 +34,9 @@
     "/coach/app.js": {
       "versions": [
         "v=20261117-audit1",
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
-      "sha": "598ecfa7115a6afb"
+      "sha": "4596d8c755eacaf9"
     },
     "/coach/audiobook-reader.js": {
       "versions": [
@@ -118,15 +118,15 @@
     },
     "/coach/coach-voice.css": {
       "versions": [
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
       "sha": "4ca37400d6867f80"
     },
     "/coach/coach-voice.js": {
       "versions": [
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
-      "sha": "c3792fe093f02db7"
+      "sha": "f40469f4ad0d5ddf"
     },
     "/coach/compact-header.js": {
       "versions": [
@@ -136,7 +136,7 @@
     },
     "/coach/demo-close-chat.js": {
       "versions": [
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
       "sha": "1e033fab59dc3f89"
     },
@@ -196,7 +196,7 @@
     },
     "/coach/my-day.js": {
       "versions": [
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
       "sha": "6e84cfe08412f763"
     },
@@ -205,12 +205,6 @@
         "v=20261121-cierredemo2"
       ],
       "sha": "955edf5206b3747e"
-    },
-    "/coach/one-button.js": {
-      "versions": [
-        "v=20261125-boton2"
-      ],
-      "sha": "3f66133659314ce9"
     },
     "/coach/order-calculator.js": {
       "versions": [
@@ -372,9 +366,9 @@
     "/coach/styles.css": {
       "versions": [
         "v=20261117-visor1",
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
-      "sha": "97431fade74e3000"
+      "sha": "4c1e767af0d11bf2"
     },
     "/coach/team-chat-media.js": {
       "versions": [
@@ -414,9 +408,9 @@
     },
     "/coach/visit-questions.js": {
       "versions": [
-        "v=20261125-boton2"
+        "v=20261126-dosbotones1"
       ],
-      "sha": "1c54c4f68f7d3a6a"
+      "sha": "76624063ce9f4460"
     }
   }
 }
