@@ -77,7 +77,7 @@ function businessSection(line, coachEmail, template) {
     <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>`;
 }
 
-export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, assistant = null, coachEmail, csrf, message }) {
+export function connectionsPage({ doc, cal, pilot, calendarPilot = pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, assistant = null, coachEmail, csrf, message }) {
   // Alta de la línea Business incompleta: se mantiene el flujo manual y se avisa sin datos de la configuración.
   const pendingNote = businessPending ? '<p class="notice">TEC todavía no completó la conexión de tu línea de WhatsApp Business con Meta. Mientras tanto, prepara tus borradores aquí y envíalos desde tu app.</p>' : '';
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
@@ -99,7 +99,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, contact
   else if (!ready) content = '<p>La conexión estará disponible cuando TEC complete la configuración de Google.</p>';
   else content = `<p>Autoriza la lectura de Gmail para consultar desde tu Coach el remitente, asunto y un extracto de tus correos recientes. Al consultar ventas de Hy Cite, Coach revisa los últimos 90 días y guarda el asunto, la fecha y el número de orden para que puedas comprobarlos.</p>${form('start', 'Conectar mi Gmail')}`;
   let calendar = '';
-  if (pilot && calendarReady) {
+  if (calendarPilot && calendarReady) {
     const availabilityField = '<input type="hidden" name="availability" value="yes">';
     const availabilityForm = calForm('start','Activar horarios libres',false,availabilityField);
     const availabilityInfo = 'Para buscar horarios, el Coach consulta los bloques ocupados de tu calendario principal y de «Seguimientos TEC».';

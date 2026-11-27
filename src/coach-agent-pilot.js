@@ -16,7 +16,7 @@ export function agentConnectionReader({config,store,sheets,calendar}) {
     const personal = inList(config.pilot);
     const [gmail,cal,sheet] = await Promise.allSettled([
       personal && config.ready ? store.findById(actor.owner,'grant mailbox sendEnabled').lean() : null,
-      personal && config.calendarReady ? calendar.getConnection(actor.owner) : null,
+      inList(config.calendarPilot ?? config.pilot) && config.calendarReady ? calendar.getConnection(actor.owner) : null,
       inList(config.sheetsPilot) && config.sheetsReady ? sheets.getConnection(actor.owner) : null
     ]);
     const state = (result, usable) => result.status==='rejected' ? 'unknown' : usable(result.value) ? 'connected' : 'missing';

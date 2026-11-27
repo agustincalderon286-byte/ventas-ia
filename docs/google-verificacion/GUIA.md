@@ -34,7 +34,7 @@ Deja **solo** estos:
 **No incluyas** `gmail.readonly` ni `gmail.send`. Leer Gmail obliga a una auditoría de seguridad que se paga y se repite cada año, y alarga la revisión a unas 6 semanas.
 En TEC la conexión de Gmail ya está limitada a las cuentas del piloto (la lista `COACH_CONNECTIONS_PILOT_EMAILS` en Render). Esas cuentas seguirán viendo el aviso solo al conectar Gmail, y Google lo permite hasta 100 personas.
 
-> Ojo: hoy la misma lista abre Gmail **y** Calendar. Antes de abrir Calendar a todos los vendedores hay que separar las dos listas en el código, para que Gmail no se abra con Calendar.
+> Para habilitar una cuenta aislada para la demostración de Google, define `COACH_GOOGLE_VERIFICATION_DEMO_EMAIL` en Render con el correo exacto. La cuenta debe estar activa en TEC y figurar entre los probadores de Google. Esta variable habilita Calendar, Sheets y Contactos para esa cuenta. El acceso a TEC y la lista de Gmail se administran por sus canales habituales. Retira la variable cuando termine la prueba.
 
 ## 4. Por qué necesitamos cada permiso (para pegar en el formulario, en inglés)
 

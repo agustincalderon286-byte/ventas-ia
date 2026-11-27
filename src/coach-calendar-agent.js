@@ -51,7 +51,8 @@ export function createCoachCalendarAgent({config,calendar,switched,findLeads,syn
     if (req.body?.responseMode==='audio' && req.body?.coachMailVersion!==1) return reply('Actualiza el Coach para usar Calendar desde el chat.');
     const user=auth?.user;
     if (!user?._id || !auth.session?.tokenHash || req.body?.accountId!==String(user._id) || switched(req)) return reply('Abre tu propia cuenta del Coach para consultar o agendar seguimientos.');
-    if (!config.pilot.includes('*') && !config.pilot.includes(String(user.email||'').toLowerCase())) return reply('Tu cuenta todavía no participa en el piloto de Google Calendar.');
+    const calendarPilots = config.calendarPilot ?? config.pilot;
+    if (!calendarPilots.includes('*') && !calendarPilots.includes(String(user.email||'').toLowerCase())) return reply('Tu cuenta todavía no participa en el piloto de Google Calendar.');
     if (slotCommand && !pending) return reply('Esa lista ya cambió. Pídeme dos horarios libres para tu demo.');
     if (requested?.kind==='help') return reply(help,[connections]);
     if (requested?.kind==='recurring') return reply('Puedo programar una cita por vez. Dime la fecha de la primera cita que quieres agendar.');

@@ -43,13 +43,14 @@ function aboutAppointmentOnly(instruction) {
 }
 
 export function createPlanChannels({config,calendar,followups,store,gmail,drafts,compose=composeMailDraft,rewrite=rewriteSellerBody,now=Date.now}) {
-  function personalPilot(actor) {
-    if (!config.pilot?.some(x=>x==='*' || x===String(actor.email).toLowerCase())) throw problem('Esta cuenta aún no participa en el piloto de Gmail y Calendar.');
+  function requirePilot(actor,list,service) {
+    if (!list?.some(email=>email==='*' || email===String(actor.email).toLowerCase())) throw problem('Esta cuenta aún no participa en el piloto de '+service+'.');
   }
+  const calendarPilots = config.calendarPilot ?? config.pilot;
   const mailDoc=owner=>store.findById(owner,'mailbox encryptedToken grant sendEnabled').lean();
   return {
     async appointment(actor, state, {name,schedule,slots,slot}) {
-      personalPilot(actor);
+      requirePilot(actor,calendarPilots,'Calendar');
       const cal=await calendar.getConnection(actor.owner);
       if (!cal?.grant || !cal.availabilityEnabled) throw problem('Conecta Calendar y activa los horarios libres en Mis conexiones.');
       const clarifiesBound=state?.openBoundary && /^(?:(?:por|de|en) la )?(am|pm|manana|tarde|noche)[.!]?$/.test(fold(schedule));
@@ -87,7 +88,7 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
     // Citas que el Coach creó en «Seguimientos TEC» y que siguen registradas. Son las únicas que puede mover o
     // borrar: el permiso de Google no alcanza el calendario principal ni las citas hechas a mano.
     async findAppointments(actor,{name='',day='',time=''}={}) {
-      personalPilot(actor);
+      requirePilot(actor,calendarPilots,'Calendar');
       const cal=await calendar.getConnection(actor.owner);
       if (!cal?.grant) throw problem('Conecta Google Calendar en Mis conexiones.');
       const binding={owner:actor.owner,session:actor.session,grant:cal.grant,calendarId:cal.calendarId};
@@ -142,7 +143,7 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
         preview:'Borrar «'+target.summary+'» del '+whenText+' en Seguimientos TEC · '+found.mailbox+'. Al confirmar se elimina de tu calendario.'};
     },
     async email(actor,{to,instruction,whenText='',optionLabels,priorDraft,editInstruction=''}) {
-      personalPilot(actor);
+      requirePilot(actor,config.pilot,'Gmail');
       if (!isGmailAddress(to)) return {question:'¿A qué dirección de correo quieres escribirle?'};
       const alternatives=optionLabels?.length>0;
       const timed=alternatives || Boolean(whenText);
@@ -178,7 +179,7 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
       return {proposal:{id:draft.id,grant:doc.grant},baseDraft,preview:'Borrador en el Coach, desde '+doc.mailbox+'\nPara: '+to+'\nAsunto: '+msg.subject+'\n'+msg.body};
     },
     async confirmAppointment(actor,p) {
-      personalPilot(actor);
+      requirePilot(actor,calendarPilots,'Calendar');
       const cal=await calendar.getConnection(actor.owner);
       if (cal?.grant!==p.grant || cal.calendarId!==p.calendarId) throw problem('La conexión de Calendar cambió. Revisa una propuesta nueva.');
       const result=await followups.confirm({owner:actor.owner,session:actor.session,grant:p.grant,calendarId:p.calendarId},p.id,
@@ -192,7 +193,7 @@ export function createPlanChannels({config,calendar,followups,store,gmail,drafts
       return {status:['slotBusy','expired','unavailable'].includes(result.status)?'blocked':'retry',message:result.status==='slotBusy'?'El horario se ocupó.':'Calendar todavía no confirmó esa cita.'};
     },
     async confirmEmail(actor,p) {
-      personalPilot(actor);
+      requirePilot(actor,config.pilot,'Gmail');
       const doc=await mailDoc(actor.owner);
       if (!doc?.sendEnabled || doc.grant!==p.grant) throw problem('Comprueba en Mis conexiones el permiso de envío de tu Gmail.');
       const result=await drafts.confirm({owner:actor.owner,session:actor.session,grant:p.grant,id:p.id,deliver:async msg=>{

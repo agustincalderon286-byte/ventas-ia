@@ -80,7 +80,8 @@ export function createCoachOfferAgent({config, store, gmail, drafts, calendar, o
     const actor = auth?.user;
     if (!actor?._id || !auth.session?.tokenHash || req.body?.accountId !== String(actor._id) || switched(req)) return refuse('Abre el chat desde tu propia cuenta de Coach para usar Gmail y Calendar.');
     const email = lower(actor.email);
-    if (!config.pilot.includes('*') && !config.pilot.includes(email)) return refuse('Tu cuenta aún no participa en el piloto de Gmail y Calendar.');
+    const calendarPilots = config.calendarPilot ?? config.pilot;
+    if (![config.pilot,calendarPilots].every(list => list.includes('*') || list.includes(email))) return refuse('Tu cuenta aún no participa en el piloto de Gmail y Calendar.');
     try {
       if (!config.ready || !(config.calendarReady ?? config.ready)) return refuse('Gmail o Calendar están temporalmente fuera de servicio.');
       const owner = actor._id;

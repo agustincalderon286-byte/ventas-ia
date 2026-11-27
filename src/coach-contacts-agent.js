@@ -49,7 +49,7 @@ export function createCoachContactsAgent({config,contacts,plans,readSession,swit
     if (!starts && !cmd && focus && (/^tec(?:plan|route)/i.test(text) || /\b(?:gmail|calendar|prepara un correo|ho[rR]arios|proxima llamada|postventa|whats\s?app|a quien (?:llamo|marco))\b/.test(t))) return null;
     const email=fold(auth?.user?.email);
     if (!direct(auth) || switched(req) || String(auth.user._id)!==body.accountId || !sessionId ||
-        !config.planPilot?.some(v=>v==='*' || v===email)) return reply('Abre Contactos desde tu propia sesión del piloto.');
+        !(config.contactsPilot ?? config.planPilot)?.some(v=>v==='*' || v===email)) return reply('Abre Contactos desde tu propia sesión del piloto.');
     const owner=auth.user._id, session=auth.session.tokenHash;
     const scope=digest(['people-chat',String(owner),session,sessionId]);
     const current=async()=>{const live=await readSession(req);return direct(live) && !switched(req) &&

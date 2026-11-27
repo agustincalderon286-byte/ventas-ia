@@ -40,6 +40,7 @@ import { gmailClient, openToken, sealToken, gmailScope, gmailSendScope } from '.
 const page = '/mis-conexiones/';
 const pendingFields = {...coachPendingFields,sheets:'coachSheetsPending',route:'coachRoutePending',contacts:'coachContactsPending'};
 const api = '/api/coach/conexiones/gmail/';
+const calendarApi = '/api/coach/conexiones/calendar/';
 const waProfileApi = '/api/coach/conexiones/whatsapp/';
 const assistantApi = '/api/coach/conexiones/asistente/';
 const random = () => randomBytes(32).toString('base64url');
@@ -56,6 +57,9 @@ export function connectionConfig(env) {
   const key = Buffer.from(env.COACH_GMAIL_ENCRYPTION_KEY || '', 'base64');
   const origin = new URL(env.APP_BASE_URL || 'https://totalelitecoaching.com').origin;
   const pilot = (env.COACH_CONNECTIONS_PILOT_EMAILS ?? 'calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v => v.trim()).filter(Boolean);
+  const demoEmail = String(env.COACH_GOOGLE_VERIFICATION_DEMO_EMAIL || '').trim().toLowerCase();
+  const demo = /^[^@,\s]+@[^@,\s]+\.[^@,\s]+$/.test(demoEmail) ? [demoEmail] : [];
+  const calendarPilot = [...new Set([...pilot, ...demo])];
   const domains = (env.COACH_HYCITE_DOMAINS || 'hycite.com').toLowerCase().split(',').map(v => v.trim()).filter(v => /^(?:[a-z\d-]+\.)+[a-z]{2,}$/.test(v));
   const clientId = env.COACH_GMAIL_CLIENT_ID, secret = env.COACH_GMAIL_CLIENT_SECRET;
   const sheetsPickerKey = env.COACH_SHEETS_PICKER_KEY || '';
@@ -64,8 +68,9 @@ export function connectionConfig(env) {
     'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
   const sheetsReady = Boolean(clientId && secret && key.length===32 && sheetsPickerKey && /^\d+$/.test(sheetsAppId));
   const planPilot=(env.COACH_PLAN_PILOT_EMAILS ?? 'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
+  const contactsPilot = [...new Set([...planPilot, ...demo])];
   const loopMicros=Number(env.COACH_AGENT_LOOP_MONTHLY_MICROS ?? 5_000_000);
-  return { key, origin, pilot, planPilot, loopPilot:loopSellers(env), loopMonthlyMicros:Number.isSafeInteger(loopMicros) && loopMicros>0 ? loopMicros : 0, agentModel:env.COACH_AGENT_PILOT_MODEL ?? 'gpt-6.2-sol', domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
+  return { key, origin, pilot, calendarPilot, planPilot, contactsPilot, loopPilot:loopSellers(env), loopMonthlyMicros:Number.isSafeInteger(loopMicros) && loopMicros>0 ? loopMicros : 0, agentModel:env.COACH_AGENT_PILOT_MODEL ?? 'gpt-6.2-sol', domains, mapsRoutesKey:env.COACH_MAPS_ROUTES_KEY || '', mapsFreeMonth:env.COACH_MAPS_FREE_MONTH, mapsFreeRequests:env.COACH_MAPS_FREE_REQUESTS, contactsReady:Boolean(clientId && secret && key.length===32), clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot:[...new Set([...sheetsPilot, ...demo])], sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
@@ -87,6 +92,9 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       await purgeCalendarProposals(args,key);
       await offerStore.purge({owner:args.owner,calendarGrant:args.grant}).catch(() => {});
     } })});
+  const calendarPilots = config.calendarPilot ?? config.pilot;
+  const isCalendarRequest = req => req.path.startsWith(calendarApi) ||
+    (req.path === api + 'callback' && typeof req.query.state === 'string' && req.query.state.startsWith('cal.'));
   const back = (res, result) => res.redirect(303, page + '?estado=' + result);
   const own = handler => async (req, res) => {
     res.set({ 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).vary('Cookie');
@@ -98,18 +106,21 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       const session = digest('coach-connections:' + auth.session.tokenHash);
       const email = String(auth.user.email || '').trim().toLowerCase();
       const pilot = config.pilot.includes('*') || config.pilot.includes(email);
+      const calendarPilot = calendarPilots.includes('*') || calendarPilots.includes(email);
+      const calendarRequest = isCalendarRequest(req);
+      if (calendarRequest && !calendarPilot) return res.status(403).send('Esta cuenta aún no participa en el piloto de Calendar.');
       const sheetsRequest = req.path.startsWith(sheetsApi) || (req.path===api+'callback' &&
         typeof req.query.state==='string' && req.query.state.startsWith('sheets.'));
       const direct = auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat');
       const sheetsPilot = direct && Boolean(config.sheetsPilot?.some(value => value==='*' || value===email));
-      const contactsPilot=direct && Boolean(config.planPilot?.some(value=>value==='*' || value===email));
+      const contactsPilot=direct && Boolean((config.contactsPilot ?? config.planPilot)?.some(value=>value==='*' || value===email));
       const contactsRequest=req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && typeof req.query.state==='string' && req.query.state.startsWith('people.'));
       if (contactsRequest && !contactsPilot) return res.status(403).send('Abre Contactos desde tu propia cuenta del piloto.');
       if (sheetsRequest && !sheetsPilot) return res.status(403).send('Abre Google Sheets desde tu propia cuenta del piloto.');
       const assistantPilot = direct && Boolean(config.loopPilot?.some(value => value==='*' || value===email));
       const assistantRequest = req.path.startsWith(assistantApi);
       if (assistantRequest && !assistantPilot) return res.status(403).send('Esta cuenta aún no participa en el piloto del asistente.');
-      if (!sheetsRequest && !contactsRequest && !assistantRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
+      if (!calendarRequest && !sheetsRequest && !contactsRequest && !assistantRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
       if (req.method === 'POST' && req.body?.csrf !== session) return res.status(403).send('La sesión cambió. Vuelve a abrir Mis conexiones.');
       if (req.method === 'POST' && (sheetsRequest || contactsRequest || assistantRequest || req.path.startsWith(waProfileApi))) {
         const site = req.get('Sec-Fetch-Site');
@@ -123,7 +134,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
           fresh.session.tokenHash!==auth.session.tokenHash) return false;
         return fresh.session.accessMode==='direct' || (!fresh.session.accessMode && fresh.user.accountType!=='seat');
       };
-      await handler(req, res, { id, session, pilot, sheetsPilot, contactsPilot, assistantPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
+      await handler(req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
     } catch (error) {
       if (req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && req.query?.state?.startsWith?.('people.'))) return back(res,error.reauthorize?'contactsReconnect':'contactsFailed');
       if (req.path === sheetsApi+'picker-token') return res.status(error.status || 503).json({error:'Vuelve a abrir Google Sheets en Mis conexiones.'});
@@ -133,8 +144,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       }
       if (req.path.startsWith(waProfileApi)) return back(res, 'waProfileFailed');
       if (req.path.startsWith(assistantApi)) return back(res, 'assistantFailed');
-      if (req.path.startsWith('/api/coach/conexiones/calendar/') ||
-          (req.path === api + 'callback' && typeof req.query.state === 'string' && req.query.state.startsWith('cal.'))) {
+      if (isCalendarRequest(req)) {
         return back(res, error.reauthorize ? 'calendarReconnect' : 'calendarFailed');
       }
       if (req.path.startsWith(api)) return back(res, error.reauthorize ? 'reconnect' : 'failed');
@@ -169,14 +179,14 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     await agentConsent.revoke(id);
     return back(res, 'assistantOff');
   }));
-  app.get(page, own(async (req, res, { id, session, pilot, sheetsPilot, contactsPilot, assistantPilot, email }) => {
+  app.get(page, own(async (req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email }) => {
     const personalWhatsAppReady = config.key?.length === 32;
     // Solo el email exacto del piloto ve la línea Business, y solo con el alta completa (igual que el chat);
     // mientras tanto conserva el flujo manual. El estado lo confirma Graph en cada carga.
     const businessSeller = waCloudSeller(waCloud?.config, { email });
     const businessPending = !businessSeller && Boolean(waCloud?.config?.email) && email === waCloud.config.email;
     const [doc, cal, sheetProfile, senderPhone, businessLine, contactsProfile, assistantAccepted] = await Promise.all([
-      pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, pilot ? calendar.panel(id) : null, sheetsPilot ? sheets.panel(id) : null,
+      pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, calendarPilot ? calendar.panel(id) : null, sheetsPilot ? sheets.panel(id) : null,
       pilot && personalWhatsAppReady && !businessSeller ? waProfile.load(id).catch(() => null) : null,
       businessSeller ? (personalWhatsAppReady ? waCloud.verify().catch(() => ({ ok:false, reason:'unreachable' }))
         : { ok:false, reason:'notConfigured' }) : null,
@@ -188,7 +198,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
-    res.send(connectionsPage({ doc, cal, pilot, contacts:contactsProfile, contactsPilot, contactsReady:config.contactsReady, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
+    res.send(connectionsPage({ doc, cal, pilot, calendarPilot, contacts:contactsProfile, contactsPilot, contactsReady:config.contactsReady, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
       personalWhatsAppReady, senderPhone, businessLine, businessPending,
       businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), assistant: assistantPilot ? assistantAccepted : null, coachEmail:email, csrf:session, message }));
   }));
@@ -292,7 +302,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service}),
     readMail:(args,readTool)=>runMail({...args,readTool}),
     readAgenda:(actor,text)=>{
-      if (!config.pilot.some(email=>email==='*' || email===actor.email.toLowerCase())) return 'Tu cuenta todavía no participa en el piloto de Calendar.';
+      if (!calendarPilots.some(email=>email==='*' || email===actor.email.toLowerCase())) return 'Tu cuenta todavía no participa en el piloto de Calendar.';
       if (!config.calendarReady) return 'Google Calendar no está disponible en TEC en este momento.';
       return readCoachAgenda({calendar:calendar.service,owner:actor.owner,zone:actor.zone,current:actor.current,text});
     },

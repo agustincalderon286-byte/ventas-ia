@@ -145,7 +145,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
     const guard=async()=>{ if (!await actor.current()) throw Object.assign(Error('La sesión cambió.'),{sessionChanged:true}); };
 
     async function calendarAccess() {
-      if (!inList(config.pilot,email)) return {problem:missing('calendar','Esta cuenta no participa en el piloto de Calendar.')};
+      if (!inList(config.calendarPilot ?? config.pilot,email)) return {problem:missing('calendar','Esta cuenta no participa en el piloto de Calendar.')};
       if (!config.calendarReady) return {problem:{estado:'fallo',nota:'Calendar no está disponible en TEC en este momento.'}};
       const connection=await calendar.getConnection(actor.owner);
       if (!connection?.grant || !connection.calendarId) return {problem:missing('calendar','El vendedor no ha conectado Google Calendar en Mis conexiones.')};
@@ -407,7 +407,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
 
       async buscar_contactos({nombre}) {
         if (!nombre.trim()) return invalid('Indica el nombre que buscas.');
-        if (!inList(config.planPilot,email)) return missing('contacts','Esta cuenta no participa en el piloto de Contactos.');
+        if (!inList(config.contactsPilot ?? config.planPilot,email)) return missing('contacts','Esta cuenta no participa en el piloto de Contactos.');
         if (!config.contactsReady) return {estado:'fallo',nota:'Contactos no está disponible en TEC en este momento.'};
         const profile=await contacts.profile(actor.owner);
         if (!profile?.grant) return missing('contacts','El vendedor no ha conectado Google Contactos en Mis conexiones.');

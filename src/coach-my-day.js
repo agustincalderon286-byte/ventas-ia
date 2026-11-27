@@ -97,7 +97,7 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
   // Citas de hoy: las de «Seguimientos TEC», los bloques ocupados del calendario principal y las de la Agenda de la Hoja TEC.
   async function appointmentsToday(actor, cal) {
     const result = { events: [], upcoming: [], busy: 0, agenda: [], calendarConnected: false, notes: [] };
-    if (calendar && inList(config.pilot, actor.email)) {
+    if (calendar && inList(config.calendarPilot ?? config.pilot, actor.email)) {
       try {
         const connection = await calendar.getConnection(actor.owner);
         if (connection?.grant) {

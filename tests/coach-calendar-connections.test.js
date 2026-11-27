@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash, randomBytes} from 'node:crypto';
 import {createCoachCalendarConnections} from '../src/coach-calendar-connections.js';
-import {registerCoachConnections} from '../src/coach-connections.js';
+import {connectionConfig, registerCoachConnections} from '../src/coach-connections.js';
 import {availabilityScope,calendarScope,calendarDescription} from '../src/coach-calendar-google.js';
 
 function harness({now}={}) {
@@ -193,7 +193,15 @@ test('la reconciliación solo lee el evento del vendedor y la reserva de horario
 
 test('Mis conexiones y callback compartido conservan las barreras de sesión, piloto y CSRF para Calendar',async()=>{
   const h=harness(), routes=new Map(), gmailQueries=[];
-  const project={key:randomBytes(32),ready:true,calendarReady:true,pilot:['a@example.com','b@example.com']};
+  const project=connectionConfig({
+    COACH_GMAIL_ENCRYPTION_KEY:randomBytes(32).toString('base64'),
+    COACH_GMAIL_CLIENT_ID:'client.apps.googleusercontent.com',
+    COACH_GMAIL_CLIENT_SECRET:'test-only',
+    COACH_SHEETS_PICKER_KEY:'test-only',
+    COACH_SHEETS_APP_ID:'123456',
+    COACH_CONNECTIONS_PILOT_EMAILS:'a@example.com,b@example.com',
+    COACH_GOOGLE_VERIFICATION_DEMO_EMAIL:' C@example.com '
+  });
   const app=Object.fromEntries(['get','post'].map(method=>[method,(path,fn)=>routes.set(method+' '+path,fn)]));
   const mailStore={
     findById(id) {gmailQueries.push(id);return {lean:async()=>({_id:id,mailbox:id+'@example.com'})};},
@@ -202,7 +210,7 @@ test('Mis conexiones y callback compartido conservan las barreras de sesión, pi
   registerCoachConnections(app,{config:project,switched:req=>req.switched,requireActive:async req=>({
     user:{_id:req.owner,email:req.owner+'@example.com'},session:{tokenHash:'session-'+req.owner}
   }),store:mailStore,gmail:{revoke:async()=>assert.fail('No revocar el otro conector')},drafts:{purge:async()=>{}},
-  calendarStore:h.store,calendarGoogle:h.google});
+  calendarStore:h.store,calendarGoogle:h.google,contactsStore:h.store,sheetsStore:h.store});
   async function run(method,path,owner,parts={}) {
     const res={set(){return this;},vary(){return this;},status(n){this.code=n;return this;},send(body){this.body=body;},
       redirect(code,to){this.code=code;this.to=to;}};
@@ -225,6 +233,21 @@ test('Mis conexiones y callback compartido conservan las barreras de sesión, pi
   assert.doesNotMatch((await run('get',page,'b')).body,/Desconectar Calendar/);
   assert.match((await run('post',mail+'disconnect','a',{body:{csrf}})).to,/gmailDisconnectedLocal/);
   assert.match((await run('get',page,'a')).body,/Desconectar Calendar/);
+
+  const calendarOnly=await run('get',page,'c');
+  assert.match(calendarOnly.body,/Conectar mi Google Calendar/);
+  assert.match(calendarOnly.body,/Conectar mis Contactos de Google/);
+  assert.match(calendarOnly.body,/Google Sheets/);
+  assert.ok(!project.planPilot.includes('c@example.com'));
+  assert.doesNotMatch(calendarOnly.body,/Conectar mi Gmail|Autorizar envío en Google/);
+  assert.ok(!gmailQueries.includes('c'));
+  const ownCsrf=calendarOnly.body.match(/name="csrf" value="([^"]+)"/)[1];
+  assert.equal((await run('post',mail+'start','c',{body:{csrf:ownCsrf}})).code,403);
+  assert.equal((await run('get',mail+'callback','c',{query:{state:'gmail-state',code:'c'}})).code,403);
+  const ownState=(await run('post',cal+'start','c',{body:{csrf:ownCsrf}})).to.state;
+  assert.match((await run('get',mail+'callback','c',{query:{state:ownState,code:'c'}})).to,/calendarConnected/);
+  assert.match((await run('get',page,'c')).body,/Desconectar Calendar/);
+  assert.ok(!gmailQueries.includes('c'));
 });
 
 test('volver a autorizar recupera un calendario borrado por el vendedor y descarta propuestas antiguas',async()=>{
