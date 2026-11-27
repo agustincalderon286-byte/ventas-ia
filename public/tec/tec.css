@@ -1,0 +1,20 @@
+/* TEC · public pages (home and privacy). Built on /legal.css. */
+.tec-brand-badge img { width: 40px; height: 40px; border-radius: 12px; display: block; }
+.tec-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.tec-button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 22px;
+  border-radius: 999px; font-weight: 800; background: var(--legal-red); color: #fff;
+  box-shadow: 0 14px 30px rgba(199, 31, 55, 0.25);
+}
+.tec-button.secondary { background: #fff; color: var(--legal-navy); box-shadow: none; border: 1px solid rgba(10, 34, 71, 0.12); }
+.tec-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.tec-features .legal-section { margin: 0; }
+.tec-features .legal-section + .legal-section { margin-top: 0; }
+.tec-features h2 { font-size: 1.45rem; }
+.tec-scopes { display: grid; gap: 14px; margin-top: 16px; }
+.tec-scope { padding: 16px 18px; border-radius: 18px; background: rgba(237, 244, 251, 0.8); border: 1px solid var(--legal-line); }
+.tec-scope strong { display: block; color: var(--legal-navy); }
+.tec-scope span { display: block; margin-top: 4px; color: var(--legal-muted); line-height: 1.7; }
+.tec-scope code { font-size: 0.82rem; color: var(--legal-navy); word-break: break-all; }
+.tec-english { border-left: 5px solid var(--legal-navy); }
+.legal-hero h1.tec-wide { max-width: 18ch; }
