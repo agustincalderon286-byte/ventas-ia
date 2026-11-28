@@ -8,6 +8,8 @@ export const COACH_WA_INBOX_WEBHOOK = '/webhooks/twilio/whatsapp';
 const mediaPath = '/webhooks/coach/whatsapp-audio/';
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
+const LINE_REFRESH = 2 * MINUTE;
+const LINE_GRACE = 10 * MINUTE;
 export const COACH_WA_INBOX_PATH = '/api/coach/conexiones/mi-coach-whatsapp/';
 const connectPage = 'https://totalelitecoaching.com/mis-conexiones/';
 const phonePattern = /^[1-9]\d{6,14}$/;
@@ -90,12 +92,28 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
   const waLink = 'https://wa.me/' + config.phone;
   const seller = email => available && config.sellers.has(String(email || '').toLowerCase());
   const parser = express.urlencoded({ extended: false, limit: '128kb' });
-  let worker, monitor, running = false, status = 'checking';
-  async function checkLine() {
-    const checked = await transport.lineStatus().catch(() => 'unavailable');
-    if (checked !== status) console.info('[mi-coach-whatsapp] Twilio sender status:', checked);
-    status = checked;
-    return status;
+  let worker, monitor, checking, lastOnline = null, status = 'checking', running = false;
+  const recent = duration => lastOnline !== null && now() - lastOnline < duration;
+  const lineOnline = () => status === 'online' || (status === 'unavailable' && recent(LINE_GRACE));
+
+  async function checkLine({ cached = false } = {}) {
+    if (cached && recent(LINE_REFRESH)) return true;
+    if (checking) return checking;
+    checking = (async () => {
+      const checked = await transport.lineStatus().catch(error => {
+        const reason = typeof error?.status === 'number' ? String(error.status)
+          : error?.name === 'TimeoutError' ? 'timeout' : 'connection';
+        if (status !== 'unavailable') console.warn('[mi-coach-whatsapp] Twilio lookup failed:', reason);
+        return 'unavailable';
+      });
+      if (checked === 'online') lastOnline = now();
+      else if (checked !== 'unavailable') lastOnline = null;
+      if (checked !== status) console.info('[mi-coach-whatsapp] Twilio sender status:', checked);
+      status = checked;
+      return lineOnline();
+    })();
+    try { return await checking; }
+    finally { checking = undefined; }
   }
 
   function registerWebhook(app) {
@@ -103,7 +121,8 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
     app.post(COACH_WA_INBOX_WEBHOOK, parser, async (req, res, next) => {
       if (req.body?.To !== 'whatsapp:+' + config.phone) return next();
       if (!validate(req) || req.body.AccountSid !== config.accountSid) return res.sendStatus(403);
-      if (status !== 'online') return next();
+      // Authenticated messages can wait in the queue while a temporary lookup recovers.
+      if (!lineOnline() && !['checking', 'unavailable'].includes(status)) return next();
       const event = waInboxMessage(req.body, config, now());
       if (event) {
         try {
@@ -114,9 +133,10 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
             : await bindings.exists({ contact });
           const id = linked ? hash(config.phone + ':' + event.id) : hash(contact + ':welcome:' + Math.floor(event.at / DAY));
           const encrypted = sealToken(JSON.stringify(linked ? event : { from: event.from, at: event.at, welcome: true }), config.key, id);
-          await jobs.updateOne({ _id: id }, {
+          const queued = await jobs.updateOne({ _id: id }, {
             $setOnInsert: { encrypted, phase: 'queued', at: new Date(event.at), expiresAt: new Date(event.at + DAY) }
           }, { upsert: true });
+          if (linked && queued.upsertedCount) console.info('[mi-coach-whatsapp] Seller message queued:', code ? 'link' : event.audio ? 'voice' : 'text');
         } catch (error) {
           if (error?.code !== 11000) return res.sendStatus(503);
         }
@@ -127,7 +147,7 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
 
   async function state(owner, email) {
     if (!seller(email)) return null;
-    return { online: status === 'online', linked: Boolean(await bindings.exists({ _id: owner, contact: { $exists: true } })) };
+    return { online: lineOnline(), linked: Boolean(await bindings.exists({ _id: owner, contact: { $exists: true } })) };
   }
 
   function registerConnections(app, own, back) {
@@ -135,7 +155,8 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
       if (!seller(actor.email) || !actor.direct) return res.sendStatus(403);
       const phone = String(req.body.phone || '').trim().replace(/^\+/, '').replace(/[\s()-]/g, '');
       if (!phonePattern.test(phone)) return back(res, 'waInboxPhone');
-      if (await checkLine() !== 'online') return back(res, 'waInboxUnavailable');
+      if (phone === config.phone) return back(res, 'waInboxPersonalPhone');
+      if (!await checkLine({ cached: true })) return back(res, 'waInboxUnavailable');
       const code = randomBytes(16).toString('hex');
       try {
         await bindings.updateOne({ _id: actor.id, contact: { $exists: false } }, {
@@ -165,7 +186,7 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
         }, { $set: { contact }, $unset: { challenge: 1, expectedContact: 1, until: 1 } }, { new: true }).lean();
         if (binding) {
           const user = await getUser(binding._id);
-          if (seller(user?.email) && await eligible(user)) return { text: 'Tu WhatsApp quedó vinculado a TEC. Puedes preguntarme «¿Qué sigue?», «¿A quién le marco?» o «¿Qué quedó de mi demo?».' };
+          if (seller(user?.email) && await eligible(user)) return { owner: binding._id, contact, text: 'Tu WhatsApp quedó vinculado a TEC. Puedes preguntarme «¿Qué sigue?», «¿A quién le marco?» o «¿Qué quedó de mi demo?».' };
           await bindings.deleteOne({ _id: binding._id, contact });
         }
       } catch (error) {
@@ -211,7 +232,13 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
       // Commit before sending. A network failure with unknown delivery never causes a duplicate reply.
       if (claim.modifiedCount && replyData?.text && now() - event.at < DAY &&
         (!replyData.owner || await bindings.exists({ _id: replyData.owner, contact: replyData.contact }))) {
-        await transport.send(event.from, replyData.text, voiceId);
+        try {
+          await transport.send(event.from, replyData.text, voiceId);
+          if (replyData.owner) console.info('[mi-coach-whatsapp] Seller reply accepted:', voiceId ? 'voice' : 'text');
+        } catch (error) {
+          await jobs.updateOne({ _id: job._id, phase: 'done' }, { $set: { phase: 'send-failed' } });
+          console.warn('[mi-coach-whatsapp] Reply send failed:', Number.isInteger(error?.status) ? error.status : 'connection');
+        }
       }
     } catch {
       await jobs.updateOne({ _id: job._id, phase: 'working', lease: job.lease },
@@ -222,10 +249,10 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
   function start() {
     if (!available || worker) return;
     void checkLine();
-    monitor = setInterval(checkLine, 5 * MINUTE);
+    monitor = setInterval(checkLine, LINE_REFRESH);
     monitor.unref();
     worker = setInterval(async () => {
-      if (running || status !== 'online') return;
+      if (running || !lineOnline()) return;
       running = true;
       try { await runOne(); }
       catch { console.error('[mi-coach-whatsapp] Worker temporarily unavailable.'); }

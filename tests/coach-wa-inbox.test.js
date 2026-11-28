@@ -101,6 +101,7 @@ test('webhook firmado guarda una versión cifrada, deduplica y no procesa audio 
   const rows = new Map();
   const jobs = { async updateOne({ _id }, { $setOnInsert }) {
     if (!rows.has(_id)) rows.set(_id, $setOnInsert);
+    return { upsertedCount: 0 };
   } };
   const checks = [];
   const bindings = { async exists(query) { checks.push(query); return null; } };
@@ -149,4 +150,67 @@ test('Twilio confirma remitente ONLINE y envía notas de voz con MediaUrl', asyn
   assert.equal(requests[2].init.body.get('MediaUrl'), attachment);
   assert.equal(requests[2].init.body.get('Body'), null);
   assert.equal(requests[2].init.body.get('From'), 'whatsapp:+' + phone);
+});
+
+test('vincular mantiene una verificación reciente frente a fallos transitorios y rechaza una baja confirmada', async t => {
+  let at = now;
+  let status = 'online';
+  let lookups = 0;
+  const bindings = {
+    async updateOne() { return { upsertedCount: 1 }; },
+    async exists() { return false; }
+  };
+  const inbox = createCoachWaInbox({
+    config, bindings, jobs: {}, now: () => at,
+    transport: { async lineStatus() {
+      lookups++;
+      if (status === 'transient') throw Object.assign(new Error('Unavailable'), { status: 503 });
+      return status;
+    } }
+  });
+  const app = express();
+  app.use(express.urlencoded({ extended: false }));
+  inbox.registerConnections(app, fn => (req, res) => fn(req, res, { id: actor.owner, email: seller, direct: true }),
+    (res, state) => res.status(409).send(state));
+  const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+  t.after(() => server.close());
+  const url = 'http://127.0.0.1:' + server.address().port + '/api/coach/conexiones/mi-coach-whatsapp/link';
+  const link = (number = from) => fetch(url, { method: 'POST', redirect: 'manual', body: new URLSearchParams({ phone: '+' + number }) });
+
+  assert.equal(await (await link(phone)).text(), 'waInboxPersonalPhone');
+  const first = await link();
+  assert.equal(first.status, 303);
+  assert.match(first.headers.get('location'), /^https:\/\/wa\.me\/\d+\?text=VINCULAR%20[a-f0-9]{32}$/);
+  assert.equal(lookups, 1);
+
+  status = 'transient';
+  at += 60_000;
+  assert.equal((await link()).status, 303);
+  assert.equal(lookups, 1);
+
+  at += 3 * 60_000;
+  assert.equal((await link()).status, 303);
+  assert.equal(lookups, 2);
+  assert.equal((await inbox.state(actor.owner, seller)).online, true);
+
+  status = 'offline';
+  assert.equal(await (await link()).text(), 'waInboxUnavailable');
+  assert.equal((await inbox.state(actor.owner, seller)).online, false);
+
+  status = 'transient';
+  assert.equal(await (await link()).text(), 'waInboxUnavailable');
+
+  status = 'online';
+  assert.equal((await link()).status, 303);
+  at += 11 * 60_000;
+  status = 'transient';
+  assert.equal(await (await link()).text(), 'waInboxUnavailable');
+});
+
+test('la API distingue un fallo temporal de un rechazo de autenticación', async () => {
+  let status = 429;
+  const transport = coachWaInboxTransport(config, { fetcher: async () => Response.json({}, { status }) });
+  await assert.rejects(transport.lineStatus(), { status: 429 });
+  status = 403;
+  assert.equal(await transport.lineStatus(), 'unauthorized');
 });

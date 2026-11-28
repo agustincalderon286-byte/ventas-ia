@@ -38,13 +38,16 @@ export function coachWaInboxTransport(config, { env = process.env, fetcher = fet
     });
   }
   async function json(response) {
-    if (!response.ok) throw failure();
+    if (!response.ok) throw Object.assign(failure(), { status: response.status });
     return response.json();
   }
 
   return {
     async lineStatus() {
-      const info = await json(await request('https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=100'));
+      const response = await request('https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=100');
+      if ([401, 403].includes(response.status)) return 'unauthorized';
+      if (response.status >= 400 && response.status < 500 && ![408, 429].includes(response.status)) return 'lookup-rejected';
+      const info = await json(response);
       const sender = info.senders?.find(item => item.sender_id === from);
       if (!sender) return 'not-registered';
       if (!['ONLINE', 'ONLINE:UPDATING'].includes(sender.status)) return 'offline';

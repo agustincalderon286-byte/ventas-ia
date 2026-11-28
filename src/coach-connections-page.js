@@ -31,6 +31,7 @@ export const notices = {
   waProfileSaved: 'Guardaste tu número de referencia para los próximos borradores de WhatsApp.',
   waProfileRemoved: 'Borraste tu número de referencia para los próximos borradores de WhatsApp.',
   waInboxPhone: 'Escribe tu número con el prefijo del país. Ejemplo: +1 202 555 0100.',
+  waInboxPersonalPhone: 'Escribe el número de tu WhatsApp personal, desde el que le vas a escribir a Jorge.',
   waInboxUnavailable: 'La línea de Jorge todavía no está disponible. Vuelve a intentar más tarde.',
   waInboxAlreadyLinked: 'Mi Coach ya está vinculado a esta cuenta.',
   waInboxUnlinked: 'Desvinculaste tu WhatsApp de Mi Coach.',
@@ -92,7 +93,7 @@ export function connectionsPage({ doc, cal, pilot, calendarPilot = pilot, ready,
       : (personalCoach.online === false ? '<p>Estamos verificando la línea de Jorge en Twilio.</p>' : '') +
         '<p>Usa tu WhatsApp personal. Confirma la vinculación enviando el mensaje que se abre. Si mandas audio, TEC usa OpenAI para transcribirlo y Microsoft para generar la voz de Jorge.</p>' +
         coachWhatsAppForm('link','Vincular WhatsApp',false,
-         '<label>Tu número con prefijo de país <input name="phone" type="tel" autocomplete="tel" placeholder="+1 202 555 0100" required></label>' +
+         '<label>Tu número personal de WhatsApp con prefijo de país <input name="phone" type="tel" autocomplete="tel" placeholder="+1 202 555 0100" required></label>' +
          '<label>Zona horaria <select name="zone"><option value="America/Chicago">Centro</option><option value="America/New_York">Este</option><option value="America/Denver">Montaña</option><option value="America/Los_Angeles">Pacífico</option><option value="America/Mexico_City">Ciudad de México</option></select></label>')}
     </section>` : '';
   const calForm = (action,label,secondary,fields) => form(action,label,secondary,'/api/coach/conexiones/calendar/',fields);
