@@ -191,7 +191,7 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
   }
 
   // Bloque de cinco personas para llamar, con el motivo de cada una. `ref` no revela a la persona.
-  async function callBlock(actor, { more = false } = {}) {
+  async function callBlock(actor, { more = false, limit = BLOCK } = {}) {
     const cal = calendarOf(now(), actor.zone);
     const log = await ensureLog(actor.owner, cal.day);
     const given = new Set(more ? log.given || [] : []);
@@ -221,7 +221,7 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
     }
     pool.sort((a, b) => a.rank - b.rank);
     const fresh = pool.filter(p => !given.has(p.ref));
-    const block = fresh.slice(0, BLOCK);
+    const block = fresh.slice(0, limit);
     if (block.length) await logs.updateOne({ owner: actor.owner, day: cal.day }, { $addToSet: { given: { $each: block.map(p => p.ref) } } });
     return { source, total: pool.length, left: Math.max(0, fresh.length - block.length),
       people: block.map(({ rank, bucket, ...person }) => person),
@@ -270,7 +270,7 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
           { $inc: { ['calls.' + before]: -1, ['calls.' + result]: 1 }, $set: { ['calls.refs.' + ref]: result } });
       }
       const log = await logs.findOne({ owner: actor.owner, day: cal.day }).select('calls').lean();
-      return { calls: Number(log?.calls?.total) || 0 };
+      return { calls: Number(log?.calls?.total) || 0, recorded: log?.calls?.refs?.[ref] === result };
     },
     async setGoal(actor, leads) {
       const value = Number(leads);

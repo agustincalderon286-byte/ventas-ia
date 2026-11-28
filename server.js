@@ -23,6 +23,8 @@ import { createDemoCloseService, demoCloseText, inDemoClosePilot, registerDemoCl
 import { extractSellerCloseReply } from "./src/coach-demo-close-facts.js";
 import { createFollowupStore } from "./src/coach-followup-store.js";
 import { COACH_META_WEBHOOK_PATH, createCoachMetaInboundModel, createCoachMetaWebhook } from "./src/coach-meta-webhook.js";
+import { createCoachWaInbox, createWaInboxAudio, createWaInboxModels, waInboxConfig } from "./src/coach-wa-inbox.js";
+import { coachWaInboxTransport } from "./src/coach-wa-inbox-transport.js";
 import { personalCalendarCrm } from "./src/coach-personal-crm-link.js";
 import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
@@ -2541,6 +2543,24 @@ app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarW
 const coachMetaWebhook = createCoachMetaWebhook({ store: createCoachMetaInboundModel(mongoose) });
 app.get(COACH_META_WEBHOOK_PATH, coachMetaWebhook.verify);
 app.post(COACH_META_WEBHOOK_PATH, coachMetaWebhook.rawBody, coachMetaWebhook.receive);
+const personalConnectionsConfig = connectionConfig(process.env);
+const waInboxConfigValues = waInboxConfig(process.env, personalConnectionsConfig.key);
+const waInboxModels = waInboxConfigValues.ready ? createWaInboxModels(mongoose) : {};
+const waInboxAudio = waInboxConfigValues.ready ? createWaInboxAudio({ model: waInboxModels.audio, key: waInboxConfigValues.key }) : null;
+const coachWaInbox = createCoachWaInbox({
+  config: waInboxConfigValues, ...waInboxModels,
+  transport: waInboxConfigValues.ready ? coachWaInboxTransport(waInboxConfigValues, { storeAudio: waInboxAudio.store }) : null,
+  validate: req => validarFirmaTwilioWebhook(req) && (!TWILIO_WHATSAPP_WEBHOOK_TOKEN ||
+    cleanText(req.query.token || "") === TWILIO_WHATSAPP_WEBHOOK_TOKEN),
+  voice: createCoachVoiceProvider({ timeoutMs: 30000 }),
+  getUser: id => CoachUser.findById(id).lean(),
+  eligible: coachTieneAccesoOperativo,
+  myDay: () => runCoachConnectedAgent.myDay,
+  latestDemo: ownerUserId => CoachDemoAnalysis.findOne({ ownerUserId, status: "completed" })
+    .sort({ startedAt: -1 }).select("autoCloseReceipt visitQuestions").lean()
+});
+coachWaInbox.registerWebhook(app);
+waInboxAudio?.register(app);
 app.post(COACH_REFERRAL_PHOTO_PATH, express.json({ limit: "3mb" }));
 app.post(liveTurnPath, liveTurnBody);
 app.use(express.json({ limit: "15mb" }));
@@ -25762,7 +25782,6 @@ app.get("/mis-conexiones/", async (req, res, next) => {
   req.tecRequestAuth = auth;
   next();
 });
-const personalConnectionsConfig = connectionConfig(process.env);
 const demoCloseService = createDemoCloseService(CoachDemoAnalysis);
 function canUseDemoClose(auth, req) {
   return inDemoClosePilot(auth, Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE]), personalConnectionsConfig.planPilot);
@@ -25771,7 +25790,7 @@ registerDemoClose(app, { active: requireCoachActivo, allowed: canUseDemoClose, s
 const personalFollowups = createFollowupStore({ key: personalConnectionsConfig.key });
 const runCoachConnectedAgent = registerCoachConnections(app, {
   readSheetsSession: req => obtenerCoachAuth(req),
-  config: personalConnectionsConfig, followups: personalFollowups,
+  config: personalConnectionsConfig, followups: personalFollowups, waInbox: coachWaInbox,
   requireActive: requireCoachActivo,
   ...personalCalendarCrm({ users: CoachUser, records: CoachCrmRecord, viewerQuery: construirCoachCrmViewerQuery,
     applySources: aplicarCoachCrmActualizacionAFuentes, invalidate: invalidarCoachWorkspaceCaches }),
@@ -35328,6 +35347,7 @@ async function iniciarServidor() {
     await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),...Object.values(raffleLeadModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet,coachDayPushDevices,...(runCoachConnectedAgent.myDay ? Object.values(runCoachConnectedAgent.myDay.models) : [])].map(model => model.init()));
     await coachTeamPush.initialize();
     await coachDayPush.initialize();
+    await Promise.all(Object.values(waInboxModels).map(model => model.init()));
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))
@@ -35336,13 +35356,14 @@ async function iniciarServidor() {
     teamChatWorker.start();
     coachTeamPush.start();
     coachDayPush.start();
+    coachWaInbox.start();
 
     const server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { clearInterval(followupTimer); clearInterval(chatPurgeTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); coachDayPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => expiringFollowups || purgingChats || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { clearInterval(followupTimer); clearInterval(chatPurgeTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); coachDayPush.stop(); teamChatWorker.stop(); coachWaInbox.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => expiringFollowups || purgingChats || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy() || coachWaInbox.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

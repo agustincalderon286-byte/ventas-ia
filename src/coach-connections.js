@@ -35,6 +35,7 @@ import { createFollowupStore, purgeCalendarProposals } from './coach-followup-st
 import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectionsPage, notices } from './coach-connections-page.js';
+import { COACH_WA_INBOX_PATH } from './coach-wa-inbox.js';
 import { gmailClient, openToken, sealToken, gmailScope, gmailSendScope } from './coach-hycite-gmail.js';
 
 const page = '/mis-conexiones/';
@@ -80,7 +81,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   // Gmail time offers need the real Mongo stores unless a test injects its own.
   offers,
   // «Mi día»: null lo apaga (pruebas); por defecto usa los modelos de TEC.
-  myDayDependencies = {} }) {
+  myDayDependencies = {}, waInbox = null }) {
   const followupStore = followups || createFollowupStore({key:config.key});
   const offerStore = offers !== undefined ? offers : store === Store ? createMailOffers({key:config.key,
     rememberEvent:(b,receipt) => followupStore.rememberEvent(b,receipt)}) : null;
@@ -119,10 +120,11 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       if (sheetsRequest && !sheetsPilot) return res.status(403).send('Abre Google Sheets desde tu propia cuenta del piloto.');
       const assistantPilot = direct && Boolean(config.loopPilot?.some(value => value==='*' || value===email));
       const assistantRequest = req.path.startsWith(assistantApi);
+      const waInboxRequest = req.path.startsWith(COACH_WA_INBOX_PATH);
       if (assistantRequest && !assistantPilot) return res.status(403).send('Esta cuenta aún no participa en el piloto del asistente.');
-      if (!calendarRequest && !sheetsRequest && !contactsRequest && !assistantRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
+      if (!calendarRequest && !sheetsRequest && !contactsRequest && !assistantRequest && !waInboxRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
       if (req.method === 'POST' && req.body?.csrf !== session) return res.status(403).send('La sesión cambió. Vuelve a abrir Mis conexiones.');
-      if (req.method === 'POST' && (sheetsRequest || contactsRequest || assistantRequest || req.path.startsWith(waProfileApi))) {
+      if (req.method === 'POST' && (sheetsRequest || contactsRequest || assistantRequest || waInboxRequest || req.path.startsWith(waProfileApi))) {
         const site = req.get('Sec-Fetch-Site');
         const fromPanel = site ? site === 'same-origin' : req.get('Origin') === req.protocol + '://' + req.get('host');
         if (!fromPanel) return res.status(403).send('Abre el formulario desde Mis conexiones.');
@@ -134,7 +136,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
           fresh.session.tokenHash!==auth.session.tokenHash) return false;
         return fresh.session.accessMode==='direct' || (!fresh.session.accessMode && fresh.user.accountType!=='seat');
       };
-      await handler(req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
+      await handler(req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email, direct, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
     } catch (error) {
       if (req.path.startsWith('/api/coach/conexiones/contactos/') || (req.path===api+'callback' && req.query?.state?.startsWith?.('people.'))) return back(res,error.reauthorize?'contactsReconnect':'contactsFailed');
       if (req.path === sheetsApi+'picker-token') return res.status(error.status || 503).json({error:'Vuelve a abrir Google Sheets en Mis conexiones.'});
@@ -152,6 +154,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     }
   };
 
+  waInbox?.registerConnections(app, own, back);
   calendar.register(app, own, back);
   contacts.register(app, own, back);
   sheets.register(app, own, back);
@@ -179,7 +182,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     await agentConsent.revoke(id);
     return back(res, 'assistantOff');
   }));
-  app.get(page, own(async (req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email }) => {
+  app.get(page, own(async (req, res, { id, session, pilot, calendarPilot, sheetsPilot, contactsPilot, assistantPilot, email, direct }) => {
     const personalWhatsAppReady = config.key?.length === 32;
     // Solo el email exacto del piloto ve la línea Business, y solo con el alta completa (igual que el chat);
     // mientras tanto conserva el flujo manual. El estado lo confirma Graph en cada carga.
@@ -193,13 +196,14 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       contactsPilot && config.contactsReady ? contacts.panel(id) : null,
       assistantPilot ? agentConsent.state(id) : null
     ]);
+    const personalCoach = direct && waInbox ? await waInbox.state(id, email) : null;
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
     res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
-    res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
+    res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com" + (personalCoach ? " https://wa.me https://api.whatsapp.com https://web.whatsapp.com" : ""));
     res.send(connectionsPage({ doc, cal, pilot, calendarPilot, contacts:contactsProfile, contactsPilot, contactsReady:config.contactsReady, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
-      personalWhatsAppReady, senderPhone, businessLine, businessPending,
+      personalWhatsAppReady, senderPhone, businessLine, businessPending, personalCoach,
       businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), assistant: assistantPilot ? assistantAccepted : null, coachEmail:email, csrf:session, message }));
   }));
 

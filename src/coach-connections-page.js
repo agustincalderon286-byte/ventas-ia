@@ -30,6 +30,10 @@ export const notices = {
   sheetsFailed: 'Google Sheets no pudo completar la operación. Revisa tu conexión y vuelve a intentarlo.',
   waProfileSaved: 'Guardaste tu número de referencia para los próximos borradores de WhatsApp.',
   waProfileRemoved: 'Borraste tu número de referencia para los próximos borradores de WhatsApp.',
+  waInboxPhone: 'Escribe tu número con el prefijo del país. Ejemplo: +1 202 555 0100.',
+  waInboxUnavailable: 'La línea de Jorge todavía no está disponible. Vuelve a intentar más tarde.',
+  waInboxAlreadyLinked: 'Mi Coach ya está vinculado a esta cuenta.',
+  waInboxUnlinked: 'Desvinculaste tu WhatsApp de Mi Coach.',
   waPhoneInvalid: 'Escribe un solo número de WhatsApp con el signo + y el prefijo del país.',
   waProfileFailed: 'No se pudo actualizar tu número de referencia. Vuelve a intentarlo.',
   calendarConnected: 'Google Calendar conectado. Ya puedes agendar seguimientos desde el chat.',
@@ -77,10 +81,20 @@ function businessSection(line, coachEmail, template) {
     <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>`;
 }
 
-export function connectionsPage({ doc, cal, pilot, calendarPilot = pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, assistant = null, coachEmail, csrf, message }) {
+export function connectionsPage({ doc, cal, pilot, calendarPilot = pilot, ready, calendarReady, contacts, contactsReady, contactsPilot, sheets, sheetsReady, sheetsPilot, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, personalCoach = null, assistant = null, coachEmail, csrf, message }) {
   // Alta de la línea Business incompleta: se mantiene el flujo manual y se avisa sin datos de la configuración.
   const pendingNote = businessPending ? '<p class="notice">TEC todavía no completó la conexión de tu línea de WhatsApp Business con Meta. Mientras tanto, prepara tus borradores aquí y envíalos desde tu app.</p>' : '';
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
+  const coachWhatsAppForm = (action, title, secondary, input = '') =>
+    form(action, title, secondary, '/api/coach/conexiones/mi-coach-whatsapp/', input);
+  const personalCoachPanel = personalCoach ? `<section><h2>Mi Coach en WhatsApp</h2>
+    ${personalCoach.linked ? '<p>Tu WhatsApp está vinculado con Jorge.</p>' + coachWhatsAppForm('unlink','Desvincular WhatsApp',true)
+      : (personalCoach.online === false ? '<p>Estamos verificando la línea de Jorge en Twilio.</p>' : '') +
+        '<p>Usa tu WhatsApp personal. Confirma la vinculación enviando el mensaje que se abre. Si mandas audio, TEC usa OpenAI para transcribirlo y Microsoft para generar la voz de Jorge.</p>' +
+        coachWhatsAppForm('link','Vincular WhatsApp',false,
+         '<label>Tu número con prefijo de país <input name="phone" type="tel" autocomplete="tel" placeholder="+1 202 555 0100" required></label>' +
+         '<label>Zona horaria <select name="zone"><option value="America/Chicago">Centro</option><option value="America/New_York">Este</option><option value="America/Denver">Montaña</option><option value="America/Los_Angeles">Pacífico</option><option value="America/Mexico_City">Ciudad de México</option></select></label>')}
+    </section>` : '';
   const calForm = (action,label,secondary,fields) => form(action,label,secondary,'/api/coach/conexiones/calendar/',fields);
   function rows(title, items, empty) {
     const links = items.map(item => {
@@ -145,7 +159,7 @@ export function connectionsPage({ doc, cal, pilot, calendarPilot = pilot, ready,
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail,needsGoogleAuthorization:message===notices.sheetsReconnect}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}</main></body></html>`;
+    ${personalCoachPanel}${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${contactsPane}${sheetsPilot ? sheetsSection({form,profile:sheets,ready:sheetsReady,email:coachEmail,needsGoogleAuthorization:message===notices.sheetsReconnect}) : ''}${assistant ? assistantSection({form,assistant}) : ''}${results}</main></body></html>`;
 }
 
 // Permiso para el asistente con ciclo de herramientas. El texto debe describir exactamente lo que
