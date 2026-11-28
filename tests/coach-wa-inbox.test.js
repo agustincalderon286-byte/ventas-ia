@@ -65,8 +65,8 @@ test('agenda y demo usan solo el vendedor vinculado y los recibos guardados', as
   };
   assert.match(await inboxReply('Jorge, ¿qué sigue?', { actor, myDay, latestDemo }), /11:00 · Demo propia/);
   const info = await inboxReply('¿Qué quedó de mi demo?', { actor, myDay, latestDemo });
-  assert.match(info, /Encuesta guardada.*Referidos guardados en el 4 en 14: 2.*1 datos/);
-  assert.doesNotMatch(info, /Cita de seguimiento guardada/);
+  assert.match(info, /Encuesta guardada en el CRM.*4 en 14 en tu Hoja TEC: 2.*1 datos/);
+  assert.doesNotMatch(info, /Cita de seguimiento/);
   assert.deepEqual(scoped, ['owner1', 'owner1']);
 });
 
@@ -93,8 +93,50 @@ test('registra una sola llamada del día y no inventa registros', async () => {
   } };
   assert.match(await callReply('No contestó', context), /Primero dime/);
   assert.match(await callReply('¿A quién le marco?', context), /María Prueba/);
-  assert.match(await callReply('Registra que no contestó.', context), /Resultado guardado/);
+  assert.match(await callReply('Registra que no contestó.', context), /conteo de Mi día: No contestó.*Hoja TEC y el CRM no cambiaron/);
   assert.equal(updated, 1);
+});
+
+test('el recibo de la demo dice dónde quedó cada dato y qué no se guardó', async () => {
+  const latestDemo = async () => ({ autoCloseReceipt: {
+    survey: { state: 'saved' }, appointment: { state: 'busy' },
+    referrals: { state: 'checked', saved: 3, duplicates: 1, pending: 2 },
+    referralAppointments: [{ name: 'A', state: 'saved' }, { name: 'B', state: 'time' }]
+  }, visitQuestions: 0 });
+  const info = await inboxReply('Qué quedó de mi demo', { actor, latestDemo });
+  assert.match(info, /Hoja TEC: 3\./);
+  assert.match(info, /Ya estaban en tu hoja: 1\./);
+  assert.match(info, /sin guardar, por revisar: 2\./);
+  assert.match(info, /no se guardó: ese horario ya estaba ocupado/);
+  assert.match(info, /Citas de referidos en tu calendario: 1\. Citas de referidos sin guardar: 1\./);
+  assert.doesNotMatch(info, /Faltan/);
+});
+
+test('volver a llamar y sacó cita solo cuentan en Mi día y lo dicen; la siguiente llamada salta las ya registradas', async () => {
+  const binding = {};
+  const ref = 'l0123456789ab';
+  const asked = [];
+  const myDay = {
+    async callBlock(_a, options) { asked.push(options); return { people: [{ name: 'Ana', ref, reason: 'Pendiente.' }] }; },
+    async callResult() { return { recorded: true }; }
+  };
+  const context = { actor, binding, myDay, now, saveCall: async (nextCall, callDay) => {
+    Object.assign(binding, { nextCall, callDay });
+    return { matchedCount: 1 };
+  } };
+  await callReply('A quién le marco', context);
+  assert.equal(asked[0].skipDone, true);
+  const later = await callReply('Volver a llamar el martes a las 5', context);
+  assert.match(later, /Volver a llamar.*No quedó un recordatorio con fecha/);
+  assert.match(later, /no quedó guardado/);
+  assert.match(await callReply('Sacó cita', context), /La cita no quedó agendada/);
+});
+
+test('confirmar o mover una cita por WhatsApp no finge haberlo hecho', async () => {
+  for (const text of ['Confirmó el sábado a las diez', 'Ya me canceló la de mañana', 'Mueve la cita de Ana al lunes']) {
+    assert.match(await inboxReply(text, { actor }), /no cambié nada/);
+  }
+  assert.match(await inboxReply('Hola', { actor }), /Puedes decir/);
 });
 
 test('webhook firmado guarda una versión cifrada, deduplica y no procesa audio de desconocidos', async t => {
@@ -217,4 +259,88 @@ test('la API distingue un fallo temporal de un rechazo de autenticación', async
   assert.equal(await transport.lineStatus(), 'unauthorized');
   accountStatus = 200;
   assert.equal(await transport.lineStatus(), 'signed-webhook-required');
+});
+
+test('con la línea rechazada, un mensaje firmado se queda en la cola y nunca pasa al bot Chef', async t => {
+  const rows = new Map();
+  const jobs = { async updateOne({ _id }, { $setOnInsert }) {
+    if (!rows.has(_id)) rows.set(_id, $setOnInsert);
+    return { upsertedCount: 1 };
+  } };
+  const inbox = createCoachWaInbox({
+    config, jobs, bindings: { async exists() { return true; } }, now: () => now,
+    transport: { async lineStatus() { return 'unauthorized'; } }, validate: () => true
+  });
+  inbox.start();
+  t.after(inbox.stop);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  let chef = 0;
+  const app = express();
+  inbox.registerWebhook(app);
+  app.post(COACH_WA_INBOX_WEBHOOK, (_req, res) => { chef++; res.send('chef'); });
+  const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+  t.after(() => server.close());
+  const response = await fetch('http://127.0.0.1:' + server.address().port + COACH_WA_INBOX_WEBHOOK,
+    { method: 'POST', body: new URLSearchParams(msg()) });
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /<Response><\/Response>/);
+  assert.equal(chef, 0);
+  assert.equal(rows.size, 1);
+  assert.equal(await inbox.state(actor.owner, seller).then(s => s?.online), false);
+});
+
+test('si procesar falla, el vendedor vinculado recibe un aviso una sola vez', async t => {
+  const { sealToken } = await import('../src/coach-hycite-gmail.js');
+  const event = { id: message, from, at: now, text: '¿Qué sigue?', audio: null };
+  let job = { _id: 'job1', encrypted: sealToken(JSON.stringify(event), key, 'job1'), at: new Date(now), phase: 'queued' };
+  const jobs = {
+    findOneAndUpdate() {
+      if (job.phase !== 'queued') return { lean: async () => null };
+      job = { ...job, phase: 'working', lease: new Date(now + 300000) };
+      const claimed = { ...job };
+      return { lean: async () => claimed };
+    },
+    async updateOne(query, update) {
+      if (query.phase !== job.phase) return { modifiedCount: 0 };
+      job = { ...job, ...update.$set };
+      return { modifiedCount: 1 };
+    }
+  };
+  const sent = [];
+  const bindings = {
+    async exists() { return true; },
+    findOne() { return { lean: async () => ({ _id: 'owner1', contact: 'c', zone: 'America/Chicago' }) }; }
+  };
+  const inbox = createCoachWaInbox({
+    config, jobs, bindings, now: () => now, validate: () => true,
+    getUser: async () => ({ _id: 'owner1', email: seller }), eligible: async () => true,
+    myDay: () => ({ async state() { throw new Error('Mongo caído'); } }), latestDemo: async () => null,
+    transport: { async lineStatus() { return 'online'; }, async send(to, text) { sent.push({ to, text }); } }
+  });
+  inbox.start();
+  t.after(inbox.stop);
+  await new Promise(resolve => setTimeout(resolve, 2300));
+  assert.equal(job.phase, 'failed');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].to, from);
+  assert.match(sent[0].text, /No pude terminar/);
+});
+
+test('el remitente no cuenta como en línea si el webhook no lleva el token que exige el servidor', async () => {
+  const guarded = waInboxConfig({ ...env, TWILIO_WHATSAPP_WEBHOOK_TOKEN: 'token-de-prueba' }, key);
+  let callback = 'https://totalelitecoaching.com/webhooks/twilio/whatsapp';
+  const transport = coachWaInboxTransport(guarded, { fetcher: async () => Response.json({
+    senders: [{ sender_id: 'whatsapp:+' + phone, status: 'ONLINE', webhook: { callback_url: callback } }] }) });
+  assert.equal(await transport.lineStatus(), 'webhook-pending');
+  callback += '?token=token-de-prueba';
+  assert.equal(await transport.lineStatus(), 'online');
+});
+
+test('«A quién le marco» da el teléfono listo para marcar, o ninguno si no es claro', async () => {
+  let phoneOf = '(312) 555-0123';
+  const myDay = { async callBlock() { return { people: [{ name: 'Ana', ref: 'l0123456789ab', phone: phoneOf, reason: 'Pendiente.' }] }; } };
+  const context = { actor, binding: {}, myDay, now, saveCall: async () => ({ matchedCount: 1 }) };
+  assert.match(await callReply('A quién le marco', context), /^Ana, \+13125550123\. Pendiente\./);
+  phoneOf = '555';
+  assert.match(await callReply('A quién le marco', context), /^Ana\. Pendiente\./);
 });

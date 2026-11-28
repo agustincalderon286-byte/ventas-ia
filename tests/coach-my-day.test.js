@@ -179,6 +179,16 @@ test('cada persona del bloque cuenta una sola llamada aunque cambie el resultado
   assert.equal((await f.service.state(f.actor)).today.calls, 2);
 });
 
+test('una llamada a la vez (WhatsApp) no vuelve a dar a quien ya tiene resultado hoy', async () => {
+  const f = fixture();
+  const [first] = (await f.service.callBlock(f.actor, { limit: 1, skipDone: true })).people;
+  assert.equal((await f.service.callBlock(f.actor, { limit: 1, skipDone: true })).people[0].ref, first.ref);
+  await f.service.callResult(f.actor, { ref: first.ref, result: 'no_contesto' });
+  const [next] = (await f.service.callBlock(f.actor, { limit: 1, skipDone: true })).people;
+  assert.ok(next && next.ref !== first.ref);
+  assert.equal((await f.service.callBlock(f.actor, { limit: 1 })).people[0].ref, first.ref, 'el bloque de la web no cambia');
+});
+
 test('la ruta de prospección cuenta los leads capturados desde que salió', async () => {
   const f = fixture();
   f.advance(60000);

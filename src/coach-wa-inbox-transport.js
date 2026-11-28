@@ -65,6 +65,7 @@ export function coachWaInboxTransport(config, { env = process.env, fetcher = fet
         const hosts = ['totalelitecoaching.com', 'www.totalelitecoaching.com', 'cmwf-crm-api.onrender.com'];
         return callback.protocol === 'https:' && !callback.port && hosts.includes(callback.hostname)
           && callback.pathname === '/webhooks/twilio/whatsapp'
+          && (!config.webhookToken || callback.searchParams.get('token') === config.webhookToken)
           && (sender.webhook.callback_method || 'POST').toUpperCase() === 'POST' ? 'online' : 'webhook-pending';
       } catch { return 'webhook-pending'; }
     },

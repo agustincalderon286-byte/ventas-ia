@@ -47,7 +47,9 @@ export function waInboxConfig(env, key) {
     .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)));
   const ready = read('ENABLED') === '1' && phonePattern.test(phone)
     && /^AC[a-f0-9]{32}$/i.test(accountSid) && authToken.length >= 16 && key?.length === 32 && sellers.size > 0;
-  return { ready, phone, accountSid, authToken, sellers, key };
+  // server.js also requires ?token= on this webhook when this variable is set; the sender check verifies it.
+  const webhookToken = String(env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || '').trim();
+  return { ready, phone, accountSid, authToken, sellers, key, webhookToken };
 }
 
 export function waInboxMessage(body, config, at) {
@@ -123,8 +125,9 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
     app.post(COACH_WA_INBOX_WEBHOOK, parser, async (req, res, next) => {
       if (req.body?.To !== 'whatsapp:+' + config.phone) return next();
       if (!validate(req) || req.body.AccountSid !== config.accountSid) return res.sendStatus(403);
-      // Authenticated messages can wait in the queue while a temporary lookup recovers.
-      if (!lineOnline() && !['checking', 'unavailable'].includes(status)) return next();
+      // A signed message for this line is always handled here, never by the public Chef bot on the same path:
+      // link codes and seller questions must not end up in a public-lead chat. While the line is not usable
+      // (suspended or rejected credentials) it waits in the queue and is answered within 24 h once Twilio recovers.
       const event = waInboxMessage(req.body, config, now());
       if (event) {
         try {
@@ -243,8 +246,18 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
         }
       }
     } catch {
-      await jobs.updateOne({ _id: job._id, phase: 'working', lease: job.lease },
-        { $set: { phase: 'failed' }, $unset: { encrypted: 1, lease: 1 } });
+      const failed = await jobs.updateOne({ _id: job._id, phase: 'working', lease: job.lease },
+        { $set: { phase: 'failed' }, $unset: { encrypted: 1, lease: 1 } }).catch(() => null);
+      // Tell a linked seller once that the message failed, instead of leaving it unanswered.
+      let event = null;
+      try { event = JSON.parse(openToken(job.encrypted, config.key, job._id)); } catch { /* unreadable job */ }
+      if (failed?.modifiedCount && event?.from && !event.welcome && now() - event.at < DAY) {
+        try {
+          if (await bindings.exists({ contact: contactOf(event.from) })) {
+            await transport.send(event.from, 'No pude terminar de procesar ese mensaje. Revisa Mi día en el Coach antes de repetirlo, por si algo alcanzó a guardarse.');
+          }
+        } catch { console.warn('[mi-coach-whatsapp] Failure notice not sent.'); }
+      }
     }
   }
 

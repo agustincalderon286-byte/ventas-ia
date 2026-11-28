@@ -191,10 +191,12 @@ export function createMyDay({ config = {}, models = createMyDayModels(), sources
   }
 
   // Bloque de cinco personas para llamar, con el motivo de cada una. `ref` no revela a la persona.
-  async function callBlock(actor, { more = false, limit = BLOCK } = {}) {
+  // skipDone: leave out the people whose result was already recorded today (WhatsApp asks one call at a time).
+  async function callBlock(actor, { more = false, limit = BLOCK, skipDone = false } = {}) {
     const cal = calendarOf(now(), actor.zone);
     const log = await ensureLog(actor.owner, cal.day);
     const given = new Set(more ? log.given || [] : []);
+    if (skipDone) for (const ref of Object.keys(log.calls?.refs || {})) given.add(ref);
     const refOf = key => 'l' + createHash('sha256').update(String(actor.owner) + '\n' + key).digest('hex').slice(0, 12);
     let pool = [], source = 'tec';
     const ctx = await sheetContext(actor).catch(() => null);
