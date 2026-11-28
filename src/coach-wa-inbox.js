@@ -40,8 +40,9 @@ export function createWaInboxModels(mongoose) {
 export function waInboxConfig(env, key) {
   const read = name => String(env['COACH_WA_INBOX_' + name] || '').trim();
   const phone = read('PHONE').replace(/^\+/, '');
-  const accountSid = String(env.TWILIO_ACCOUNT_SID || '').trim();
-  const authToken = String(env.TWILIO_AUTH_TOKEN || '').trim();
+  const separate = read('TWILIO_ACCOUNT_SID') || read('TWILIO_AUTH_TOKEN');
+  const accountSid = separate ? read('TWILIO_ACCOUNT_SID') : String(env.TWILIO_ACCOUNT_SID || '').trim();
+  const authToken = separate ? read('TWILIO_AUTH_TOKEN') : String(env.TWILIO_AUTH_TOKEN || '').trim();
   const sellers = new Set(read('SELLERS').toLowerCase().split(',').map(email => email.trim())
     .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)));
   const ready = read('ENABLED') === '1' && phonePattern.test(phone)
@@ -94,7 +95,8 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
   const parser = express.urlencoded({ extended: false, limit: '128kb' });
   let worker, monitor, checking, lastOnline = null, status = 'checking', running = false;
   const recent = duration => lastOnline !== null && now() - lastOnline < duration;
-  const lineOnline = () => status === 'online' || (status === 'unavailable' && recent(LINE_GRACE));
+  const usable = new Set(['online', 'signed-webhook-required']);
+  const lineOnline = () => usable.has(status) || (status === 'unavailable' && recent(LINE_GRACE));
 
   async function checkLine({ cached = false } = {}) {
     if (cached && recent(LINE_REFRESH)) return true;
@@ -106,7 +108,7 @@ export function createCoachWaInbox({ config, bindings, jobs, transport, voice, v
         if (status !== 'unavailable') console.warn('[mi-coach-whatsapp] Twilio lookup failed:', reason);
         return 'unavailable';
       });
-      if (checked === 'online') lastOnline = now();
+      if (usable.has(checked)) lastOnline = now();
       else if (checked !== 'unavailable') lastOnline = null;
       if (checked !== status) console.info('[mi-coach-whatsapp] Twilio sender status:', checked);
       status = checked;

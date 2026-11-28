@@ -2550,7 +2550,7 @@ const waInboxAudio = waInboxConfigValues.ready ? createWaInboxAudio({ model: waI
 const coachWaInbox = createCoachWaInbox({
   config: waInboxConfigValues, ...waInboxModels,
   transport: waInboxConfigValues.ready ? coachWaInboxTransport(waInboxConfigValues, { storeAudio: waInboxAudio.store }) : null,
-  validate: req => validarFirmaTwilioWebhook(req) && (!TWILIO_WHATSAPP_WEBHOOK_TOKEN ||
+  validate: req => validarFirmaTwilioWebhook(req, waInboxConfigValues.authToken) && (!TWILIO_WHATSAPP_WEBHOOK_TOKEN ||
     cleanText(req.query.token || "") === TWILIO_WHATSAPP_WEBHOOK_TOKEN),
   voice: createCoachVoiceProvider({ timeoutMs: 30000 }),
   getUser: id => CoachUser.findById(id).lean(),
@@ -23395,14 +23395,14 @@ function construirTwilioWebhookExpectedSignature(req, authToken = "") {
   return crypto.createHmac("sha1", safeAuthToken).update(payload, "utf8").digest("base64");
 }
 
-function validarFirmaTwilioWebhook(req) {
+function validarFirmaTwilioWebhook(req, authToken = TWILIO_AUTH_TOKEN) {
   const providedSignature = String(req.headers["x-twilio-signature"] || "").trim();
 
-  if (!TWILIO_AUTH_TOKEN || !providedSignature) {
+  if (!authToken || !providedSignature) {
     return false;
   }
 
-  const expectedSignature = construirTwilioWebhookExpectedSignature(req, TWILIO_AUTH_TOKEN);
+  const expectedSignature = construirTwilioWebhookExpectedSignature(req, authToken);
 
   if (!expectedSignature) {
     return false;

@@ -45,7 +45,16 @@ export function coachWaInboxTransport(config, { env = process.env, fetcher = fet
   return {
     async lineStatus() {
       const response = await request('https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=100');
-      if ([401, 403].includes(response.status)) return 'unauthorized';
+      if ([401, 403].includes(response.status)) {
+        // The sender listing may be restricted independently of the messaging account.
+        // Use only the HTTP result: the account response can contain credentials.
+        await response.body?.cancel();
+        const account = await request(api + accountPath + '.json');
+        await account.body?.cancel();
+        if (account.ok) return 'signed-webhook-required';
+        if ([401, 403, 404].includes(account.status)) return 'unauthorized';
+        throw Object.assign(failure(), { status: account.status });
+      }
       if (response.status >= 400 && response.status < 500 && ![408, 429].includes(response.status)) return 'lookup-rejected';
       const info = await json(response);
       const sender = info.senders?.find(item => item.sender_id === from);

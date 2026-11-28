@@ -208,9 +208,13 @@ test('vincular mantiene una verificación reciente frente a fallos transitorios 
 });
 
 test('la API distingue un fallo temporal de un rechazo de autenticación', async () => {
-  let status = 429;
-  const transport = coachWaInboxTransport(config, { fetcher: async () => Response.json({}, { status }) });
+  let status = 429, accountStatus = 401;
+  const transport = coachWaInboxTransport(config, { fetcher: async url =>
+    Response.json({}, { status: String(url).includes('/Channels/Senders') ? status : accountStatus })
+  });
   await assert.rejects(transport.lineStatus(), { status: 429 });
   status = 403;
   assert.equal(await transport.lineStatus(), 'unauthorized');
+  accountStatus = 200;
+  assert.equal(await transport.lineStatus(), 'signed-webhook-required');
 });
